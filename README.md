@@ -1,0 +1,2 @@
+phonegap-plugin-contentsync
+===========================
