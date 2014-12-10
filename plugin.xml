@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+xmlns:android="http://schemas.android.com/apk/res/android"
+           id="com.adobe.phonegap.content-sync"
+      version="0.0.0">
+    <name>content-sync</name>
+    <description>PhoneGap Content Sync Plugin</description>
+    <license></license>
+    <keywords>phonegap,content sync</keywords>
+    <repo>https://github.com/phonegap/phonegap-plugin-contentsync</repo>
+    <issue>https://github.com/phonegap/phonegap-plugin-contentsync/issues</issue>
+
+</plugin>
