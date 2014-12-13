@@ -1,6 +1,13 @@
 var exec = require('cordova/exec');
 
 var sync = function(options){
+	var this._handlers = {
+		'progress' : [],
+		'cancel' : [],
+		'error' : [],
+		'complete' :[]
+	};
+
 	if(!options.src){
 		// error out - need src
 	}
@@ -12,7 +19,40 @@ var sync = function(options){
 		options.type = 'replace';
 	}
 
-	exec(null, null, "Sync", "sync", [src, type]);
+	var win = function(result){
+		if(typeof result.progressLength != 'undefined'){
+			this.publish('progress', result.progressLength);
+		}else{
+			this.publish('complete');
+		}
+	}
+
+	exec(win, null, "Sync", "sync", [src, type]);
+};
+
+sync.prototype.cancel = function(){
+	 exec(null, null, 'Sync', 'cancel', []);
+};
+
+sync.prototype.on = function(event, callback){
+	if(this._handlers.hasOwnProperty(event)){
+		this._handlers[event].push(callback);
+	}
+};
+
+sync.prototype.publish = function(){
+	var args = Array.prototype.slice.call( arguments );
+	var theEvent = args.shift();
+
+	if(!this._handlers.hasOwnProperty(theEvent)){
+		return false;
+	}
+
+	for(var i = 0,len = this._handlers[theEvent].length;i<len;i++){
+		this._handlers[theEvent][i].apply(undefined,args);
+	}
+
+	return true;
 };
 
 module.exports = sync;
