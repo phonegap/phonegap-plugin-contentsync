@@ -16,8 +16,9 @@ var ContentSync = function(options) {
         'complete' :[]
     };
 
-    if(!options.src){
+    if(typeof options == 'undefined' || typeof options.src == 'undefined'){
         // error out - need src
+        throw new Error('An options object with a src property is needed');
     }
 
     if (typeof options.type == 'undefined'){

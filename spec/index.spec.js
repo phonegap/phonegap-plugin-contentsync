@@ -4,19 +4,20 @@
 
 var cordova = require('./helper/cordova'),
     contentSync = require('../www/sync'),
-    execSpy;
+    execSpy,
+    execWin;
 
 /*!
  * Sync specification.
  */
 
 describe('phonegap-plugin-contentsync', function() {
-    beforeEach(function() {
-        // spy on any cordova.required module just like any other jasmine spy.
-        execSpy = spyOn(cordova.required, 'cordova/exec');
-    });
-
     describe('.sync', function() {
+        beforeEach(function() {
+            execWin = jasmine.createSpy(function() { return { result : { progressLength: 1} } });
+            execSpy = spyOn(cordova.required, 'cordova/exec').andCallFake(execWin);
+        });
+
         it('should return an instance of ContentSync', function() {
             var sync = contentSync.sync({ src: 'dummySrc' });
             expect(sync).toEqual(jasmine.any(contentSync.ContentSync));
@@ -24,9 +25,8 @@ describe('phonegap-plugin-contentsync', function() {
 
         it('should delegate to exec', function() {
             var sync = contentSync.sync({ src: 'dummySrc' });
-            // simple
+
             expect(execSpy).toHaveBeenCalled();
-            // detailed
             expect(execSpy).toHaveBeenCalledWith(
                 jasmine.any(Function),
                 null,
@@ -35,5 +35,51 @@ describe('phonegap-plugin-contentsync', function() {
                 jasmine.any(Object)
             );
         });
+
+        it('should fire the success callback with a return value', function(){
+            var sync = contentSync.sync({ src: 'dummySrc' });
+            expect(execWin).toHaveBeenCalled();
+            expect(execSpy).toHaveBeenCalledWith(
+                jasmine.any(Function),
+                null,
+                'Sync',
+                'sync',
+                jasmine.any(Object)
+            );
+
+        });
+
+        it('should set options.type to "replace" by default', function(){
+            var sync = contentSync.sync({ src: 'dummySrc' });
+            expect(execSpy).toHaveBeenCalledWith(
+                jasmine.any(Function),
+                null,
+                'Sync',
+                'sync',
+                ['dummySrc', 'replace']
+            );
+        });
+
+        it('should set options.type to whatever we specify', function(){
+            var sync = contentSync.sync({ src: 'dummySrc', type: 'superduper' });
+            expect(execSpy).toHaveBeenCalledWith(
+                jasmine.any(Function),
+                null,
+                'Sync',
+                'sync',
+                ['dummySrc', 'superduper']
+            );
+        });
+
+        it('should throw an error when provided with no options and not call exec', function(){
+            expect(function(){ contentSync.sync(); }).toThrow(new Error('An options object with a src property is needed'));
+            expect(execSpy).not.toHaveBeenCalled();
+        });
+
+        it('should throw an error when provided with no options.src and not call exec', function(){
+            expect(function(){ contentSync.sync( { nimbly: 'bimbly' } ); }).toThrow(new Error('An options object with a src property is needed'));
+            expect(execSpy).not.toHaveBeenCalled();
+        });
+
     });
 });
