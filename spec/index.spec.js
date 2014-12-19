@@ -80,6 +80,35 @@ describe('phonegap-plugin-contentsync', function() {
             expect(function(){ contentSync.sync( { nimbly: 'bimbly' } ); }).toThrow(new Error('An options object with a src property is needed'));
             expect(execSpy).not.toHaveBeenCalled();
         });
+    });
 
+    describe('.cancel', function(){
+         beforeEach(function() {
+            execSpy = spyOn(cordova.required, 'cordova/exec');
+        });
+
+        it('should delegate to exec', function(){
+            var sync = contentSync.sync({ src: 'dummySrc' });
+            sync.cancel();
+            expect(execSpy).toHaveBeenCalled();
+            expect(execSpy.callCount).toEqual(2);
+            expect(execSpy.mostRecentCall.args).toEqual(
+                [ null, null, 'Sync', 'cancel', [] ]
+            );
+        });
+    });
+
+    describe('.on', function(){
+        beforeEach(function() {
+            execWin = jasmine.createSpy(function() { return { result : { progressLength: 1} } });
+            execSpy = spyOn(cordova.required, 'cordova/exec').andCallFake(execWin);
+        });
+        
+        it('should fire the publish the complete event when sync is complete', function(){
+            var sync = contentSync.sync({ src: 'dummySrc' });   
+            var completeWin = function(){ console.log('i win') };
+            //sync.on('complete', completeWin);
+            //expect(completeWin).toHaveBeenCalled();
+        });
     });
 });
