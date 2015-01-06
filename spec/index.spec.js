@@ -93,22 +93,46 @@ describe('phonegap-plugin-contentsync', function() {
             expect(execSpy).toHaveBeenCalled();
             expect(execSpy.callCount).toEqual(2);
             expect(execSpy.mostRecentCall.args).toEqual(
-                [ null, null, 'Sync', 'cancel', [] ]
+                [ jasmine.any(Function), null, 'Sync', 'cancel', [] ]
             );
         });
     });
 
     describe('.on', function(){
         beforeEach(function() {
-            execWin = jasmine.createSpy(function() { return { result : { progressLength: 1} } });
-            execSpy = spyOn(cordova.required, 'cordova/exec').andCallFake(execWin);
+            execSpy = spyOn(cordova.required, 'cordova/exec');
         });
         
-        it('should fire the publish the complete event when sync is complete', function(){
-            var sync = contentSync.sync({ src: 'dummySrc' });   
-            var completeWin = function(){ console.log('i win') };
-            //sync.on('complete', completeWin);
-            //expect(completeWin).toHaveBeenCalled();
+        it('should fire the complete callback when we publish it', function(){
+            var sync = contentSync.sync({ src: 'dummySrc' });
+            var completeWin = jasmine.createSpy(function() { console.log('i win') });
+            sync.on('complete', completeWin);
+            sync.publish('complete');
+            expect(completeWin).toHaveBeenCalled();
+        });
+
+        it('should fire the cancel callback when we publish it', function(){
+            var sync = contentSync.sync({ src: 'dummySrc' });
+            var cancelCallback = jasmine.createSpy(function() { console.log('i cancel') });
+            sync.on('cancel', cancelCallback);
+            sync.publish('cancel');
+            expect(cancelCallback).toHaveBeenCalled();
+        });
+
+        it('should fire the progress callback when we publish it', function(){
+            var sync = contentSync.sync({ src: 'dummySrc' });
+            var progressCallback = jasmine.createSpy(function() { console.log('i progress') });
+            sync.on('progress', progressCallback);
+            sync.publish('progress');
+            expect(progressCallback).toHaveBeenCalled();
+        });
+
+        it('should fire the error callback when we publish it', function(){
+            var sync = contentSync.sync({ src: 'dummySrc' });
+            var errorCallback = jasmine.createSpy(function() { console.log('i error') });
+            sync.on('error', errorCallback);
+            sync.publish('error');
+            expect(errorCallback).toHaveBeenCalled();
         });
     });
 });

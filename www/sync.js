@@ -9,7 +9,7 @@ var exec = cordova.require('cordova/exec');
  */
 
 var ContentSync = function(options) {
-    var _handlers = {
+    this._handlers = {
         'progress' : [],
         'cancel' : [],
         'error' : [],
@@ -44,7 +44,11 @@ var ContentSync = function(options) {
  */
 
 ContentSync.prototype.cancel = function() {
-    exec(null, null, 'Sync', 'cancel', []);
+    var publishCancel = function() {
+        this.publish('cancel');
+    };
+
+    exec(publishCancel, null, 'Sync', 'cancel', []);
 };
 
 /**
