@@ -127,6 +127,16 @@ describe('phonegap-plugin-contentsync', function() {
             expect(progressCallback).toHaveBeenCalled();
         });
 
+        it('should fire the progress callback with an argument when we publish it with an argument', function(){
+            var sync = contentSync.sync({ src: 'dummySrc' });
+            var myMsg = 'this is custom';
+            var progressCallback = jasmine.createSpy(function( theMsg ) { return theMsg; });
+            sync.on('progress', progressCallback);
+            sync.publish('progress', myMsg);
+            expect(progressCallback).toHaveBeenCalled();
+            expect(progressCallback.mostRecentCall.args).toEqual( ['this is custom'] );
+        });
+
         it('should fire the error callback when we publish it', function(){
             var sync = contentSync.sync({ src: 'dummySrc' });
             var errorCallback = jasmine.createSpy(function() { console.log('i error') });
