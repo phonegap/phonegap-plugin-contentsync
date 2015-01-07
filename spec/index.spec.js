@@ -23,52 +23,62 @@ describe('phonegap-plugin-contentsync', function() {
             expect(sync).toEqual(jasmine.any(contentSync.ContentSync));
         });
 
-        it('should delegate to exec', function() {
+        it('should delegate to exec', function(done) {
             var sync = contentSync.sync({ src: 'dummySrc' });
-
-            expect(execSpy).toHaveBeenCalled();
-            expect(execSpy).toHaveBeenCalledWith(
-                jasmine.any(Function),
-                null,
-                'Sync',
-                'sync',
-                jasmine.any(Object)
-            );
+            setTimeout(function() {
+                expect(execSpy).toHaveBeenCalled();
+                expect(execSpy).toHaveBeenCalledWith(
+                    jasmine.any(Function),
+                    null,
+                    'Sync',
+                    'sync',
+                    jasmine.any(Object)
+                );
+                done();
+            }, 100);
         });
 
-        it('should fire the success callback with a return value', function(){
+        it('should fire the success callback with a return value', function(done){
             var sync = contentSync.sync({ src: 'dummySrc' });
-            expect(execWin).toHaveBeenCalled();
-            expect(execSpy).toHaveBeenCalledWith(
-                jasmine.any(Function),
-                null,
-                'Sync',
-                'sync',
-                jasmine.any(Object)
-            );
-
+            setTimeout(function() {
+                expect(execWin).toHaveBeenCalled();
+                expect(execSpy).toHaveBeenCalledWith(
+                    jasmine.any(Function),
+                    null,
+                    'Sync',
+                    'sync',
+                    jasmine.any(Object)
+                );
+                done();
+            }, 100);
         });
 
-        it('should set options.type to "replace" by default', function(){
+        it('should set options.type to "replace" by default', function(done){
             var sync = contentSync.sync({ src: 'dummySrc' });
-            expect(execSpy).toHaveBeenCalledWith(
-                jasmine.any(Function),
-                null,
-                'Sync',
-                'sync',
-                ['dummySrc', 'replace']
-            );
+            setTimeout(function() {
+                expect(execSpy).toHaveBeenCalledWith(
+                    jasmine.any(Function),
+                    null,
+                    'Sync',
+                    'sync',
+                    ['dummySrc', 'replace']
+                );
+                done();
+            }, 100);
         });
 
-        it('should set options.type to whatever we specify', function(){
+        it('should set options.type to whatever we specify', function(done){
             var sync = contentSync.sync({ src: 'dummySrc', type: 'superduper' });
-            expect(execSpy).toHaveBeenCalledWith(
-                jasmine.any(Function),
-                null,
-                'Sync',
-                'sync',
-                ['dummySrc', 'superduper']
-            );
+            setTimeout(function() {
+                expect(execSpy).toHaveBeenCalledWith(
+                    jasmine.any(Function),
+                    null,
+                    'Sync',
+                    'sync',
+                    ['dummySrc', 'superduper']
+                );
+                done();
+            }, 100);
         });
 
         it('should throw an error when provided with no options and not call exec', function(){
@@ -87,14 +97,17 @@ describe('phonegap-plugin-contentsync', function() {
             execSpy = spyOn(cordova.required, 'cordova/exec');
         });
 
-        it('should delegate to exec', function(){
+        it('should delegate to exec', function(done){
             var sync = contentSync.sync({ src: 'dummySrc' });
             sync.cancel();
-            expect(execSpy).toHaveBeenCalled();
-            expect(execSpy.callCount).toEqual(2);
-            expect(execSpy.mostRecentCall.args).toEqual(
-                [ jasmine.any(Function), null, 'Sync', 'cancel', [] ]
-            );
+            setTimeout(function() {
+                expect(execSpy).toHaveBeenCalled();
+                expect(execSpy.callCount).toEqual(2);
+                expect(execSpy.mostRecentCall.args).toEqual(
+                    [ jasmine.any(Function), null, 'Sync', 'cancel', [] ]
+                );
+                done();
+            }, 100);
         });
     });
 

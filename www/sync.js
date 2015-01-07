@@ -35,8 +35,9 @@ var ContentSync = function(options) {
             this.publish('complete');
         }
     }
-
-    exec(win, null, "Sync", "sync", [options.src, options.type]);
+    setTimeout(function(){
+        exec(win, null, "Sync", "sync", [options.src, options.type]);
+    }, 10);
 };
 
 /**
@@ -47,8 +48,9 @@ ContentSync.prototype.cancel = function() {
     var publishCancel = function() {
         this.publish('cancel');
     };
-
-    exec(publishCancel, null, 'Sync', 'cancel', []);
+    setTimeout(function(){
+        exec(publishCancel, null, 'Sync', 'cancel', []);
+    }, 10);
 };
 
 /**
