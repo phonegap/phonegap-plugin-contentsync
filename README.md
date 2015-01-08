@@ -20,7 +20,7 @@ Note: this plugin is still pretty new so expect some changes!
 
 ## ContentSync
 
-# Quick example:
+### Quick example:
 ```
 var sync = ContentSync.sync( { src: 'http://myserver' } );
 sync.on('complete', function(result) {
@@ -28,19 +28,19 @@ sync.on('complete', function(result) {
 });
 ```
 
-# Methods
+### Methods
 - sync: syncs to a remote destination
 - cancel: cancel the sync operation
 - on: subscribe to sync events
 
-# sync
+### sync
 Parameters:
-    - options: (Object). Valid keys:
-        - src: Sets the remote destination to grab content from
-        - type: Set the merge strategy for new content
-            - replace:
-            - merge:
-            - update:
+- options: (Object). Valid keys:
+    - src: Sets the remote destination to grab content from
+    - type: Set the merge strategy for new content
+        - replace:
+        - merge:
+        - update:
 
 
  
