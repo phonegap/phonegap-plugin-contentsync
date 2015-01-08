@@ -29,24 +29,24 @@ sync.on('complete', function(result) {
 ```
 
 ### Methods
-- sync: syncs to a remote destination
-- cancel: cancel the sync operation
-- on: subscribe to sync events
+- __sync__: syncs to a remote destination
+- __cancel__: cancels the sync operation
+- __on__: subscribes to sync events
 
 ### sync
 Parameters:
-- options: (Object). Valid keys:
-    - src: (String) Remote destination to grab content from
-    - type: (String) Sets the merge strategy for new content. Valid strings:
-        - replace: This is the normal behavior. Existing content is replaced completely by the imported content, i.e. is overridden or deleted accordingly.
-        - merge: Existing content is not modified, i.e. only new content is added and none is deleted or modified.
-        - update: Existing content is updated, new content is added and none is deleted.
+- __options__: (Object). Valid keys:
+    - __src__: (String) Remote destination to grab content from
+    - __type__: (String) Sets the merge strategy for new content. Valid strings:
+        - __replace:__ This is the normal behavior. Existing content is replaced completely by the imported content, i.e. is overridden or deleted accordingly.
+        - __merge__: Existing content is not modified, i.e. only new content is added and none is deleted or modified.
+        - __update__: Existing content is updated, new content is added and none is deleted.
 
 ### on
 Parameters:
-- event: (String). Describes which event you want to subscribe to. Valid events:
-    - complete: Fires when we have successfully downloaded from the source.
-    - cancel: Fires when we use sync.cancel();
-    - progress: Fires when the native portion begins to download the content and returns progress updates.
-    - error: Fires when an error occured. 
+- __event__: (String). Describes which event you want to subscribe to. Valid events:
+    - __complete__: Fires when we have successfully downloaded from the source.
+    - __cancel__: Fires when we use sync.cancel();
+    - __progress__: Fires when the native portion begins to download the content and returns progress updates.
+    - __error__: Fires when an error occured. 
 
