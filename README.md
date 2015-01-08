@@ -36,11 +36,17 @@ sync.on('complete', function(result) {
 ### sync
 Parameters:
 - options: (Object). Valid keys:
-    - src: Sets the remote destination to grab content from
-    - type: Set the merge strategy for new content
-        - replace:
-        - merge:
-        - update:
+    - src: (String) Remote destination to grab content from
+    - type: (String) Sets the merge strategy for new content. Valid strings:
+        - replace: This is the normal behavior. Existing content is replaced completely by the imported content, i.e. is overridden or deleted accordingly.
+        - merge: Existing content is not modified, i.e. only new content is added and none is deleted or modified.
+        - update: Existing content is updated, new content is added and none is deleted.
 
+### on
+Parameters:
+- event: (String). Describes which event you want to subscribe to. Valid events:
+    - complete: Fires when we have successfully downloaded from the source.
+    - cancel: Fires when we use sync.cancel();
+    - progress: Fires when the native portion begins to download the content and returns progress updates.
+    - error: Fires when an error occured. 
 
- 
