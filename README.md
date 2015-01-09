@@ -1,5 +1,4 @@
-phonegap-plugin-contentsync
-===========================
+# phonegap-plugin-contentsync
 
 Greetings fellow keyboard masher,
 
@@ -30,32 +29,39 @@ sync.on('complete', function(result) {
 });
 ```
 
-### Methods
+### API
 
-- __sync__: syncs to a remote destination
-- __cancel__: cancels the sync operation
-- __on__: subscribes to sync events
-
-### sync
+#### sync(options)
 
 Parameters:
 
-- __options__: (Object). Valid keys:
-    - __src__: (String) Remote destination to grab content from
-    - __type__: (String) Sets the merge strategy for new content. Valid strings:
+- __options__: (Object)
+    - __src__: (String) Remote destination to grab content.
+    - __type__: (String) Sets the merge strategy for new content. Optional.
         - __replace:__ This is the normal behavior. Existing content is replaced completely by the imported content, i.e. is overridden or deleted accordingly.
         - __merge__: Existing content is not modified, i.e. only new content is added and none is deleted or modified.
         - __update__: Existing content is updated, new content is added and none is deleted.
 
-### on
+Returns:
+
+- Instance of `ContentSync`.
+
+Example:
+
+```
+var sync = ContentSync.sync({ src: 'http://myserver' });
+```
+
+### ContentSync.on(event, callback)
 
 Parameters:
 
-- __event__: (String). Describes which event you want to subscribe to. Valid events:
+- __event__: (String). Describes which event you want to subscribe to.
     - __complete__: Fires when we have successfully downloaded from the source.
     - __cancel__: Fires when we use sync.cancel();
     - __progress__: Fires when the native portion begins to download the content and returns progress updates.
     - __error__: Fires when an error occured.
+- __callback__: (Function). Triggered on the event.
 
 ## Contributing
 
