@@ -77,12 +77,12 @@ The project uses [.jshint](http://jshint.com/docs) to define the JavaScript
 coding conventions. Most editors now have a JSHint add-on to provide on-save
 or on-edit linting.
 
-#### VIM
+#### Install JSHint for vim
 
 1. Install [jshint](https://www.npmjs.com/package/jshint).
 1. Install [jshint.vim](https://github.com/wookiehangover/jshint.vim).
 
-#### Sublime
+#### Install JSHint for Sublime
 
 1. Install [Package Control](https://packagecontrol.io/installation)
 1. Restart Sublime
