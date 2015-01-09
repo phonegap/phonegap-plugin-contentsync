@@ -18,7 +18,7 @@
     "newcap": true,
     "node": true,
     "nonew": true,
-    "plusplus": true,
+    "plusplus": false,
     "quotmark": "single",
     "shadow": false,
     "strict": false,

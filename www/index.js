@@ -12,33 +12,34 @@ var exec = cordova.require('cordova/exec');
 
 var ContentSync = function(options) {
     this._handlers = {
-        'progress' : [],
-        'cancel' : [],
-        'error' : [],
-        'complete' :[]
+        'progress': [],
+        'cancel': [],
+        'error': [],
+        'complete': []
     };
 
-    if(typeof options == 'undefined' || typeof options.src == 'undefined'){
+    if (typeof options === 'undefined' || typeof options.src === 'undefined') {
         // error out - need src
         throw new Error('An options object with a src property is needed');
     }
 
-    if (typeof options.type == 'undefined'){
+    if (typeof options.type === 'undefined') {
         // options.type = replace : This is the normal behavior. Existing content is replaced completely by the imported content, i.e. is overridden or deleted accordingly.
         // options.type = merge : Existing content is not modified, i.e. only new content is added and none is deleted or modified.
         // options.type = update : Existing content is updated, new content is added and none is deleted.
         options.type = 'replace';
     }
 
-    var win = function(result){
-        if(typeof result.progressLength != 'undefined'){
+    var win = function(result) {
+        if (typeof result.progressLength !== 'undefined') {
             this.publish('progress', result.progressLength);
-        }else{
+        } else {
             this.publish('complete');
         }
-    }
-    setTimeout(function(){
-        exec(win, null, "Sync", "sync", [options.src, options.type]);
+    };
+
+    setTimeout(function() {
+        exec(win, null, 'Sync', 'sync', [options.src, options.type]);
     }, 10);
 };
 
@@ -50,7 +51,7 @@ ContentSync.prototype.cancel = function() {
     var publishCancel = function() {
         this.publish('cancel');
     };
-    setTimeout(function(){
+    setTimeout(function() {
         exec(publishCancel, null, 'Sync', 'cancel', []);
     }, 10);
 };
@@ -59,8 +60,8 @@ ContentSync.prototype.cancel = function() {
  * ContentSync::on
  */
 
-ContentSync.prototype.on = function(event, callback){
-    if(this._handlers.hasOwnProperty(event)){
+ContentSync.prototype.on = function(event, callback) {
+    if (this._handlers.hasOwnProperty(event)) {
         this._handlers[event].push(callback);
     }
 };
@@ -69,15 +70,15 @@ ContentSync.prototype.on = function(event, callback){
  * ContentSync::publish
  */
 
-ContentSync.prototype.publish = function(){
-    var args = Array.prototype.slice.call( arguments );
+ContentSync.prototype.publish = function() {
+    var args = Array.prototype.slice.call(arguments);
     var theEvent = args.shift();
 
-    if(!this._handlers.hasOwnProperty(theEvent)){
+    if (!this._handlers.hasOwnProperty(theEvent)) {
         return false;
     }
 
-    for(var i = 0,len = this._handlers[theEvent].length;i<len;i++){
+    for (var i = 0, length = this._handlers[theEvent].length; i < length; i++) {
         this._handlers[theEvent][i].apply(undefined,args);
     }
 
@@ -110,4 +111,3 @@ module.exports = {
 
     ContentSync: ContentSync
 };
-
