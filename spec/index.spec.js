@@ -3,7 +3,7 @@
  */
 
 var cordova = require('./helper/cordova'),
-    contentSync = require('../www/sync'),
+    contentSync = require('../www'),
     execSpy,
     execWin;
 
