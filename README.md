@@ -1,9 +1,9 @@
 #phonegap-plugin-contentsync [![Build Status][travis-ci-img]][travis-ci-url]
 
-Greetings fellow keyboard masher, 
+Greetings fellow keyboard masher,
 
 This is a PhoneGap plugin that allows you to retrieve
-a PhoneGap app being served from a server and as well as 
+a PhoneGap app being served from a server and as well as
 being able to easily update that app.
 
 Note: this plugin is still pretty new so expect some changes!
@@ -47,7 +47,37 @@ Parameters:
     - __complete__: Fires when we have successfully downloaded from the source.
     - __cancel__: Fires when we use sync.cancel();
     - __progress__: Fires when the native portion begins to download the content and returns progress updates.
-    - __error__: Fires when an error occured. 
+    - __error__: Fires when an error occured.
+
+## Contributing
+
+### Editor Config
+
+The project uses [.editorconfig](http://editorconfig.org/) to define the coding
+style of each file. We recommend that you install the Editor Config extension
+for your preferred IDE.
+
+### JSHint
+
+The project uses [.jshint](http://jshint.com/docs) to define the JavaScript
+coding conventions. Most editors now have a JSHint add-on to provide on-save
+or on-edit linting.
+
+#### VIM
+
+1. Install [jshint](https://www.npmjs.com/package/jshint).
+1. Install [jshint.vim](https://github.com/wookiehangover/jshint.vim).
+
+#### Sublime
+
+1. Install [Package Control](https://packagecontrol.io/installation)
+1. Restart Sublime
+1. Type `CMD+SHIFT+P`
+1. Type _Install Package_
+1. Type _JSHint Gutter_
+1. Sublime -> Preferences -> Package Settings -> JSHint Gutter
+1. Set `lint_on_load` and `lint_on_save` to `true`
 
 [travis-ci-img]: https://travis-ci.org/phonegap/phonegap-plugin-contentsync.png?branch=master
 [travis-ci-url]: http://travis-ci.org/phonegap/phonegap-plugin-contentsync
+
