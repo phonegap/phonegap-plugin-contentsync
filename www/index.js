@@ -1,3 +1,5 @@
+/* global cordova:false */
+
 /*!
  * Module dependencies.
  */
