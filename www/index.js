@@ -7,7 +7,16 @@
 var exec = cordova.require('cordova/exec');
 
 /**
- * ContentSync Object
+ * ContentSync constructor.
+ *
+ * @param {Object} options to initiate a new content synchronization.
+ *   @param {String} src is a URL to the content sync end-point.
+ *   @param {Object} type defines the sync strategy applied to the contnet.
+ *     @param {String} replace completely removes existing content then copies new content.
+ *     @param {String} merge   does not modify existing content, but adds new content.
+ *     @param {String} update  only updates existing content, but does not add or delete new content.
+ *
+ * @return {ContentSync} instance that can be monitored and cancelled.
  */
 
 var ContentSync = function(options) {
@@ -18,68 +27,97 @@ var ContentSync = function(options) {
         'complete': []
     };
 
+    // requires src parameter
     if (typeof options === 'undefined' || typeof options.src === 'undefined') {
-        // error out - need src
         throw new Error('An options object with a src property is needed');
     }
 
+    // define synchronization strategy
+    //
+    //     replace: This is the normal behavior. Existing content is replaced
+    //              completely by the imported content, i.e. is overridden or
+    //              deleted accordingly.
+    //     merge:   Existing content is not modified, i.e. only new content is
+    //              added and none is deleted or modified.
+    //     update:  Existing content is updated, new content is added and none
+    //              is deleted.
+    //
     if (typeof options.type === 'undefined') {
-        // options.type = replace : This is the normal behavior. Existing content is replaced completely by the imported content, i.e. is overridden or deleted accordingly.
-        // options.type = merge : Existing content is not modified, i.e. only new content is added and none is deleted or modified.
-        // options.type = update : Existing content is updated, new content is added and none is deleted.
         options.type = 'replace';
     }
 
-    var win = function(result) {
+    // trigged on update and completion
+    var success = function(result) {
         if (typeof result.progressLength !== 'undefined') {
-            this.publish('progress', result.progressLength);
+            this.emit('progress', result.progressLength);
         } else {
-            this.publish('complete');
+            this.emit('complete');
         }
     };
 
+    // wait at least one process tick to allow event subscriptions
     setTimeout(function() {
-        exec(win, null, 'Sync', 'sync', [options.src, options.type]);
+        exec(success, null, 'Sync', 'sync', [options.src, options.type]);
     }, 10);
 };
 
 /**
- * ContentSync::cancel
+ * Cancel the Content Sync
+ *
+ * After successfully cancelling the content sync process, the `cancel` event
+ * will be emitted.
  */
 
 ContentSync.prototype.cancel = function() {
-    var publishCancel = function() {
-        this.publish('cancel');
+    var onCancel = function() {
+        this.emit('cancel');
     };
     setTimeout(function() {
-        exec(publishCancel, null, 'Sync', 'cancel', []);
+        exec(onCancel, null, 'Sync', 'cancel', []);
     }, 10);
 };
 
 /**
- * ContentSync::on
+ * Listen for an event.
+ *
+ * The following events are supported:
+ *
+ *   - progress
+ *   - cancel
+ *   - error
+ *   - completion
+ *
+ * @param {String} eventName to subscribe to.
+ * @param {Function} callback trigged on the event.
  */
 
-ContentSync.prototype.on = function(event, callback) {
-    if (this._handlers.hasOwnProperty(event)) {
-        this._handlers[event].push(callback);
+ContentSync.prototype.on = function(eventName, callback) {
+    if (this._handlers.hasOwnProperty(eventName)) {
+        this._handlers[eventName].push(callback);
     }
 };
 
 /**
- * ContentSync::publish
+ * Emit an event.
+ *
+ * This is intended for internal use only.
+ *
+ * @param {String} eventName is the event to trigger.
+ * @param {*} all arguments are passed to the event listeners.
+ *
+ * @return {Boolean} is true when the event is trigged otherwise false.
  */
 
-ContentSync.prototype.publish = function() {
+ContentSync.prototype.emit = function() {
     var args = Array.prototype.slice.call(arguments);
-    var theEvent = args.shift();
+    var eventName = args.shift();
 
-    if (!this._handlers.hasOwnProperty(theEvent)) {
+    if (!this._handlers.hasOwnProperty(eventName)) {
         return false;
     }
 
-    for (var i = 0, length = this._handlers[theEvent].length; i < length; i++) {
-        this._handlers[theEvent][i].apply(undefined,args);
+    for (var i = 0, length = this._handlers[eventName].length; i < length; i++) {
+        this._handlers[eventName][i].apply(undefined,args);
     }
 
     return true;
@@ -91,7 +129,10 @@ ContentSync.prototype.publish = function() {
 
 module.exports = {
     /**
-     * Run a Synchronize Task.
+     * Synchronize the content.
+     *
+     * This method will instantiate a new copy of the ContentSync object
+     * and start synchronizing.
      *
      * @param {Object} options
      * @return {ContentSync} instance
