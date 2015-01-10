@@ -10,6 +10,7 @@
     "expr": false,
     "forin": true,
     "funcscope": false,
+    "jasmine": true,
     "immed": true,
     "indent": 4,
     "latedef": true,
