@@ -1,8 +1,8 @@
+/* global cordova:true */
+
 /*!
  * Module dependencies.
  */
-
-var path = require('path');
 
 /**
  * cordova.js for node.
