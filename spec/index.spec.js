@@ -14,7 +14,7 @@ var cordova = require('./helper/cordova'),
 describe('phonegap-plugin-contentsync', function() {
     describe('.sync', function() {
         beforeEach(function() {
-            execWin = jasmine.createSpy(function() { return { result : { progressLength: 1} } });
+            execWin = jasmine.createSpy(function() { return { result : { progressLength: 1} }; });
             execSpy = spyOn(cordova.required, 'cordova/exec').andCallFake(execWin);
         });
 
@@ -115,10 +115,10 @@ describe('phonegap-plugin-contentsync', function() {
         beforeEach(function() {
             execSpy = spyOn(cordova.required, 'cordova/exec');
         });
-        
+
         it('should fire the complete callback when we publish it', function(){
             var sync = contentSync.sync({ src: 'dummySrc' });
-            var completeWin = jasmine.createSpy(function() { console.log('i win') });
+            var completeWin = jasmine.createSpy(function() { console.log('i win'); });
             sync.on('complete', completeWin);
             sync.publish('complete');
             expect(completeWin).toHaveBeenCalled();
@@ -126,7 +126,7 @@ describe('phonegap-plugin-contentsync', function() {
 
         it('should fire the cancel callback when we publish it', function(){
             var sync = contentSync.sync({ src: 'dummySrc' });
-            var cancelCallback = jasmine.createSpy(function() { console.log('i cancel') });
+            var cancelCallback = jasmine.createSpy(function() { console.log('i cancel'); });
             sync.on('cancel', cancelCallback);
             sync.publish('cancel');
             expect(cancelCallback).toHaveBeenCalled();
@@ -134,7 +134,7 @@ describe('phonegap-plugin-contentsync', function() {
 
         it('should fire the progress callback when we publish it', function(){
             var sync = contentSync.sync({ src: 'dummySrc' });
-            var progressCallback = jasmine.createSpy(function() { console.log('i progress') });
+            var progressCallback = jasmine.createSpy(function() { console.log('i progress'); });
             sync.on('progress', progressCallback);
             sync.publish('progress');
             expect(progressCallback).toHaveBeenCalled();
@@ -152,7 +152,7 @@ describe('phonegap-plugin-contentsync', function() {
 
         it('should fire the error callback when we publish it', function(){
             var sync = contentSync.sync({ src: 'dummySrc' });
-            var errorCallback = jasmine.createSpy(function() { console.log('i error') });
+            var errorCallback = jasmine.createSpy(function() { console.log('i error'); });
             sync.on('error', errorCallback);
             sync.publish('error');
             expect(errorCallback).toHaveBeenCalled();
