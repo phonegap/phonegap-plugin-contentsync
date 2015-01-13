@@ -19,9 +19,7 @@ describe('phonegap-plugin-contentsync', function() {
 
     describe('.sync', function() {
         beforeEach(function() {
-            execWin = jasmine.createSpy(function() {
-                return { result: { progressLength: 1 } };
-            });
+            execWin = jasmine.createSpy();
             execSpy = spyOn(cordova.required, 'cordova/exec').andCallFake(execWin);
         });
 
