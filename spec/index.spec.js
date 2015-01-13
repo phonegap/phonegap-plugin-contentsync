@@ -25,6 +25,20 @@ describe('phonegap-plugin-contentsync', function() {
             execSpy = spyOn(cordova.required, 'cordova/exec').andCallFake(execWin);
         });
 
+        it('should require the options parameter', function() {
+            expect(function() {
+                contentSync.sync();
+            }).toThrow();
+            expect(execSpy).not.toHaveBeenCalled();
+        });
+
+        it('should require the options.src parameter', function() {
+            expect(function(){
+                contentSync.sync({ nimbly: 'bimbly' });
+            }).toThrow();
+            expect(execSpy).not.toHaveBeenCalled();
+        });
+
         it('should return an instance of ContentSync', function() {
             var sync = contentSync.sync(options);
             expect(sync).toEqual(jasmine.any(contentSync.ContentSync));
@@ -88,20 +102,6 @@ describe('phonegap-plugin-contentsync', function() {
                 );
                 done();
             }, 100);
-        });
-
-        it('should require the options parameter', function() {
-            expect(function() {
-                contentSync.sync();
-            }).toThrow();
-            expect(execSpy).not.toHaveBeenCalled();
-        });
-
-        it('should require the options.src parameter', function() {
-            expect(function(){
-                contentSync.sync({ nimbly: 'bimbly' });
-            }).toThrow();
-            expect(execSpy).not.toHaveBeenCalled();
         });
     });
 
