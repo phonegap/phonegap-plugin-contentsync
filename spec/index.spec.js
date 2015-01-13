@@ -122,7 +122,7 @@ describe('phonegap-plugin-contentsync', function() {
     });
 
     describe('.on', function() {
-        it('should fire the complete callback when we emit it', function() {
+        it('should support the event "complete"', function() {
             var sync = contentSync.sync(options);
             var completeWin = jasmine.createSpy(function() { console.log('i win'); });
             sync.on('complete', completeWin);
@@ -130,7 +130,7 @@ describe('phonegap-plugin-contentsync', function() {
             expect(completeWin).toHaveBeenCalled();
         });
 
-        it('should fire the cancel callback when we emit it', function() {
+        it('should support the event "cancel"', function() {
             var sync = contentSync.sync(options);
             var cancelCallback = jasmine.createSpy(function() { console.log('i cancel'); });
             sync.on('cancel', cancelCallback);
@@ -138,7 +138,7 @@ describe('phonegap-plugin-contentsync', function() {
             expect(cancelCallback).toHaveBeenCalled();
         });
 
-        it('should fire the progress callback when we emit it', function() {
+        it('should support the event "progress"', function() {
             var sync = contentSync.sync(options);
             var progressCallback = jasmine.createSpy(function() { console.log('i progress'); });
             sync.on('progress', progressCallback);
@@ -146,17 +146,19 @@ describe('phonegap-plugin-contentsync', function() {
             expect(progressCallback).toHaveBeenCalled();
         });
 
-        it('should fire the progress callback with an argument when we emit it with an argument', function() {
-            var sync = contentSync.sync(options);
-            var myMsg = 'this is custom';
-            var progressCallback = jasmine.createSpy(function(theMsg) { return theMsg; });
-            sync.on('progress', progressCallback);
-            sync.emit('progress', myMsg);
-            expect(progressCallback).toHaveBeenCalled();
-            expect(progressCallback.mostRecentCall.args).toEqual(['this is custom']);
+        describe('progress event', function() {
+            it('should pass an argument', function() {
+                var sync = contentSync.sync(options);
+                var myMsg = 'this is custom';
+                var progressCallback = jasmine.createSpy(function(theMsg) { return theMsg; });
+                sync.on('progress', progressCallback);
+                sync.emit('progress', myMsg);
+                expect(progressCallback).toHaveBeenCalled();
+                expect(progressCallback.mostRecentCall.args).toEqual(['this is custom']);
+            });
         });
 
-        it('should fire the error callback when we emit it', function() {
+        it('should support the event "error"', function() {
             var sync = contentSync.sync(options);
             var errorCallback = jasmine.createSpy(function() { console.log('i error'); });
             sync.on('error', errorCallback);
