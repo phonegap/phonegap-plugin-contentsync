@@ -5,28 +5,33 @@
 var cordova = require('./helper/cordova'),
     contentSync = require('../www'),
     execSpy,
-    execWin;
+    execWin,
+    options;
 
 /*!
  * Specification.
  */
 
 describe('phonegap-plugin-contentsync', function() {
+    beforeEach(function() {
+        options = { src: 'http://path/to/src.zip' };
+    });
+
     describe('.sync', function() {
         beforeEach(function() {
             execWin = jasmine.createSpy(function() {
-                return { result: { progressLength: 1} };
+                return { result: { progressLength: 1 } };
             });
             execSpy = spyOn(cordova.required, 'cordova/exec').andCallFake(execWin);
         });
 
         it('should return an instance of ContentSync', function() {
-            var sync = contentSync.sync({ src: 'dummySrc' });
+            var sync = contentSync.sync(options);
             expect(sync).toEqual(jasmine.any(contentSync.ContentSync));
         });
 
-        it('should delegate to exec', function(done) {
-            contentSync.sync({ src: 'dummySrc' });
+        it('should delegate to cordova.exec', function(done) {
+            contentSync.sync(options);
             setTimeout(function() {
                 expect(execSpy).toHaveBeenCalled();
                 expect(execSpy).toHaveBeenCalledWith(
@@ -40,8 +45,9 @@ describe('phonegap-plugin-contentsync', function() {
             }, 100);
         });
 
+        // @FIX this does not test the scenario
         it('should fire the success callback with a return value', function(done) {
-            contentSync.sync({ src: 'dummySrc' });
+            contentSync.sync(options);
             setTimeout(function() {
                 expect(execWin).toHaveBeenCalled();
                 expect(execSpy).toHaveBeenCalledWith(
@@ -56,44 +62,45 @@ describe('phonegap-plugin-contentsync', function() {
         });
 
         it('should set options.type to "replace" by default', function(done) {
-            contentSync.sync({ src: 'dummySrc' });
+            contentSync.sync(options);
             setTimeout(function() {
                 expect(execSpy).toHaveBeenCalledWith(
                     jasmine.any(Function),
                     null,
                     'Sync',
                     'sync',
-                    ['dummySrc', 'replace']
+                    [options.src, 'replace']
                 );
                 done();
             }, 100);
         });
 
         it('should set options.type to whatever we specify', function(done) {
-            contentSync.sync({ src: 'dummySrc', type: 'superduper' });
+            options.type = 'superduper';
+            contentSync.sync(options);
             setTimeout(function() {
                 expect(execSpy).toHaveBeenCalledWith(
                     jasmine.any(Function),
                     null,
                     'Sync',
                     'sync',
-                    ['dummySrc', 'superduper']
+                    [options.src, 'superduper']
                 );
                 done();
             }, 100);
         });
 
-        it('should throw an error when provided with no options and not call exec', function() {
+        it('should require the options parameter', function() {
             expect(function() {
                 contentSync.sync();
-            }).toThrow(new Error('An options object with a src property is needed'));
+            }).toThrow();
             expect(execSpy).not.toHaveBeenCalled();
         });
 
-        it('should throw an error when provided with no options.src and not call exec', function() {
+        it('should require the options.src parameter', function() {
             expect(function(){
                 contentSync.sync({ nimbly: 'bimbly' });
-            }).toThrow(new Error('An options object with a src property is needed'));
+            }).toThrow();
             expect(execSpy).not.toHaveBeenCalled();
         });
     });
@@ -104,7 +111,7 @@ describe('phonegap-plugin-contentsync', function() {
         });
 
         it('should delegate to exec', function(done) {
-            var sync = contentSync.sync({ src: 'dummySrc' });
+            var sync = contentSync.sync(options);
             sync.cancel();
             setTimeout(function() {
                 expect(execSpy).toHaveBeenCalled();
@@ -123,7 +130,7 @@ describe('phonegap-plugin-contentsync', function() {
         });
 
         it('should fire the complete callback when we emit it', function() {
-            var sync = contentSync.sync({ src: 'dummySrc' });
+            var sync = contentSync.sync(options);
             var completeWin = jasmine.createSpy(function() { console.log('i win'); });
             sync.on('complete', completeWin);
             sync.emit('complete');
@@ -131,7 +138,7 @@ describe('phonegap-plugin-contentsync', function() {
         });
 
         it('should fire the cancel callback when we emit it', function() {
-            var sync = contentSync.sync({ src: 'dummySrc' });
+            var sync = contentSync.sync(options);
             var cancelCallback = jasmine.createSpy(function() { console.log('i cancel'); });
             sync.on('cancel', cancelCallback);
             sync.emit('cancel');
@@ -139,7 +146,7 @@ describe('phonegap-plugin-contentsync', function() {
         });
 
         it('should fire the progress callback when we emit it', function() {
-            var sync = contentSync.sync({ src: 'dummySrc' });
+            var sync = contentSync.sync(options);
             var progressCallback = jasmine.createSpy(function() { console.log('i progress'); });
             sync.on('progress', progressCallback);
             sync.emit('progress');
@@ -147,7 +154,7 @@ describe('phonegap-plugin-contentsync', function() {
         });
 
         it('should fire the progress callback with an argument when we emit it with an argument', function() {
-            var sync = contentSync.sync({ src: 'dummySrc' });
+            var sync = contentSync.sync(options);
             var myMsg = 'this is custom';
             var progressCallback = jasmine.createSpy(function(theMsg) { return theMsg; });
             sync.on('progress', progressCallback);
@@ -157,7 +164,7 @@ describe('phonegap-plugin-contentsync', function() {
         });
 
         it('should fire the error callback when we emit it', function() {
-            var sync = contentSync.sync({ src: 'dummySrc' });
+            var sync = contentSync.sync(options);
             var errorCallback = jasmine.createSpy(function() { console.log('i error'); });
             sync.on('error', errorCallback);
             sync.emit('error');
