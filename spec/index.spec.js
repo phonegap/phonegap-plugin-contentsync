@@ -15,12 +15,13 @@ var cordova = require('./helper/cordova'),
 describe('phonegap-plugin-contentsync', function() {
     beforeEach(function() {
         options = { src: 'http://path/to/src.zip' };
+        execSpy = spyOn(cordova.required, 'cordova/exec');
     });
 
     describe('.sync', function() {
         beforeEach(function() {
             execWin = jasmine.createSpy();
-            execSpy = spyOn(cordova.required, 'cordova/exec').andCallFake(execWin);
+            execSpy.andCallFake(execWin);
         });
 
         it('should require the options parameter', function() {
@@ -57,57 +58,55 @@ describe('phonegap-plugin-contentsync', function() {
             }, 100);
         });
 
-        // @FIX this does not test the scenario
-        it('should fire the success callback with a return value', function(done) {
-            contentSync.sync(options);
-            setTimeout(function() {
-                expect(execWin).toHaveBeenCalled();
-                expect(execSpy).toHaveBeenCalledWith(
-                    jasmine.any(Function),
-                    null,
-                    'Sync',
-                    'sync',
-                    jasmine.any(Object)
-                );
-                done();
-            }, 100);
-        });
+        describe('when cordova.exec called', function() {
+            it('should default options.type to "replace"', function(done) {
+                contentSync.sync(options);
+                setTimeout(function() {
+                    expect(execSpy).toHaveBeenCalledWith(
+                        jasmine.any(Function),
+                        null,
+                        'Sync',
+                        'sync',
+                        [options.src, 'replace']
+                    );
+                    done();
+                }, 100);
+            });
 
-        it('should set options.type to "replace" by default', function(done) {
-            contentSync.sync(options);
-            setTimeout(function() {
-                expect(execSpy).toHaveBeenCalledWith(
-                    jasmine.any(Function),
-                    null,
-                    'Sync',
-                    'sync',
-                    [options.src, 'replace']
-                );
-                done();
-            }, 100);
-        });
+            it('should set options.type to whatever we specify', function(done) {
+                options.type = 'superduper';
+                contentSync.sync(options);
+                setTimeout(function() {
+                    expect(execSpy).toHaveBeenCalledWith(
+                        jasmine.any(Function),
+                        null,
+                        'Sync',
+                        'sync',
+                        [options.src, 'superduper']
+                    );
+                    done();
+                }, 100);
+            });
 
-        it('should set options.type to whatever we specify', function(done) {
-            options.type = 'superduper';
-            contentSync.sync(options);
-            setTimeout(function() {
-                expect(execSpy).toHaveBeenCalledWith(
-                    jasmine.any(Function),
-                    null,
-                    'Sync',
-                    'sync',
-                    [options.src, 'superduper']
-                );
-                done();
-            }, 100);
+            // @FIX this does not test the scenario
+            it('should fire the success callback with a return value', function(done) {
+                contentSync.sync(options);
+                setTimeout(function() {
+                    expect(execWin).toHaveBeenCalled();
+                    expect(execSpy).toHaveBeenCalledWith(
+                        jasmine.any(Function),
+                        null,
+                        'Sync',
+                        'sync',
+                        jasmine.any(Object)
+                    );
+                    done();
+                }, 100);
+            });
         });
     });
 
     describe('.cancel', function() {
-         beforeEach(function() {
-            execSpy = spyOn(cordova.required, 'cordova/exec');
-        });
-
         it('should delegate to exec', function(done) {
             var sync = contentSync.sync(options);
             sync.cancel();
@@ -123,10 +122,6 @@ describe('phonegap-plugin-contentsync', function() {
     });
 
     describe('.on', function() {
-        beforeEach(function() {
-            execSpy = spyOn(cordova.required, 'cordova/exec');
-        });
-
         it('should fire the complete callback when we emit it', function() {
             var sync = contentSync.sync(options);
             var completeWin = jasmine.createSpy(function() { console.log('i win'); });
