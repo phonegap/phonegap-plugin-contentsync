@@ -89,6 +89,17 @@ describe('phonegap-plugin-contentsync', function() {
             });
 
             // @FIX this does not test the scenario
+            //
+            // The success callback should have a deeper set of tests under
+            // a describe block. It should tests the various states that a sync
+            // will go through:
+            //   - continuous progress
+            //   - complete event
+            //
+            // Additionally, we should have an error callback block which tests
+            // the two error states:
+            //   - an error occured
+            //   - sync cancelled internally
             it('should fire the success callback with a return value', function(done) {
                 contentSync.sync(options);
                 setTimeout(function() {
