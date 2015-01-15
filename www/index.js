@@ -46,18 +46,26 @@ var ContentSync = function(options) {
         options.type = 'replace';
     }
 
-    // trigged on update and completion
+    // triggered on update and completion
+    var that = this;
     var success = function(result) {
-        if (typeof result.progressLength !== 'undefined') {
-            this.emit('progress', result.progressLength);
-        } else {
-            this.emit('complete');
+        if(typeof result !== 'undefined') {
+            if (typeof result.progressLength !== 'undefined') {
+                that.emit('progress', result.progressLength);
+            } else {
+                that.emit('complete');
+            }
         }
+    };
+
+    //triggered on error
+    var fail = function(msg) {
+        that.emit('error', msg);
     };
 
     // wait at least one process tick to allow event subscriptions
     setTimeout(function() {
-        exec(success, null, 'Sync', 'sync', [options.src, options.type]);
+        exec(success, fail, 'Sync', 'sync', [options.src, options.type]);
     }, 10);
 };
 
@@ -69,8 +77,9 @@ var ContentSync = function(options) {
  */
 
 ContentSync.prototype.cancel = function() {
+    var that = this;
     var onCancel = function() {
-        this.emit('cancel');
+        that.emit('cancel');
     };
     setTimeout(function() {
         exec(onCancel, null, 'Sync', 'cancel', []);
