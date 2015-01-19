@@ -57,10 +57,12 @@ var sync = ContentSync.sync({ src: 'http://myserver' });
 Parameters:
 
 - __event__: (String). Describes which event you want to subscribe to.
-    - __complete__: Fires when we have successfully downloaded from the source.
-    - __cancel__: Fires when we use sync.cancel();
     - __progress__: Fires when the native portion begins to download the content and returns progress updates.
+        - __data.progressLength__: (Integer) between 0 - 100.
+    - __complete__: Fires when we have successfully downloaded from the source.
     - __error__: Fires when an error occured.
+        - __e__: (Error) describes the error.
+    - __cancel__: Fires when we use sync.cancel();
 - __callback__: (Function). Triggered on the event.
 
 ## Contributing

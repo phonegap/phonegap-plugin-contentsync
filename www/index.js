@@ -58,7 +58,8 @@ var ContentSync = function(options) {
 
     //triggered on error
     var fail = function(msg) {
-        that.emit('error', msg);
+        var e = (typeof msg === 'string') ? new Error(msg) : msg;
+        that.emit('error', e);
     };
 
     // wait at least one process tick to allow event subscriptions
