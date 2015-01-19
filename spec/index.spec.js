@@ -101,13 +101,16 @@ describe('phonegap-plugin-contentsync', function() {
             });
         });
 
-        it('should emit the complete event on a success', function(done) {
-            execSpy.andCallFake(function(win, fail, service, id, args) {
-                win({});
-            });
-            var sync = contentSync.sync(options);
-            sync.on('complete', function() {
-                done();
+        describe('on "complete" event', function() {
+            it('should be emitted on success', function(done) {
+                execSpy.andCallFake(function(win, fail, service, id, args) {
+                    win();
+                });
+                var sync = contentSync.sync(options);
+                sync.on('complete', function(data) {
+                    expect(data).toBeUndefined();
+                    done();
+                });
             });
         });
 
@@ -150,14 +153,6 @@ describe('phonegap-plugin-contentsync', function() {
     });
 
     describe('.on', function() {
-        it('should support the event "complete"', function() {
-            var sync = contentSync.sync(options);
-            var completeWin = jasmine.createSpy(function() { console.log('i win'); });
-            sync.on('complete', completeWin);
-            sync.emit('complete');
-            expect(completeWin).toHaveBeenCalled();
-        });
-
         it('should support the event "cancel"', function() {
             var sync = contentSync.sync(options);
             var cancelCallback = jasmine.createSpy(function() { console.log('i cancel'); });

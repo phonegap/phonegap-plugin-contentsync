@@ -49,12 +49,10 @@ var ContentSync = function(options) {
     // triggered on update and completion
     var that = this;
     var success = function(result) {
-        if(typeof result !== 'undefined') {
-            if (typeof result.progressLength !== 'undefined') {
-                that.emit('progress', result);
-            } else {
-                that.emit('complete');
-            }
+        if (result && typeof result.progressLength !== 'undefined') {
+            that.emit('progress', result);
+        } else {
+            that.emit('complete');
         }
     };
 
