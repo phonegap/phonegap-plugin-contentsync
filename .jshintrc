@@ -26,6 +26,5 @@
     "supernew": false,
     "trailing": true,
     "undef": true,
-    "unused": true,
     "white": true
 }
