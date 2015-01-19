@@ -114,14 +114,17 @@ describe('phonegap-plugin-contentsync', function() {
             });
         });
 
-        it('should emit the error event on error', function(done) {
-            execSpy.andCallFake(function(win, fail, service, id, args) {
-                fail('something went wrong');
-            });
-            var sync = contentSync.sync(options);
-            sync.on('error', function(e) {
-                expect(e).toEqual('something went wrong');
-                done();
+        describe('on "error" event', function() {
+            it('should be emitted with an Error', function(done) {
+                execSpy.andCallFake(function(win, fail, service, id, args) {
+                    fail('something went wrong');
+                });
+                var sync = contentSync.sync(options);
+                sync.on('error', function(e) {
+                    expect(e).toEqual(jasmine.any(Error));
+                    expect(e.message).toEqual('something went wrong');
+                    done();
+                });
             });
         });
     });
@@ -159,14 +162,6 @@ describe('phonegap-plugin-contentsync', function() {
             sync.on('cancel', cancelCallback);
             sync.emit('cancel');
             expect(cancelCallback).toHaveBeenCalled();
-        });
-
-        it('should support the event "error"', function() {
-            var sync = contentSync.sync(options);
-            var errorCallback = jasmine.createSpy(function() { console.log('i error'); });
-            sync.on('error', errorCallback);
-            sync.emit('error');
-            expect(errorCallback).toHaveBeenCalled();
         });
     });
 });
