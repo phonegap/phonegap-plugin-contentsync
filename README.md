@@ -37,8 +37,8 @@ Parameters:
 
 - __options__: (Object)
     - __src__: (String) Remote destination to grab content.
-    - __type__: (String) Sets the merge strategy for new content. Optional.
-        - __replace:__ This is the normal behavior. Existing content is replaced completely by the imported content, i.e. is overridden or deleted accordingly.
+    - __[type]__: (String) Sets the merge strategy for new content. Optional.
+        - __replace:__ This is the normal behavior. Existing content is replaced completely by the imported content, i.e. is overridden or deleted accordingly. (Default)
         - __merge__: Existing content is not modified, i.e. only new content is added and none is deleted or modified.
         - __update__: Existing content is updated, new content is added and none is deleted.
 

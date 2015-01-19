@@ -58,7 +58,16 @@ describe('phonegap-plugin-contentsync', function() {
                 }, 100);
             });
 
-            // TODO add test for id
+            describe('options.src', function() {
+                it('should be passed to exec', function(done) {
+                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                        expect(args[0]).toEqual(options.src);
+                        done();
+                    });
+                    contentSync.sync(options);
+                });
+            });
+
             describe('options.type', function() {
                 it('should default to "replace"', function(done) {
                     execSpy.andCallFake(function(win, fail, service, id, args) {
@@ -68,7 +77,7 @@ describe('phonegap-plugin-contentsync', function() {
                     contentSync.sync(options);
                 });
 
-                it('should be set to whatever we specify', function(done) {
+                it('should be passed as whatever we specify', function(done) {
                     options.type = 'superduper';
                     execSpy.andCallFake(function(win, fail, service, id, args) {
                         expect(args[1]).toEqual(options.type);
