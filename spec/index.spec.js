@@ -15,15 +15,11 @@ var cordova = require('./helper/cordova'),
 describe('phonegap-plugin-contentsync', function() {
     beforeEach(function() {
         options = { src: 'http://path/to/src.zip' };
-        execSpy = spyOn(cordova.required, 'cordova/exec');
+        execWin = jasmine.createSpy();
+        execSpy = spyOn(cordova.required, 'cordova/exec').andCallFake(execWin);
     });
 
     describe('.sync', function() {
-        beforeEach(function() {
-            execWin = jasmine.createSpy();
-            execSpy.andCallFake(execWin);
-        });
-
         it('should require the options parameter', function() {
             expect(function() {
                 options = undefined;
@@ -44,23 +40,25 @@ describe('phonegap-plugin-contentsync', function() {
             var sync = contentSync.sync(options);
             expect(sync).toEqual(jasmine.any(contentSync.ContentSync));
         });
+    });
 
-        it('should delegate to cordova.exec', function(done) {
-            contentSync.sync(options);
-            setTimeout(function() {
-                expect(execSpy).toHaveBeenCalled();
-                expect(execSpy).toHaveBeenCalledWith(
-                    jasmine.any(Function),
-                    jasmine.any(Function),
-                    'Sync',
-                    'sync',
-                    jasmine.any(Object)
-                );
-                done();
-            }, 100);
-        });
-
+    describe('ContentSync instance', function() {
         describe('cordova.exec', function() {
+            it('should call cordova.exec on next process tick', function(done) {
+                contentSync.sync(options);
+                setTimeout(function() {
+                    expect(execSpy).toHaveBeenCalledWith(
+                        jasmine.any(Function),
+                        jasmine.any(Function),
+                        'Sync',
+                        'sync',
+                        jasmine.any(Object)
+                    );
+                    done();
+                }, 100);
+            });
+
+            // TODO add test for id
             describe('options.type', function() {
                 it('should default to "replace"', function(done) {
                     execSpy.andCallFake(function(win, fail, service, id, args) {
@@ -80,9 +78,7 @@ describe('phonegap-plugin-contentsync', function() {
                 });
             });
         });
-    });
 
-    describe('.sync callbacks', function(){
         it('should emit the complete event on a success', function(done) {
             execSpy.andCallFake(function(win, fail, service, id, args) {
                 win({});
