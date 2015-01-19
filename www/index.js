@@ -51,7 +51,7 @@ var ContentSync = function(options) {
     var success = function(result) {
         if(typeof result !== 'undefined') {
             if (typeof result.progressLength !== 'undefined') {
-                that.emit('progress', result.progressLength);
+                that.emit('progress', result);
             } else {
                 that.emit('complete');
             }

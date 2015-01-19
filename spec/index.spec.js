@@ -92,66 +92,35 @@ describe('phonegap-plugin-contentsync', function() {
 
     describe('.sync callbacks', function(){
         it('should emit the complete event on a success', function(done) {
-            execSpy.andCallFake(function(win, fail, service, id, args) { win( {} ); } );
+            execSpy.andCallFake(function(win, fail, service, id, args) {
+                win({});
+            });
             var sync = contentSync.sync(options);
-            var completeSpy = jasmine.createSpy( function() { console.log('i am winning!'); });
-
-            sync.on('complete', completeSpy);
-
-            setTimeout(function() {
-                expect(execSpy).toHaveBeenCalledWith(
-                    jasmine.any(Function),
-                    jasmine.any(Function),
-                    'Sync',
-                    'sync',
-                    jasmine.any(Object)
-                );
-                expect(completeSpy).toHaveBeenCalled();
-
+            sync.on('complete', function() {
                 done();
-            }, 100);
+            });
         });
 
         it('should emit the progress event on progress', function(done) {
-            execSpy.andCallFake(function(win, fail, service, id, args) { win( { 'progressLength' : 1 } ); } );
+            execSpy.andCallFake(function(win, fail, service, id, args) {
+                win({ 'progressLength': 1 });
+            });
             var sync = contentSync.sync(options);
-            var progressSpy = jasmine.createSpy( function() { console.log('i am progressing!'); });
-
-            sync.on('progress', progressSpy);
-
-            setTimeout(function() {
-                expect(execSpy).toHaveBeenCalledWith(
-                    jasmine.any(Function),
-                    jasmine.any(Function),
-                    'Sync',
-                    'sync',
-                    jasmine.any(Object)
-                );
-                expect(progressSpy).toHaveBeenCalled();
-
+            sync.on('progress', function(data) {
+                expect(data.progressLength).toEqual(1);
                 done();
-            }, 100);
+            });
         });
 
         it('should emit the error event on error', function(done) {
-            execSpy.andCallFake(function(win, fail, service, id, args) { fail( 'something went wrong' ); } );
+            execSpy.andCallFake(function(win, fail, service, id, args) {
+                fail('something went wrong');
+            });
             var sync = contentSync.sync(options);
-            var errorSpy = jasmine.createSpy( function() { console.log('i am error'); });
-
-            sync.on('error', errorSpy);
-
-            setTimeout(function() {
-                expect(execSpy).toHaveBeenCalledWith(
-                    jasmine.any(Function),
-                    jasmine.any(Function),
-                    'Sync',
-                    'sync',
-                    jasmine.any(Object)
-                );
-                expect(errorSpy).toHaveBeenCalled();
-
+            sync.on('error', function(e) {
+                expect(e).toEqual('something went wrong');
                 done();
-            }, 100);
+            });
         });
     });
 
@@ -170,18 +139,14 @@ describe('phonegap-plugin-contentsync', function() {
         });
 
         it('should emit the cancel event on cancel', function(done) {
-            execSpy.andCallFake(function(onCancel, fail, service, id, args) { onCancel(); } );
+            execSpy.andCallFake(function(onCancel, fail, service, id, args) {
+                onCancel();
+            });
             var sync = contentSync.sync(options);
-            var cancelSpy = jasmine.createSpy( function() { console.log('i am cancel'); });
-
-            sync.on('cancel', cancelSpy);
-            sync.cancel();
-
-            setTimeout(function() {
-                expect(cancelSpy).toHaveBeenCalled();
-
+            sync.on('cancel', function() {
                 done();
-            }, 100);
+            });
+            sync.cancel();
         });
     });
 
