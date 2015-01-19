@@ -26,14 +26,16 @@ describe('phonegap-plugin-contentsync', function() {
 
         it('should require the options parameter', function() {
             expect(function() {
-                contentSync.sync();
+                options = undefined;
+                contentSync.sync(options);
             }).toThrow();
             expect(execSpy).not.toHaveBeenCalled();
         });
 
         it('should require the options.src parameter', function() {
-            expect(function(){
-                contentSync.sync({ nimbly: 'bimbly' });
+            expect(function() {
+                options.src = undefined;
+                contentSync.sync(options);
             }).toThrow();
             expect(execSpy).not.toHaveBeenCalled();
         });
@@ -58,34 +60,24 @@ describe('phonegap-plugin-contentsync', function() {
             }, 100);
         });
 
-        describe('when cordova.exec called', function() {
-            it('should default options.type to "replace"', function(done) {
-                contentSync.sync(options);
-                setTimeout(function() {
-                    expect(execSpy).toHaveBeenCalledWith(
-                        jasmine.any(Function),
-                        jasmine.any(Function),
-                        'Sync',
-                        'sync',
-                        [options.src, 'replace']
-                    );
-                    done();
-                }, 100);
-            });
+        describe('cordova.exec', function() {
+            describe('options.type', function() {
+                it('should default to "replace"', function(done) {
+                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                        expect(args[1]).toEqual('replace');
+                        done();
+                    });
+                    contentSync.sync(options);
+                });
 
-            it('should set options.type to whatever we specify', function(done) {
-                options.type = 'superduper';
-                contentSync.sync(options);
-                setTimeout(function() {
-                    expect(execSpy).toHaveBeenCalledWith(
-                        jasmine.any(Function),
-                        jasmine.any(Function),
-                        'Sync',
-                        'sync',
-                        [options.src, 'superduper']
-                    );
-                    done();
-                }, 100);
+                it('should be set to whatever we specify', function(done) {
+                    options.type = 'superduper';
+                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                        expect(args[1]).toEqual(options.type);
+                        done();
+                    });
+                    contentSync.sync(options);
+                });
             });
         });
     });
