@@ -127,41 +127,35 @@ describe('phonegap-plugin-contentsync', function() {
                 });
             });
         });
-    });
 
-    describe('.cancel', function() {
-        it('should delegate to exec', function(done) {
-            var sync = contentSync.sync(options);
-            sync.cancel();
-            setTimeout(function() {
-                expect(execSpy).toHaveBeenCalled();
-                expect(execSpy.callCount).toEqual(2);
-                expect(execSpy.mostRecentCall.args).toEqual(
-                    [jasmine.any(Function), null, 'Sync', 'cancel', []]
-                );
-                done();
-            }, 100);
-        });
-
-        it('should emit the cancel event on cancel', function(done) {
-            execSpy.andCallFake(function(onCancel, fail, service, id, args) {
-                onCancel();
+        describe('.cancel()', function() {
+            it('should delegate to exec', function(done) {
+                var sync = contentSync.sync(options);
+                sync.cancel();
+                setTimeout(function() {
+                    expect(execSpy).toHaveBeenCalled();
+                    expect(execSpy.callCount).toEqual(2); // 1) sync, 2) cancel
+                    expect(execSpy.mostRecentCall.args).toEqual([
+                        jasmine.any(Function),
+                        jasmine.any(Function),
+                        'Sync',
+                        'cancel',
+                        []
+                    ]);
+                    done();
+                }, 100);
             });
-            var sync = contentSync.sync(options);
-            sync.on('cancel', function() {
-                done();
-            });
-            sync.cancel();
-        });
-    });
 
-    describe('.on', function() {
-        it('should support the event "cancel"', function() {
-            var sync = contentSync.sync(options);
-            var cancelCallback = jasmine.createSpy(function() { console.log('i cancel'); });
-            sync.on('cancel', cancelCallback);
-            sync.emit('cancel');
-            expect(cancelCallback).toHaveBeenCalled();
+            it('should emit the "cancel" event', function(done) {
+                execSpy.andCallFake(function(win, fail, service, id, args) {
+                    win();
+                });
+                var sync = contentSync.sync(options);
+                sync.on('cancel', function() {
+                    done();
+                });
+                sync.cancel();
+            });
         });
     });
 });

@@ -81,7 +81,7 @@ ContentSync.prototype.cancel = function() {
         that.emit('cancel');
     };
     setTimeout(function() {
-        exec(onCancel, null, 'Sync', 'cancel', []);
+        exec(onCancel, onCancel, 'Sync', 'cancel', []);
     }, 10);
 };
 
