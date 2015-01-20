@@ -49,5 +49,5 @@ Parameters:
     - __progress__: Fires when the native portion begins to download the content and returns progress updates.
     - __error__: Fires when an error occured. 
 
-[travis-ci-img]: https://travis-ci.org/phonegap/phonegap-plugin-contentsync?branch=master
+[travis-ci-img]: https://travis-ci.org/phonegap/phonegap-plugin-contentsync.png?branch=master
 [travis-ci-url]: http://travis-ci.org/phonegap/phonegap-plugin-contentsync
