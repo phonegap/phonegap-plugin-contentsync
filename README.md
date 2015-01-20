@@ -1,4 +1,4 @@
-phonegap-plugin-contentsync
+#phonegap-plugin-contentsync [![Build Status][travis-ci-img]][travis-ci-url]
 ===========================
 
 Greetings fellow keyboard masher, 
