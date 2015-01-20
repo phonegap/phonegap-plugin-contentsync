@@ -71,7 +71,7 @@ Parameters:
 
 - __event__: (String). Describes which event you want to subscribe to.
     - __progress__: Fires when the native portion begins to download the content and returns progress updates.
-        - __data.progress: (Integer) between 0 - 100.
+        - __data.progress__: (Integer) between 0 - 100.
     - __complete__: Fires when we have successfully downloaded from the source.
         - __data.localpath__ (String) is a file path to content that is usable by browser.
     - __error__: Fires when an error occured.
