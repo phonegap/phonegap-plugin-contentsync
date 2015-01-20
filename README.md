@@ -108,6 +108,6 @@ or on-edit linting.
 1. Sublime -> Preferences -> Package Settings -> JSHint Gutter
 1. Set `lint_on_load` and `lint_on_save` to `true`
 
-[travis-ci-img]: https://travis-ci.org/phonegap/phonegap-plugin-contentsync.png?branch=master
+[travis-ci-img]: https://travis-ci.org/phonegap/phonegap-plugin-contentsync.svg?branch=master
 [travis-ci-url]: http://travis-ci.org/phonegap/phonegap-plugin-contentsync
 
