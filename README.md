@@ -30,7 +30,7 @@ sync.on('progress', function(data) {
 });
 
 sync.on('complete', function(data) {
-    // data.location - browser-compatible path to the sync'd content
+    // data.localPath - browser-compatible path to the sync'd content
 });
 
 sync.on('error', function(e) {
@@ -73,6 +73,7 @@ Parameters:
     - __progress__: Fires when the native portion begins to download the content and returns progress updates.
         - __data.progress: (Integer) between 0 - 100.
     - __complete__: Fires when we have successfully downloaded from the source.
+        - __data.localpath__ (String) is a file path to content that is usable by browser.
     - __error__: Fires when an error occured.
         - __e__: (Error) describes the error.
     - __cancel__: Fires when we use sync.cancel();
