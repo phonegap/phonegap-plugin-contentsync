@@ -102,13 +102,25 @@ describe('phonegap-plugin-contentsync', function() {
         });
 
         describe('on "complete" event', function() {
-            it('should be emitted on success', function(done) {
+            beforeEach(function() {
                 execSpy.andCallFake(function(win, fail, service, id, args) {
-                    win();
+                    win({
+                        localPath: 'file:///path/to/content'
+                    });
                 });
+            });
+
+            it('should be emitted on success', function(done) {
                 var sync = contentSync.sync(options);
                 sync.on('complete', function(data) {
-                    expect(data).toBeUndefined();
+                    done();
+                });
+            });
+
+            it('should provide the data.localPath argument', function(done) {
+                var sync = contentSync.sync(options);
+                sync.on('complete', function(data) {
+                    expect(data.localPath).toEqual('file:///path/to/content');
                     done();
                 });
             });

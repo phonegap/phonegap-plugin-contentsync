@@ -52,7 +52,7 @@ var ContentSync = function(options) {
         if (result && typeof result.progress !== 'undefined') {
             that.emit('progress', result);
         } else {
-            that.emit('complete');
+            that.emit('complete', result);
         }
     };
 
