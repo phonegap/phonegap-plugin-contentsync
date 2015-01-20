@@ -1,5 +1,4 @@
 #phonegap-plugin-contentsync [![Build Status][travis-ci-img]][travis-ci-url]
-===========================
 
 Greetings fellow keyboard masher, 
 
@@ -50,3 +49,5 @@ Parameters:
     - __progress__: Fires when the native portion begins to download the content and returns progress updates.
     - __error__: Fires when an error occured. 
 
+[travis-ci-img]: https://travis-ci.org/phonegap/phonegap-plugin-contentsync?branch=master
+[travis-ci-url]: http://travis-ci.org/phonegap/phonegap-plugin-contentsync
