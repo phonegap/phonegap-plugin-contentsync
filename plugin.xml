@@ -11,7 +11,16 @@ xmlns:android="http://schemas.android.com/apk/res/android"
     <repo>https://github.com/phonegap/phonegap-plugin-contentsync</repo>
     <issue>https://github.com/phonegap/phonegap-plugin-contentsync/issues</issue>
 
-    <js-module src="www/index.js" name="File">
+    <js-module src="www/index.js" name="ContentSync">
         <clobbers target="window.ContentSync" />
     </js-module>
+
+	<platform name="wp8">
+		<config-file target="config.xml" parent="/*">
+			<feature name = "ContentSync">
+				<param name="wp-package" value = "ContentSync" />
+			</feature>
+		</config-file>
+		<source-file src="src/wp8/ContentSync.cs" />
+	</platform>
 </plugin>
