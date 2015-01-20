@@ -91,11 +91,11 @@ describe('phonegap-plugin-contentsync', function() {
         describe('on "progress" event', function() {
             it('should be emitted with an argument', function(done) {
                 execSpy.andCallFake(function(win, fail, service, id, args) {
-                    win({ 'progressLength': 1 });
+                    win({ 'progress': 1 });
                 });
                 var sync = contentSync.sync(options);
                 sync.on('progress', function(data) {
-                    expect(data.progressLength).toEqual(1);
+                    expect(data.progress).toEqual(1);
                     done();
                 });
             });
