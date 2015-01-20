@@ -24,8 +24,21 @@ Note: this plugin is still pretty new so expect some changes!
 
 ```javascript
 var sync = ContentSync.sync({ src: 'http://myserver' });
-sync.on('complete', function(result) {
-    alert('The saved content lives at: ' + result.location);
+
+sync.on('progress', function(data) {
+    // data.progressLength - Integer value representing progress precentage
+});
+
+sync.on('complete', function(data) {
+    // data.location - browser-compatible path to the sync'd content
+});
+
+sync.on('error', function(e) {
+    // e - Error object that describes the error
+});
+
+sync.on('cancel', function() {
+    // trigged if event is cancelled
 });
 ```
 
