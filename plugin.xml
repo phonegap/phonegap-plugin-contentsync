@@ -17,10 +17,10 @@ xmlns:android="http://schemas.android.com/apk/res/android"
 
 	<platform name="wp8">
 		<config-file target="config.xml" parent="/*">
-			<feature name = "ContentSync">
-				<param name="wp-package" value = "ContentSync" />
+			<feature name = "Sync">
+				<param name="wp-package" value = "Sync" />
 			</feature>
 		</config-file>
-		<source-file src="src/wp8/ContentSync.cs" />
+		<source-file src="src/wp8/Sync.cs" />
 	</platform>
 </plugin>
