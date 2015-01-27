@@ -86,6 +86,44 @@ describe('phonegap-plugin-contentsync', function() {
                     contentSync.sync(options);
                 });
             });
+
+            describe('options.headers', function() {
+                it('should default to null', function(done) {
+                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                        expect(args[2]).toEqual(null);
+                        done();
+                    });
+                    contentSync.sync(options);
+                });
+
+                it('should be passed as whatever we specify', function(done) {
+                    options.headers = { 'Authorization': 'SECRET_PASSWORD' };
+                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                        expect(args[2]).toEqual(options.headers);
+                        done();
+                    });
+                    contentSync.sync(options);
+                });
+            });
+
+            describe('options.id', function() {
+                it('should default to null', function(done) {
+                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                        expect(args[3]).toEqual(null);
+                        done();
+                    });
+                    contentSync.sync(options);
+                });
+
+                it('should be passed as whatever we specify', function(done) {
+                    options.id = '1234567890';
+                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                        expect(args[3]).toEqual(options.id);
+                        done();
+                    });
+                    contentSync.sync(options);
+                });
+            });
         });
 
         describe('on "progress" event', function() {

@@ -15,7 +15,8 @@ var exec = cordova.require('cordova/exec');
  *     @param {String} replace completely removes existing content then copies new content.
  *     @param {String} merge   does not modify existing content, but adds new content.
  *     @param {String} update  only updates existing content, but does not add or delete new content.
- *
+ *  @param {Object} headers are used to set the headers for when we send a request to the src URL
+ *  @param {String} id is used as a unique identifier for the sync operation
  * @return {ContentSync} instance that can be monitored and cancelled.
  */
 
@@ -46,6 +47,14 @@ var ContentSync = function(options) {
         options.type = 'replace';
     }
 
+    if (typeof options.headers === 'undefined') {
+        options.headers = null;
+    }
+
+    if (typeof options.id === 'undefined') {
+        options.id = null;
+    }
+
     // triggered on update and completion
     var that = this;
     var success = function(result) {
@@ -64,7 +73,7 @@ var ContentSync = function(options) {
 
     // wait at least one process tick to allow event subscriptions
     setTimeout(function() {
-        exec(success, fail, 'Sync', 'sync', [options.src, options.type]);
+        exec(success, fail, 'Sync', 'sync', [options.src, options.type, options.headers, options.id]);
     }, 10);
 };
 
