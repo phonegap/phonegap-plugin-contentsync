@@ -54,6 +54,8 @@ Parameters:
         - __replace:__ This is the normal behavior. Existing content is replaced completely by the imported content, i.e. is overridden or deleted accordingly. (Default)
         - __merge__: Existing content is not modified, i.e. only new content is added and none is deleted or modified.
         - __update__: Existing content is updated, new content is added and none is deleted.
+    -__headers__: (Object) Used to set the headers for when we send a request to the src URL
+    -__id__: (String) Used as a unique identifier for the sync operation
 
 Returns:
 
