@@ -215,20 +215,21 @@ namespace WPCordovaClassLib.Cordova.Commands
 
             try
             {
-                // source, target, trustAllHosts, this._id, headers
+                // options.src, options.type, options.headers, options.id
                 string[] optionStrings = JSON.JsonHelper.Deserialize<string[]>(options);
 
                 downloadOptions = new TransferOptions();
                 downloadOptions.Url = optionStrings[0];
-                downloadOptions.FilePath = "temp";
+                // this will need some tweaking as there are replacement strats and ids to consider
+                downloadOptions.FilePath = "aughhh/temp.txt";
 
                 bool trustAll = false;
                 //bool.TryParse(optionStrings[2],out trustAll);
                 downloadOptions.TrustAllHosts = trustAll;
 
-                downloadOptions.Id = "";
-                downloadOptions.Headers = "";
-                downloadOptions.CallbackId = callbackId = "";
+                downloadOptions.Id = Guid.NewGuid().ToString();
+                downloadOptions.Headers = optionStrings[3];
+                downloadOptions.CallbackId = callbackId = optionStrings[4];
             }
             catch (Exception)
             {
@@ -309,10 +310,11 @@ namespace WPCordovaClassLib.Cordova.Commands
                     }
 
                     //File.FileEntry entry = File.FileEntry.GetEntry(downloadOptions.FilePath);
-                    string entry = "Im download";
-                    if (entry != null)
+                    // this will require some tweaking 
+                    string result = "{ localPath: \"" + downloadOptions.FilePath + "\"}";
+                    if (result != null)
                     {
-                        DispatchCommandResult(new PluginResult(PluginResult.Status.OK, entry), callbackId);
+                        DispatchCommandResult(new PluginResult(PluginResult.Status.OK, result), callbackId);
                     }
                     else
                     {
@@ -410,7 +412,8 @@ namespace WPCordovaClassLib.Cordova.Commands
             // send a progress change event
             SyncProgress progEvent = new SyncProgress(bytesTotal);
             progEvent.BytesLoaded = bytesLoaded;
-            PluginResult plugRes = new PluginResult(PluginResult.Status.OK, progEvent);
+            string result = "{\"progress\":" + bytesLoaded + "}";
+            PluginResult plugRes = new PluginResult(PluginResult.Status.OK, result);
             plugRes.KeepCallback = keepCallback;
             plugRes.CallbackId = callbackId;
             DispatchCommandResult(plugRes, callbackId);
@@ -496,8 +499,8 @@ namespace WPCordovaClassLib.Cordova.Commands
                 else
                 {
                     //File.FileEntry entry = new File.FileEntry(reqState.options.FilePath);
-                    string entry = "i finish";
-                    DispatchCommandResult(new PluginResult(PluginResult.Status.OK, entry), callbackId);
+                    string result = "{ localPath: \"" + reqState.options.FilePath + "\"}";
+                    DispatchCommandResult(new PluginResult(PluginResult.Status.OK, result), callbackId);
                 }
             }
             catch (IsolatedStorageException)
@@ -566,69 +569,6 @@ namespace WPCordovaClassLib.Cordova.Commands
             if (InProcDownloads.ContainsKey(reqState.options.Id))
             {
                 InProcDownloads.Remove(reqState.options.Id);
-            }
-        }
-
-        /// <summary>
-        /// Reads response into FileUploadResult
-        /// </summary>
-        /// <param name="asynchronousResult"></param>
-        private void ReadCallback(IAsyncResult asynchronousResult)
-        {
-            DownloadRequestState reqState = (DownloadRequestState)asynchronousResult.AsyncState;
-            try
-            {
-                HttpWebRequest webRequest = reqState.request;
-                string callbackId = reqState.options.CallbackId;
-
-                if (InProcDownloads.ContainsKey(reqState.options.Id))
-                {
-                    InProcDownloads.Remove(reqState.options.Id);
-                }
-
-                using (HttpWebResponse response = (HttpWebResponse)webRequest.EndGetResponse(asynchronousResult))
-                {
-                    using (Stream streamResponse = response.GetResponseStream())
-                    {
-                        using (StreamReader streamReader = new StreamReader(streamResponse))
-                        {
-                            string responseString = streamReader.ReadToEnd();
-                            Deployment.Current.Dispatcher.BeginInvoke(() =>
-                            {
-                                DispatchCommandResult(new PluginResult(PluginResult.Status.OK, "hi"));
-                            });
-                            /*
-                            Deployment.Current.Dispatcher.BeginInvoke(() =>
-                            {
-                                DispatchCommandResult(new PluginResult(PluginResult.Status.OK, new FileUploadResult(bytesSent, (long)response.StatusCode, responseString)));
-                            });
-                            */
-                        }
-                    }
-                }
-            }
-            catch (WebException webex)
-            {
-                // TODO: probably need better work here to properly respond with all http status codes back to JS
-                // Right now am jumping through hoops just to detect 404.
-                if ((webex.Status == WebExceptionStatus.ProtocolError && ((HttpWebResponse)webex.Response).StatusCode == HttpStatusCode.NotFound)
-                    || webex.Status == WebExceptionStatus.UnknownError)
-                {
-                    int statusCode = (int)((HttpWebResponse)webex.Response).StatusCode;
-                    SyncError ftError = new SyncError(ConnectionError, null, null, statusCode);
-                    DispatchCommandResult(new PluginResult(PluginResult.Status.ERROR, ftError), reqState.options.CallbackId);
-                }
-                else
-                {
-                    DispatchCommandResult(new PluginResult(PluginResult.Status.ERROR,
-                                                           new SyncError(ConnectionError)),
-                                          reqState.options.CallbackId);
-                }
-            }
-            catch (Exception /*ex*/)
-            {
-                SyncError transferError = new SyncError(ConnectionError, reqState.options.Server, reqState.options.FilePath, 403);
-                DispatchCommandResult(new PluginResult(PluginResult.Status.ERROR, transferError), reqState.options.CallbackId);
             }
         }
 
