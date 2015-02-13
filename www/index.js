@@ -66,7 +66,7 @@ var ContentSync = function(options) {
     var success = function(result) {
         if (result && typeof result.progress !== 'undefined') {
             that.emit('progress', result);
-        } else {
+        } else if (result && typeof result.localPath !== 'undefined') {
             that.emit('complete', result);
         }
     };
