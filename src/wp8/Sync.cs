@@ -220,14 +220,12 @@ namespace WPCordovaClassLib.Cordova.Commands
 
                 downloadOptions = new TransferOptions();
                 downloadOptions.Url = optionStrings[0];
-                // this will need some tweaking as there are replacement strats and ids to consider
-                downloadOptions.FilePath = "aughhh/temp.txt";
 
                 bool trustAll = false;
-                //bool.TryParse(optionStrings[2],out trustAll);
                 downloadOptions.TrustAllHosts = trustAll;
 
-                downloadOptions.Id = Guid.NewGuid().ToString();
+                downloadOptions.Id = (Guid.NewGuid().ToString()).Replace("-", "");
+                downloadOptions.FilePath = "/" + downloadOptions.Id + "/app.zip";
                 downloadOptions.Headers = optionStrings[3];
                 downloadOptions.CallbackId = callbackId = optionStrings[4];
             }
@@ -239,6 +237,7 @@ namespace WPCordovaClassLib.Cordova.Commands
 
             try
             {
+                // not sure if we still need this 
                 // is the URL a local app file?
                 if (downloadOptions.Url.StartsWith("x-wmapp0") || downloadOptions.Url.StartsWith("file:"))
                 {
@@ -309,9 +308,7 @@ namespace WPCordovaClassLib.Cordova.Commands
                         }
                     }
 
-                    //File.FileEntry entry = File.FileEntry.GetEntry(downloadOptions.FilePath);
-                    // this will require some tweaking 
-                    string result = "{ localPath: \"" + downloadOptions.FilePath + "\"}";
+                    string result = "{ \"localPath\": \"" + downloadOptions.FilePath + "\" , \"Id\" : \"" + downloadOptions.Id + "\"}";
                     if (result != null)
                     {
                         DispatchCommandResult(new PluginResult(PluginResult.Status.OK, result), callbackId);
@@ -498,8 +495,7 @@ namespace WPCordovaClassLib.Cordova.Commands
                 }
                 else
                 {
-                    //File.FileEntry entry = new File.FileEntry(reqState.options.FilePath);
-                    string result = "{ localPath: \"" + reqState.options.FilePath + "\"}";
+                    string result = "{ \"localPath\": \"" + reqState.options.FilePath + "\" , \"Id\" : \"" + reqState.options.Id + "\"}";
                     DispatchCommandResult(new PluginResult(PluginResult.Status.OK, result), callbackId);
                 }
             }
