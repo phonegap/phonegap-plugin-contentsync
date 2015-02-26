@@ -225,7 +225,7 @@ namespace WPCordovaClassLib.Cordova.Commands
                 downloadOptions.TrustAllHosts = trustAll;
 
                 downloadOptions.Id = (Guid.NewGuid().ToString()).Replace("-", "");
-                downloadOptions.FilePath = "/" + downloadOptions.Id + "/app.zip";
+                downloadOptions.FilePath = "/" + downloadOptions.Id + "/test.txt";
                 downloadOptions.Headers = optionStrings[3];
                 downloadOptions.CallbackId = callbackId = optionStrings[4];
             }
@@ -495,6 +495,8 @@ namespace WPCordovaClassLib.Cordova.Commands
                 }
                 else
                 {
+                    UnZip unzipper = new UnZip();
+                    unzipper.unzip(reqState.options.FilePath, "www/myapp");
                     string result = "{ \"localPath\": \"" + reqState.options.FilePath + "\" , \"Id\" : \"" + reqState.options.Id + "\"}";
                     DispatchCommandResult(new PluginResult(PluginResult.Status.OK, result), callbackId);
                 }
