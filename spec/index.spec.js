@@ -80,7 +80,7 @@ describe('phonegap-plugin-contentsync', function() {
                 it('should be passed to exec', function(done) {
                     options.id = '1234567890';
                     execSpy.andCallFake(function(win, fail, service, id, args) {
-                        expect(args[3]).toEqual(options.id);
+                        expect(args[1]).toEqual(options.id);
                         done();
                     });
                     contentSync.sync(options);
@@ -90,7 +90,7 @@ describe('phonegap-plugin-contentsync', function() {
             describe('options.type', function() {
                 it('should default to "replace"', function(done) {
                     execSpy.andCallFake(function(win, fail, service, id, args) {
-                        expect(args[1]).toEqual('replace');
+                        expect(args[2]).toEqual('replace');
                         done();
                     });
                     contentSync.sync(options);
@@ -99,7 +99,7 @@ describe('phonegap-plugin-contentsync', function() {
                 it('should be passed as whatever we specify', function(done) {
                     options.type = 'superduper';
                     execSpy.andCallFake(function(win, fail, service, id, args) {
-                        expect(args[1]).toEqual(options.type);
+                        expect(args[2]).toEqual(options.type);
                         done();
                     });
                     contentSync.sync(options);
@@ -109,7 +109,7 @@ describe('phonegap-plugin-contentsync', function() {
             describe('options.headers', function() {
                 it('should default to null', function(done) {
                     execSpy.andCallFake(function(win, fail, service, id, args) {
-                        expect(args[2]).toEqual(null);
+                        expect(args[3]).toEqual(null);
                         done();
                     });
                     contentSync.sync(options);
@@ -118,7 +118,7 @@ describe('phonegap-plugin-contentsync', function() {
                 it('should be passed as whatever we specify', function(done) {
                     options.headers = { 'Authorization': 'SECRET_PASSWORD' };
                     execSpy.andCallFake(function(win, fail, service, id, args) {
-                        expect(args[2]).toEqual(options.headers);
+                        expect(args[3]).toEqual(options.headers);
                         done();
                     });
                     contentSync.sync(options);
