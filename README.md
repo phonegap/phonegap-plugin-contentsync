@@ -80,6 +80,19 @@ Parameters:
     - __cancel__: Fires when we use sync.cancel();
 - __callback__: (Function). Triggered on the event.
 
+#### ContentSync.cancel()
+
+Cancels the content sync operation and fires the error callback.
+
+```
+var sync = ContentSync.sync({ src: 'http://myserver/app/1', id: 'app-1' });
+
+sync.on('error', function(e) {
+});
+
+sync.cancel();
+```
+
 ## Running Tests
 
     $ npm test
