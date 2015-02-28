@@ -58,9 +58,8 @@ var ContentSync = function(options) {
         options.headers = null;
     }
 
-    if (typeof options.id === 'undefined') {
-        options.id = null;
-    }
+    // store the options to this object instance
+    this.options = options;
 
     // triggered on update and completion
     var that = this;
@@ -97,7 +96,7 @@ ContentSync.prototype.cancel = function() {
         that.emit('cancel');
     };
     setTimeout(function() {
-        exec(onCancel, onCancel, 'Sync', 'cancel', []);
+        exec(onCancel, onCancel, 'Sync', 'cancel', [ that.options.id ]);
     }, 10);
 };
 

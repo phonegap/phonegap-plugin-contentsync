@@ -190,7 +190,7 @@ describe('phonegap-plugin-contentsync', function() {
                         jasmine.any(Function),
                         'Sync',
                         'cancel',
-                        []
+                        [ options.id ]
                     ]);
                     done();
                 }, 100);
