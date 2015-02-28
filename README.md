@@ -87,7 +87,8 @@ Cancels the content sync operation and fires the error callback.
 ```
 var sync = ContentSync.sync({ src: 'http://myserver/app/1', id: 'app-1' });
 
-sync.on('error', function(e) {
+sync.on('cancel', function(e) {
+    console.log('content sync was cancelled');
 });
 
 sync.cancel();
