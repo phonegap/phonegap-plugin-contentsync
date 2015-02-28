@@ -54,7 +54,7 @@ Parameters:
     - __[type]__: (String) Sets the merge strategy for new content. Optional.
         - __replace:__ This is the normal behavior. Existing content is replaced completely by the imported content, i.e. is overridden or deleted accordingly. (Default)
         - __merge__: Add and update existing content with new content.
-    - __headers__: (Object) Used to set the headers for when we send a request to the src URL
+    - __[headers]__: (Object) Used to set the headers for when we send a request to the src URL. Optional.
 
 Returns:
 

@@ -11,12 +11,11 @@ var exec = cordova.require('cordova/exec');
  *
  * @param {Object} options to initiate a new content synchronization.
  *   @param {String} src is a URL to the content sync end-point.
+ *   @param {String} id is used as a unique identifier for the sync operation
  *   @param {Object} type defines the sync strategy applied to the contnet.
  *     @param {String} replace completely removes existing content then copies new content.
  *     @param {String} merge   does not modify existing content, but adds new content.
- *     @param {String} update  only updates existing content, but does not add or delete new content.
- *  @param {Object} headers are used to set the headers for when we send a request to the src URL
- *  @param {String} id is used as a unique identifier for the sync operation
+ *   @param {Object} headers are used to set the headers for when we send a request to the src URL
  * @return {ContentSync} instance that can be monitored and cancelled.
  */
 
@@ -28,9 +27,19 @@ var ContentSync = function(options) {
         'complete': []
     };
 
-    // requires src parameter
-    if (typeof options === 'undefined' || typeof options.src === 'undefined') {
-        throw new Error('An options object with a src property is needed');
+    // require options parameter
+    if (typeof options === 'undefined') {
+        throw new Error('The options argument is required.');
+    }
+
+    // require options.src parameter
+    if (typeof options.src === 'undefined') {
+        throw new Error('The options.src argument is required.');
+    }
+
+    // require options.id parameter
+    if (typeof options.id === 'undefined') {
+        throw new Error('The options.id argument is required.');
     }
 
     // define synchronization strategy
@@ -40,8 +49,6 @@ var ContentSync = function(options) {
     //              deleted accordingly.
     //     merge:   Existing content is not modified, i.e. only new content is
     //              added and none is deleted or modified.
-    //     update:  Existing content is updated, new content is added and none
-    //              is deleted.
     //
     if (typeof options.type === 'undefined') {
         options.type = 'replace';
