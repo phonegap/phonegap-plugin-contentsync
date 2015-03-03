@@ -12,6 +12,6 @@ xmlns:android="http://schemas.android.com/apk/res/android"
     <issue>https://github.com/phonegap/phonegap-plugin-contentsync/issues</issue>
 
     <js-module src="www/index.js" name="File">
-        <clobbers target="window.sync" />
+        <clobbers target="window.ContentSync" />
     </js-module>
 </plugin>
