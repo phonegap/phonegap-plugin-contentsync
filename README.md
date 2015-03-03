@@ -23,7 +23,7 @@ Note: this plugin is still pretty new so expect some changes!
 ### Example
 
 ```javascript
-var sync = ContentSync.sync({ src: 'http://myserver' });
+var sync = ContentSync.sync({ src: 'http://myserver/app/1', id: 'app-1' });
 
 sync.on('progress', function(data) {
     // data.progress - Integer value representing progress precentage
@@ -50,12 +50,11 @@ Parameters:
 
 - __options__: (Object)
     - __src__: (String) Remote destination to grab content.
+    - __id__: (String) Used as a unique identifier for the sync operation
     - __[type]__: (String) Sets the merge strategy for new content. Optional.
         - __replace:__ This is the normal behavior. Existing content is replaced completely by the imported content, i.e. is overridden or deleted accordingly. (Default)
-        - __merge__: Existing content is not modified, i.e. only new content is added and none is deleted or modified.
-        - __update__: Existing content is updated, new content is added and none is deleted.
-    -__headers__: (Object) Used to set the headers for when we send a request to the src URL
-    -__id__: (String) Used as a unique identifier for the sync operation
+        - __merge__: Add and update existing content with new content.
+    - __[headers]__: (Object) Used to set the headers for when we send a request to the src URL. Optional.
 
 Returns:
 
@@ -64,7 +63,7 @@ Returns:
 Example:
 
 ```
-var sync = ContentSync.sync({ src: 'http://myserver' });
+var sync = ContentSync.sync({ src: 'http://myserver/app/1', id: 'app-1' });
 ```
 
 ### ContentSync.on(event, callback)
@@ -80,6 +79,24 @@ Parameters:
         - __e__: (Error) describes the error.
     - __cancel__: Fires when we use sync.cancel();
 - __callback__: (Function). Triggered on the event.
+
+#### ContentSync.cancel()
+
+Cancels the content sync operation and fires the error callback.
+
+```
+var sync = ContentSync.sync({ src: 'http://myserver/app/1', id: 'app-1' });
+
+sync.on('cancel', function(e) {
+    console.log('content sync was cancelled');
+});
+
+sync.cancel();
+```
+
+## Running Tests
+
+    $ npm test
 
 ## Contributing
 
