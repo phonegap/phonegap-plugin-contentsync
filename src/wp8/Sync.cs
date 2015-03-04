@@ -625,6 +625,12 @@ namespace WPCordovaClassLib.Cordova.Commands
         {
             using (IsolatedStorageFile isoFile = IsolatedStorageFile.GetUserStoreForApplication())
             {
+                string directoryName = getDirectoryName(destURL);
+                if (!string.IsNullOrEmpty(directoryName) && !isoFile.DirectoryExists(directoryName))
+                {
+                    isoFile.CreateDirectory(directoryName);
+                }
+
                 Uri uri = new Uri(srcURL, UriKind.RelativeOrAbsolute);
                 Uri relUri = new Uri(uri.AbsolutePath, UriKind.Relative);
                 var resource = Application.GetResourceStream(relUri);

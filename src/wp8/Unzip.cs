@@ -91,10 +91,10 @@ namespace WPCordovaClassLib.Cordova.Commands
                             // flatten the file path since the zip will always include its original filename
                             string flattenPath = filename.Substring(filename.IndexOf("/"));
                             string destFilePath = destPath + flattenPath;
-                            
+
                             string directoryName = getDirectoryName(destFilePath);
 
-                            Debug.WriteLine("upacking file : " + filename + " to : " + destFilePath);
+                            //Debug.WriteLine("upacking file : " + filename + " to : " + destFilePath);
 
                             if (!appStorage.DirectoryExists(directoryName))
                             {
