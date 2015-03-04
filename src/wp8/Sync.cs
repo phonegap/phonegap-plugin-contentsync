@@ -225,7 +225,7 @@ namespace WPCordovaClassLib.Cordova.Commands
                 downloadOptions.TrustAllHosts = trustAll;
 
                 downloadOptions.Id = (Guid.NewGuid().ToString()).Replace("-", "");
-                downloadOptions.FilePath = "/" + downloadOptions.Id + "/test.txt";
+                downloadOptions.FilePath = downloadOptions.Id;
                 downloadOptions.Headers = optionStrings[3];
                 downloadOptions.CallbackId = callbackId = optionStrings[4];
             }
@@ -496,7 +496,9 @@ namespace WPCordovaClassLib.Cordova.Commands
                 else
                 {
                     UnZip unzipper = new UnZip();
-                    unzipper.unzip(reqState.options.FilePath, "www/myapp");
+                    string destFilePath = "www/" + reqState.options.FilePath;
+                    unzipper.unzip(reqState.options.FilePath, destFilePath);
+                    copyCordovaAssets(destFilePath);
                     string result = "{ \"localPath\": \"" + reqState.options.FilePath + "\" , \"Id\" : \"" + reqState.options.Id + "\"}";
                     DispatchCommandResult(new PluginResult(PluginResult.Status.OK, result), callbackId);
                 }
@@ -583,6 +585,99 @@ namespace WPCordovaClassLib.Cordova.Commands
                 directoryName = "";
             }
             return directoryName;
+        }
+
+        private void copyCordovaAssets(string destFilePath)
+        {
+            copyCordovaPlugins("x-wmapp0:www/cordova.js", destFilePath + "/cordova.js");
+            copyCordovaPlugins("x-wmapp0:www/cordova_plugins.js", destFilePath + "/cordova_plugins.js");
+
+            Uri uri = new Uri("x-wmapp0:www/cordova_plugins.js", UriKind.RelativeOrAbsolute);
+            Uri relUri = new Uri(uri.AbsolutePath, UriKind.Relative);
+            var resource = Application.GetResourceStream(relUri);
+
+            using (StreamReader streamReader = new StreamReader(resource.Stream))
+            {
+                // have to parse cordova_plugins.js to find all the file paths - kinda messy
+                string cordovaPluginsText = streamReader.ReadToEnd();
+                string parsedCordovaPlugins = cordovaPluginsText;
+                string[] result;
+                string[] jsonSepOne = new string[] { "module.exports=" };
+                string[] jsonSepTwo = new string[] { ";module.exports.metadata" };
+
+                parsedCordovaPlugins = parsedCordovaPlugins.Replace(" ", "");
+                parsedCordovaPlugins = parsedCordovaPlugins.Replace("\n", "");
+
+                result = parsedCordovaPlugins.Split(jsonSepOne, StringSplitOptions.RemoveEmptyEntries);
+                result = result[1].Split(jsonSepTwo, StringSplitOptions.RemoveEmptyEntries);
+                cordova_plugin[] pluginsJSON = JSON.JsonHelper.Deserialize<cordova_plugin[]>(result[0]);
+
+                for(var i=0;i<pluginsJSON.Length;i++)
+                {
+                    Debug.WriteLine("x-wmapp0:www/" + pluginsJSON[i].file + " to " + destFilePath + "/" + pluginsJSON[i].file);
+                    copyCordovaPlugins("x-wmapp0:www/" + pluginsJSON[i].file, destFilePath + "/" + pluginsJSON[i].file);
+                }
+            }
+
+        }
+
+        private void copyCordovaPlugins(string srcURL, string destURL)
+        {
+            using (IsolatedStorageFile isoFile = IsolatedStorageFile.GetUserStoreForApplication())
+            {
+                Uri uri = new Uri(srcURL, UriKind.RelativeOrAbsolute);
+                Uri relUri = new Uri(uri.AbsolutePath, UriKind.Relative);
+                var resource = Application.GetResourceStream(relUri);
+
+                if (resource != null)
+                {
+                    // create the file destination
+                    if (!isoFile.FileExists(destURL))
+                    {
+                        var destFile = isoFile.CreateFile(destURL);
+                        destFile.Close();
+                    }
+
+                    using (FileStream fileStream = new IsolatedStorageFileStream(destURL, FileMode.Open, FileAccess.Write, isoFile))
+                    {
+                        long totalBytes = resource.Stream.Length;
+                        int bytesRead = 0;
+                        using (BinaryReader reader = new BinaryReader(resource.Stream))
+                        {
+                            using (BinaryWriter writer = new BinaryWriter(fileStream))
+                            {
+                                int BUFFER_SIZE = 1024;
+                                byte[] buffer;
+
+                                Debug.WriteLine("Copying url : " + srcURL + " to : " + destURL);
+                                while (true)
+                                {
+                                    buffer = reader.ReadBytes(BUFFER_SIZE);
+                                    // fire a progress event ?
+                                    bytesRead += buffer.Length;
+                                    if (buffer.Length > 0)
+                                    {
+                                        writer.Write(buffer);
+                                    }
+                                    else
+                                    {
+                                        writer.Close();
+                                        reader.Close();
+                                        fileStream.Close();
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public class cordova_plugin
+        {
+            public string file;
+            public string id;
         }
     }
 }
