@@ -224,7 +224,7 @@ namespace WPCordovaClassLib.Cordova.Commands
                 bool trustAll = false;
                 downloadOptions.TrustAllHosts = trustAll;
 
-                downloadOptions.Id = (Guid.NewGuid().ToString()).Replace("-", "");
+                downloadOptions.Id = optionStrings[1];
                 downloadOptions.FilePath = downloadOptions.Id;
                 downloadOptions.Headers = optionStrings[3];
                 downloadOptions.CallbackId = callbackId = optionStrings[4];
@@ -237,7 +237,7 @@ namespace WPCordovaClassLib.Cordova.Commands
 
             try
             {
-                // not sure if we still need this 
+                // not sure if we still need this
                 // is the URL a local app file?
                 if (downloadOptions.Url.StartsWith("x-wmapp0") || downloadOptions.Url.StartsWith("file:"))
                 {
