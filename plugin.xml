@@ -33,5 +33,13 @@ xmlns:android="http://schemas.android.com/apk/res/android"
 
         <source-file src="src/wp8/Sync.cs" />
         <source-file src="src/wp8/Unzip.cs" />
+    <platform name="ios">
+        <source-file src="src/ios/ContentSync.m" />
+        <header-file src="src/ios/ContentSync.h" />
+        <config-file target="config.xml" parent="/*">
+            <feature name="Sync">
+                <param name="ios-package" value="CDVContentSync" />
+            </feature>
+        </config-file>
     </platform>
 </plugin>
