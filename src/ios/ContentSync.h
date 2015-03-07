@@ -1,7 +1,8 @@
 #import <Foundation/Foundation.h>
 #import <Cordova/CDVPlugin.h>
+#import "SSZipArchive.h"
 
-@interface CDVContentSync : CDVPlugin <NSURLSessionDelegate, NSURLSessionTaskDelegate, NSURLSessionDownloadDelegate> {
+@interface CDVContentSync : CDVPlugin <NSURLSessionDelegate, NSURLSessionTaskDelegate, NSURLSessionDownloadDelegate, SSZipArchiveDelegate> {
     @private CDVInvokedUrlCommand* _command;
 }
 @property (nonatomic) NSURLSession* session;

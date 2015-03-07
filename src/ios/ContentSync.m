@@ -38,7 +38,7 @@
         double progress = (double)totalBytesWritten / (double)totalBytesExpectedToWrite;
         NSLog(@"DownloadTask: %@ progress: %lf callbackId: %@", downloadTask, progress, self->_command.callbackId);
         NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:1];
-        [message setObject:[NSNumber numberWithDouble:progress] forKey:@"progress"];
+        [message setObject:[NSNumber numberWithDouble:(progress / 2)] forKey:@"progress"];
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
     }
     [pluginResult setKeepCallbackAsBool:YES];
@@ -46,23 +46,54 @@
 }
 
 - (void) URLSession:(NSURLSession*)session downloadTask:(NSURLSessionDownloadTask*)downloadTask didFinishDownloadingToURL:(NSURL *)downloadURL {
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    NSArray *URLs = [fileManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask];
-    NSURL *documentsDirectory = [URLs objectAtIndex:0];
+        
+        CDVPluginResult* pluginResult = nil;
+        NSString* id = [self->_command.arguments objectAtIndex:1];
+        [pluginResult setKeepCallbackAsBool:YES];
+        
+        NSLog(@"Download URL %@", downloadURL);
     
-    NSURL *originalURL = [[downloadTask originalRequest] URL];
-    NSURL *destinationURL = [documentsDirectory URLByAppendingPathComponent:[originalURL lastPathComponent]];
-    NSError *errorCopy;
+        NSFileManager *fileManager = [NSFileManager defaultManager];
+        NSArray *URLs = [fileManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask];
+        NSURL *documentsDirectory = [URLs objectAtIndex:0];
+
+        NSURL *originalURL = [[downloadTask originalRequest] URL];
+        NSURL *sourceURL = [documentsDirectory URLByAppendingPathComponent:[originalURL lastPathComponent]];
+        NSError *errorCopy;
+
+        [fileManager removeItemAtURL:sourceURL error:NULL];
+        BOOL success = [fileManager copyItemAtURL:downloadURL toURL:sourceURL error:&errorCopy];
     
-    [fileManager removeItemAtURL:destinationURL error:NULL];
+        @try {
+            if(success) {
+                NSURL *extractURL = [documentsDirectory URLByAppendingPathComponent:id];
+                NSError *error;
+                if([SSZipArchive unzipFileAtPath:[sourceURL path] toDestination:[extractURL path] overwrite:YES password:nil error:&error delegate:self]) {
+                    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:[extractURL path]];
+                } else {
+                    NSLog(@"Sync Failed - %@", [error localizedDescription]);
+                    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Sync Failed"];
+                }
+            } else {
+                NSLog(@"Sync Failed - Copy Failed - %@", [errorCopy localizedDescription]);
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Sync Failed"];
+            }
+        }
+        @catch (NSException *exception) {
+            NSLog(@"Sync Failed - %@", [exception debugDescription]);
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Sync Failed"];
+        }
+        
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:self->_command.callbackId];
+}
+
+- (void) zipArchiveProgressEvent:(NSInteger)loaded total:(NSInteger)total {
+    NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:1];
+    [message setObject:[NSNumber numberWithDouble:(0.5 + ( ((double)loaded / (double)total) ) / 2)] forKey:@"progress"];
     
-    BOOL success = [fileManager copyItemAtURL:downloadURL toURL:destinationURL error:&errorCopy];
-    
-    if(success) {
-        NSLog(@"Download complete at %@!", destinationURL);
-    } else {
-        NSLog(@"Download failed!");
-    }
+    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+    [pluginResult setKeepCallbackAsBool:YES];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:self->_command.callbackId];
 }
 
 - (void) URLSession:(NSURLSession*)session task:(NSURLSessionTask*)task didCompleteWithError:(NSError *)error {
