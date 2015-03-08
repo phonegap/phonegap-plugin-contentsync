@@ -30,6 +30,9 @@ xmlns:android="http://schemas.android.com/apk/res/android"
 				<param name="wp-package" value = "Sync" />
 			</feature>
 		</config-file>
+        <config-file target="AndroidManifest.xml" parent="/*">
+            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+        </config-file>
 		<source-file src="src/wp8/Sync.cs" />
 	</platform>
 </plugin>
