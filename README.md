@@ -38,7 +38,7 @@ sync.on('error', function(e) {
 });
 
 sync.on('cancel', function() {
-    // trigged if event is cancelled
+    // triggered if event is cancelled
 });
 ```
 

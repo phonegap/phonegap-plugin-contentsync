@@ -12,7 +12,7 @@ var exec = cordova.require('cordova/exec');
  * @param {Object} options to initiate a new content synchronization.
  *   @param {String} src is a URL to the content sync end-point.
  *   @param {String} id is used as a unique identifier for the sync operation
- *   @param {Object} type defines the sync strategy applied to the contnet.
+ *   @param {Object} type defines the sync strategy applied to the content.
  *     @param {String} replace completely removes existing content then copies new content.
  *     @param {String} merge   does not modify existing content, but adds new content.
  *   @param {Object} headers are used to set the headers for when we send a request to the src URL
@@ -86,7 +86,7 @@ var ContentSync = function(options) {
 /**
  * Cancel the Content Sync
  *
- * After successfully cancelling the content sync process, the `cancel` event
+ * After successfully canceling the content sync process, the `cancel` event
  * will be emitted.
  */
 
@@ -111,7 +111,7 @@ ContentSync.prototype.cancel = function() {
  *   - completion
  *
  * @param {String} eventName to subscribe to.
- * @param {Function} callback trigged on the event.
+ * @param {Function} callback triggered on the event.
  */
 
 ContentSync.prototype.on = function(eventName, callback) {
@@ -128,7 +128,7 @@ ContentSync.prototype.on = function(eventName, callback) {
  * @param {String} eventName is the event to trigger.
  * @param {*} all arguments are passed to the event listeners.
  *
- * @return {Boolean} is true when the event is trigged otherwise false.
+ * @return {Boolean} is true when the event is triggered otherwise false.
  */
 
 ContentSync.prototype.emit = function() {
