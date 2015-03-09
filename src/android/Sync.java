@@ -55,6 +55,7 @@ import android.util.Log;
 import android.webkit.CookieManager;
 
 public class Sync extends CordovaPlugin {
+	private static final String PROP_LOCAL_PATH = "localPath";
 	private static final String STATUS_DOWNLOADING = "downloading";
 	private static final String PROP_STATUS = "status";
 	private static final String PROP_PROGRESS = "progress";
@@ -99,25 +100,15 @@ public class Sync extends CordovaPlugin {
         		headers = new JSONObject();
         	}
         	Log.d(LOG_TAG, "sync called with id = " + id + " and src = " + src + "!");
-        	sync(src, id, type, headers, callbackContext);
+
+        	download(src, id, type, headers, callbackContext);
+
             return true;
         } else if (action.equals("cancel")) {
         	Log.d(LOG_TAG, "not implemented, yet");
         }
         return false;
     }
-
-	private void sync(String src, String id, String type, JSONObject headers, CallbackContext callbackContext) throws JSONException {
-		// TODO download
-		download(src, id, headers, callbackContext);
-		// TODO unzip
-		// TODO copy
-
-		// complete
-//		JSONObject result = new JSONObject();
-//		result.put("localPath", "done");
-//        callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, result));
-	}
 
 	/**
      * Adds an interface method to an InputStream to return the number of bytes
@@ -189,7 +180,7 @@ public class Sync extends CordovaPlugin {
         }
     }
 
-	private void download(final String source, final String id, final JSONObject headers, final CallbackContext callbackContext) {
+	private void download(final String source, final String id, final String type, final JSONObject headers, final CallbackContext callbackContext) {
         Log.d(LOG_TAG, "download " + source);
 
         final CordovaResourceApi resourceApi = webView.getResourceApi();
@@ -224,7 +215,7 @@ public class Sync extends CordovaPlugin {
                     OpenForReadResult readResult = null;
 
                     File outputDir = cordova.getActivity().getCacheDir();
-                    file = File.createTempFile("prefix", "extension", outputDir);
+                    file = File.createTempFile(id, ".tmp", outputDir);
                     final Uri targetUri = resourceApi.remapUri(Uri.fromFile(file));
 
 
@@ -325,11 +316,13 @@ public class Sync extends CordovaPlugin {
                                 progressResult.setKeepCallback(true);
                                 context.sendPluginResult(progressResult);
                             }
+
+                            unzip(context.targetFile, id, type, callbackContext);
+
                         } finally {
                             synchronized (context) {
                                 context.connection = null;
                             }
-                            Log.d(LOG_TAG, "file size = " + file.length());
                             safeClose(inputStream);
                             safeClose(outputStream);
                         }
@@ -371,11 +364,26 @@ public class Sync extends CordovaPlugin {
                     if (!cached && result.getStatus() != PluginResult.Status.OK.ordinal() && file != null) {
                         file.delete();
                     }
-                    //context.sendPluginResult(result);
                 }
             }
         });
     }
+
+	private void unzip(final File targetFile, final String id, String type, final CallbackContext callbackContext) throws JSONException {
+		Log.d(LOG_TAG, "downloaded = " + targetFile.getAbsolutePath());
+
+		// TODO unzip
+
+		// TODO copy
+
+		// delete temp file
+		targetFile.delete();
+
+		// complete
+		JSONObject result = new JSONObject();
+		result.put(PROP_LOCAL_PATH, "done");
+        callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, result));
+	}
 
 	private static TrackingInputStream getInputStream(URLConnection conn) throws IOException {
         String encoding = conn.getContentEncoding();
