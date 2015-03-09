@@ -45,9 +45,7 @@ import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaResourceApi;
 import org.apache.cordova.CordovaResourceApi.OpenForReadResult;
-import org.apache.cordova.PluginManager;
 import org.apache.cordova.PluginResult;
-import org.apache.cordova.Whitelist;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -57,6 +55,9 @@ import android.util.Log;
 import android.webkit.CookieManager;
 
 public class Sync extends CordovaPlugin {
+	private static final String STATUS_DOWNLOADING = "downloading";
+	private static final String PROP_STATUS = "status";
+	private static final String PROP_PROGRESS = "progress";
 	// Type
 	private static final String TYPE_REPLACE = "replace";
 	private static final String TYPE_MERGE = "merge";
@@ -106,11 +107,16 @@ public class Sync extends CordovaPlugin {
         return false;
     }
 
-	private void sync(String src, String id, String type, JSONObject headers, CallbackContext callbackContext) {
+	private void sync(String src, String id, String type, JSONObject headers, CallbackContext callbackContext) throws JSONException {
 		// TODO download
 		download(src, id, headers, callbackContext);
 		// TODO unzip
 		// TODO copy
+
+		// complete
+//		JSONObject result = new JSONObject();
+//		result.put("localPath", "done");
+//        callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, result));
 	}
 
 	/**
@@ -307,7 +313,15 @@ public class Sync extends CordovaPlugin {
                                 outputStream.write(buffer, 0, bytesRead);
                                 // Send a progress event.
                                 progress.setLoaded(inputStream.getTotalRawBytesRead());
-                                PluginResult progressResult = new PluginResult(PluginResult.Status.OK, progress.toJSONObject());
+
+                                // compute progress
+                                JSONObject jsonProgress = new JSONObject();
+                                double loaded = progress.getLoaded();
+                                double total = progress.getTotal();
+                                double percentage = Math.floor((loaded / total * 100) / 2);
+                                jsonProgress.put(PROP_PROGRESS, percentage);
+                                jsonProgress.put(PROP_STATUS, STATUS_DOWNLOADING);
+                                PluginResult progressResult = new PluginResult(PluginResult.Status.OK, jsonProgress);
                                 progressResult.setKeepCallback(true);
                                 context.sendPluginResult(progressResult);
                             }
