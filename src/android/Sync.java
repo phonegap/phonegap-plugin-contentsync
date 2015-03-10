@@ -14,9 +14,11 @@
 
 package com.adobe.phonegap.contentsync;
 
+import java.io.BufferedInputStream;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,6 +31,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.Inflater;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipInputStream;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -55,6 +60,7 @@ import android.util.Log;
 import android.webkit.CookieManager;
 
 public class Sync extends CordovaPlugin {
+	private static final String STATUS_INSTALLING = "installing";
 	private static final String PROP_LOCAL_PATH = "localPath";
 	private static final String STATUS_DOWNLOADING = "downloading";
 	private static final String PROP_STATUS = "status";
@@ -225,12 +231,12 @@ public class Sync extends CordovaPlugin {
                     Log.d(LOG_TAG, "Target file:" + file);
                     Log.d(LOG_TAG, "size = " + file.length());
 
-                    FileProgressResult progress = new FileProgressResult();
+                    ProgressEvent progress = new ProgressEvent();
+                    progress.setStatus(STATUS_DOWNLOADING);
 
                     if (isLocalTransfer) {
                         readResult = resourceApi.openForRead(sourceUri);
                         if (readResult.length != -1) {
-                            progress.setLengthComputable(true);
                             progress.setTotal(readResult.length);
                         }
                         inputStream = new SimpleTrackingInputStream(readResult.inputStream);
@@ -278,7 +284,6 @@ public class Sync extends CordovaPlugin {
                                 // Only trust content-length header if we understand
                                 // the encoding -- identity or gzip
                                 if (connection.getContentLength() != -1) {
-                                    progress.setLengthComputable(true);
                                     progress.setTotal(connection.getContentLength());
                                 }
                             }
@@ -305,16 +310,7 @@ public class Sync extends CordovaPlugin {
                                 // Send a progress event.
                                 progress.setLoaded(inputStream.getTotalRawBytesRead());
 
-                                // compute progress
-                                JSONObject jsonProgress = new JSONObject();
-                                double loaded = progress.getLoaded();
-                                double total = progress.getTotal();
-                                double percentage = Math.floor((loaded / total * 100) / 2);
-                                jsonProgress.put(PROP_PROGRESS, percentage);
-                                jsonProgress.put(PROP_STATUS, STATUS_DOWNLOADING);
-                                PluginResult progressResult = new PluginResult(PluginResult.Status.OK, jsonProgress);
-                                progressResult.setKeepCallback(true);
-                                context.sendPluginResult(progressResult);
+                                updateProgress(callbackContext, progress);
                             }
 
                             unzip(context.targetFile, id, type, callbackContext);
@@ -372,16 +368,21 @@ public class Sync extends CordovaPlugin {
 	private void unzip(final File targetFile, final String id, String type, final CallbackContext callbackContext) throws JSONException {
 		Log.d(LOG_TAG, "downloaded = " + targetFile.getAbsolutePath());
 
-		// TODO unzip
-
-		// TODO copy
+		// unzip
+		String outputDirectory = cordova.getActivity().getFilesDir().getAbsolutePath();
+		outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
+		outputDirectory += id;
+		Log.d(LOG_TAG, "output dir = " + outputDirectory);
+		// TODO if output dir exists make a backup
+		unzipSync(targetFile, outputDirectory, callbackContext);
 
 		// delete temp file
 		targetFile.delete();
+		// TODO delete backup if exists
 
 		// complete
 		JSONObject result = new JSONObject();
-		result.put(PROP_LOCAL_PATH, "done");
+		result.put(PROP_LOCAL_PATH, getUriForArg(outputDirectory));
         callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, result));
 	}
 
@@ -494,4 +495,193 @@ public class Sync extends CordovaPlugin {
             return true;
         }
     };
+
+    /* Unzip code */
+
+    // Can't use DataInputStream because it has the wrong endian-ness.
+    private static int readInt(InputStream is) throws IOException {
+        int a = is.read();
+        int b = is.read();
+        int c = is.read();
+        int d = is.read();
+        return a | b << 8 | c << 16 | d << 24;
+    }
+
+    private boolean unzipSync(File targetFile, String outputDirectory, CallbackContext callbackContext) {
+    	Log.d(LOG_TAG, "unzipSync called");
+    	Log.d(LOG_TAG, "zip = " + targetFile.getAbsolutePath());
+        InputStream inputStream = null;
+        ZipFile zip = null;
+        boolean anyEntries = false;
+        try {
+        	zip = new ZipFile(targetFile);
+            // Since Cordova 3.3.0 and release of File plugins, files are accessed via cdvfile://
+            // Accept a path or a URI for the source zip.
+            Uri zipUri = getUriForArg(targetFile.getAbsolutePath());
+            Uri outputUri = getUriForArg(outputDirectory);
+
+            CordovaResourceApi resourceApi = webView.getResourceApi();
+
+            File tempFile = resourceApi.mapUriToFile(zipUri);
+            if (tempFile == null || !tempFile.exists()) {
+                String errorMessage = "Zip file does not exist";
+                callbackContext.error(errorMessage);
+                Log.e(LOG_TAG, errorMessage);
+                return false;
+            }
+
+            File outputDir = resourceApi.mapUriToFile(outputUri);
+            outputDirectory = outputDir.getAbsolutePath();
+            outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
+            if (outputDir == null || (!outputDir.exists() && !outputDir.mkdirs())){
+                String errorMessage = "Could not create output directory";
+                callbackContext.error(errorMessage);
+                Log.e(LOG_TAG, errorMessage);
+                return false;
+            }
+
+            OpenForReadResult zipFile = resourceApi.openForRead(zipUri);
+            ProgressEvent progress = new ProgressEvent();
+            progress.setStatus(STATUS_INSTALLING);
+            progress.setTotal(zip.size());
+            Log.d(LOG_TAG, "zip file len = " + zip.size());
+
+            inputStream = new BufferedInputStream(zipFile.inputStream);
+            inputStream.mark(10);
+            int magic = readInt(inputStream);
+
+            if (magic != 875721283) { // CRX identifier
+                inputStream.reset();
+            } else {
+                // CRX files contain a header. This header consists of:
+                //  * 4 bytes of magic number
+                //  * 4 bytes of CRX format version,
+                //  * 4 bytes of public key length
+                //  * 4 bytes of signature length
+                //  * the public key
+                //  * the signature
+                // and then the ordinary zip data follows. We skip over the header before creating the ZipInputStream.
+                readInt(inputStream); // version == 2.
+                int pubkeyLength = readInt(inputStream);
+                int signatureLength = readInt(inputStream);
+
+                inputStream.skip(pubkeyLength + signatureLength);
+            }
+
+            // The inputstream is now pointing at the start of the actual zip file content.
+            ZipInputStream zis = new ZipInputStream(inputStream);
+            inputStream = zis;
+
+            ZipEntry ze;
+            byte[] buffer = new byte[32 * 1024];
+
+            while ((ze = zis.getNextEntry()) != null)
+            {
+                anyEntries = true;
+                String compressedName = ze.getName();
+
+                if (ze.isDirectory()) {
+                   File dir = new File(outputDirectory + compressedName);
+                   dir.mkdirs();
+                } else {
+                    File file = new File(outputDirectory + compressedName);
+                    file.getParentFile().mkdirs();
+                    if(file.exists() || file.createNewFile()){
+                        Log.w(LOG_TAG, "extracting: " + file.getPath());
+                        FileOutputStream fout = new FileOutputStream(file);
+                        int count;
+                        while ((count = zis.read(buffer)) != -1)
+                        {
+                            fout.write(buffer, 0, count);
+                        }
+                        fout.close();
+                    }
+
+                }
+                progress.addLoaded(1);
+                updateProgress(callbackContext, progress);
+                zis.closeEntry();
+            }
+
+            // final progress = 100%
+//            progress.setLoaded(progress.getTotal());
+//            updateProgress(callbackContext, progress);
+        } catch (Exception e) {
+            String errorMessage = "An error occurred while unzipping.";
+            callbackContext.error(errorMessage);
+            Log.e(LOG_TAG, errorMessage, e);
+        } finally {
+            if (inputStream != null) {
+                try {
+                    inputStream.close();
+                } catch (IOException e) {
+                }
+            }
+            if (zip != null) {
+            	try {
+            		zip.close();
+            	} catch (IOException e) {
+                }
+            }
+        }
+
+        if (anyEntries)
+            return true;
+        else
+            return false;
+    }
+
+    private void updateProgress(CallbackContext callbackContext, ProgressEvent progress) throws JSONException {
+        PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, progress.toJSONObject());
+        pluginResult.setKeepCallback(true);
+        callbackContext.sendPluginResult(pluginResult);
+    }
+
+    private Uri getUriForArg(String arg) {
+        CordovaResourceApi resourceApi = webView.getResourceApi();
+        Uri tmpTarget = Uri.parse(arg);
+        return resourceApi.remapUri(
+                tmpTarget.getScheme() != null ? tmpTarget : Uri.fromFile(new File(arg)));
+    }
+
+    private static class ProgressEvent {
+        private long loaded;
+        private long total;
+        private String status;
+        public long getLoaded() {
+            return loaded;
+        }
+        public void setLoaded(long loaded) {
+            this.loaded = loaded;
+        }
+        public void addLoaded(long add) {
+            this.loaded += add;
+        }
+        public long getTotal() {
+            return total;
+        }
+        public void setTotal(long total) {
+            this.total = total;
+        }
+        public String getStatus() {
+			return status;
+		}
+		public void setStatus(String status) {
+			this.status = status;
+		}
+		public JSONObject toJSONObject() throws JSONException {
+			JSONObject jsonProgress = new JSONObject();
+			double loaded = this.getLoaded();
+			double total = this.getTotal();
+			double percentage = Math.floor((loaded / total * 100) / 2);
+			// if we are installing then add 50% done
+			if (this.getStatus() == STATUS_INSTALLING) {
+				percentage += 50;
+			}
+			jsonProgress.put(PROP_PROGRESS, percentage);
+			jsonProgress.put(PROP_STATUS, this.getStatus());
+			return jsonProgress;
+
+        }
+    }
 }
