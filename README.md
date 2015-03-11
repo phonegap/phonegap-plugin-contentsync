@@ -1,40 +1,37 @@
 #phonegap-plugin-contentsync [![Build Status][travis-ci-img]][travis-ci-url]
 
-Greetings fellow keyboard masher,
+> Download and cache remotely hosted content.
 
-This is a PhoneGap plugin that allows you to retrieve
-a PhoneGap app being served from a server and as well as
-being able to easily update that app.
-
-Note: this plugin is still pretty new so expect some changes!
+_This plugin is a work in progress and it is not production ready._
 
 ## Installation
 
-`phonegap plugin add https://github.com/phonegap/phonegap-plugin-contentsync`
+```
+phonegap plugin add https://github.com/phonegap/phonegap-plugin-contentsync
+```
 
 ## Supported Platforms
 
-- iOS (in the works)
-- Android (in the works)
-- WP8 (in the works)
+- Android
+- iOS
+- WP8
 
-## ContentSync
 
-### Example
+## Quick Example
 
 ```javascript
-var sync = ContentSync.sync({ src: 'http://myserver/app/1', id: 'app-1' });
+var sync = ContentSync.sync({ src: 'http://myserver/assets/movie-1', id: 'movie-1' });
 
 sync.on('progress', function(data) {
-    // data.progress - Integer value representing progress precentage
+    // data.progress
 });
 
 sync.on('complete', function(data) {
-    // data.localPath - browser-compatible path to the sync'd content
+    // data.localPath
 });
 
 sync.on('error', function(e) {
-    // e - Error object that describes the error
+    // e.message
 });
 
 sync.on('cancel', function() {
@@ -42,61 +39,127 @@ sync.on('cancel', function() {
 });
 ```
 
-### API
+## API
 
-#### sync(options)
+### ContentSync.sync(options)
 
-Parameters:
+Parameter | Description
+--------- | ------------
+`options.src` | `String` URL to the remotely hosted content.
+`options.id` | `String` Unique identifer to reference the cached content.
+`options.type` | `String` _(Optional)_ Defines the copy strategy for the cached content.<br/>The type `replace` is the default behaviour that deletes the old content and caches the new content.<br/> The type `merge` will add the new content to the existing content. This will replace existing files, add new files, but never delete files.
+`options.headers` | `Object` _(Optional)_ Set of headers to use when requesting the remote content from `options.src`.
 
-- __options__: (Object)
-    - __src__: (String) Remote destination to grab content.
-    - __id__: (String) Used as a unique identifier for the sync operation
-    - __[type]__: (String) Sets the merge strategy for new content. Optional.
-        - __replace:__ This is the normal behavior. Existing content is replaced completely by the imported content, i.e. is overridden or deleted accordingly. (Default)
-        - __merge__: Add and update existing content with new content.
-    - __[headers]__: (Object) Used to set the headers for when we send a request to the src URL. Optional.
-
-Returns:
+#### Returns
 
 - Instance of `ContentSync`.
 
-Example:
+#### Example
 
-```
+```javascript
 var sync = ContentSync.sync({ src: 'http://myserver/app/1', id: 'app-1' });
 ```
 
-### ContentSync.on(event, callback)
+### sync.on(event, callback)
 
-Parameters:
+Parameter | Description
+--------- | ------------
+`event` | `String` Name of the event to listen to. See below for all the event names.
+`callback` | `Function` is called when the event is triggered.
 
-- __event__: (String). Describes which event you want to subscribe to.
-    - __progress__: Fires when the native portion begins to download the content and returns progress updates.
-        - __data.progress__: (Integer) between 0 - 100.
-    - __complete__: Fires when we have successfully downloaded from the source.
-        - __data.localpath__ (String) is a file path to content that is usable by browser.
-    - __error__: Fires when an error occured.
-        - __e__: (Error) describes the error.
-    - __cancel__: Fires when we use sync.cancel();
-- __callback__: (Function). Triggered on the event.
+### sync.on('progress', callback)
 
-#### ContentSync.cancel()
+The event `progress` will be triggered on each update as the native platform downloads and caches the content.
 
-Cancels the content sync operation and fires the error callback.
+Callback Parameter | Description
+------------------ | -----------
+`data.progress` | `Integer` Progress percentage between `0 - 100`. The progress includes all actions required to cache the remote content locally. This is different on each platform, but often includes requesting, downloading, and extracting the cached content along with any system cleanup tasks.
+`data.status` | `String` Briefly describes the current task status, such as "Downloading" or "Extracting"
 
+#### Example
+
+```javascript
+sync.on('progress', function(data) {
+    // data.progress
+    // data.status
+});
 ```
+
+### sync.on('complete', callback)
+
+The event `complete` will be triggered when the content has been successfully cached onto the device.
+
+Callback Parameter | Description
+------------------ | -----------
+`data.localPath` | `String` The file path to the cached content. The file path will be different on each platform and may be relative or absolute. However, it is guaraneteed to be a compatible reference in the browser.
+
+#### Example
+
+```javascript
+sync.on('complete', function(data) {
+    // data.localPath
+});
+```
+
+### sync.on('error', callback)
+
+The event `error` will trigger when an internal error occurs and the cache is aborted.
+
+Callback Parameter | Description
+------------------ | -----------
+`e` | `Error` Standard JavaScript error object that describes the error.
+
+#### Example
+
+```javascript
+sync.on('error', function(e) {
+    // e.message
+});
+```
+
+### sync.on('cancel', callback)
+
+The event `cancel` will trigger when `sync.cancel` is called.
+
+Callback Parameter | Description
+------------------ | -----------
+`no parameters` |
+
+#### Example
+
+```javascript
+sync.on('cancel', function() {
+    // user cancelled the sync operation
+});
+```
+
+#### sync.cancel()
+
+Cancels the content sync operation and triggers the cancel callback.
+
+```javascript
 var sync = ContentSync.sync({ src: 'http://myserver/app/1', id: 'app-1' });
 
-sync.on('cancel', function(e) {
+sync.on('cancel', function() {
     console.log('content sync was cancelled');
 });
 
 sync.cancel();
 ```
 
+## Native Requirements
+
+- There should be no dependency on the existing File or FileTransfer plugins.
+- The native cached file path should be uniquely identifiable with the `id` parameter. This will allow the Content Sync plugin to lookup the file path at a later time using the `id` parameter.
+- The first version of the plugin assumes that all cached content is downloaded as a compressed ZIP. The native implementation must properly extract content and clean up any temporary files, such as the downloaded zip.
+- The locally compiled Cordova web assets should be copied to the cached content. This includes `cordova.js`, `cordova_plugins.js`, and `plugins/**/*`.
+- Multiple syncs should be supported at the same time.
+
 ## Running Tests
 
-    $ npm test
+```
+npm test
+```
 
 ## Contributing
 
@@ -129,4 +192,3 @@ or on-edit linting.
 
 [travis-ci-img]: https://travis-ci.org/phonegap/phonegap-plugin-contentsync.svg?branch=master
 [travis-ci-url]: http://travis-ci.org/phonegap/phonegap-plugin-contentsync
-
