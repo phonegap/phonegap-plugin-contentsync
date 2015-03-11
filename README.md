@@ -6,7 +6,9 @@ _This plugin is a work in progress and it is not production ready._
 
 ## Installation
 
-`phonegap plugin add https://github.com/phonegap/phonegap-plugin-contentsync`
+```
+phonegap plugin add https://github.com/phonegap/phonegap-plugin-contentsync
+```
 
 ## Supported Platforms
 
@@ -62,39 +64,80 @@ var sync = ContentSync.sync({ src: 'http://myserver/app/1', id: 'app-1' });
 
 Parameter | Description
 --------- | ------------
-`event` | `String` Name of the event to listen to.<br/>The event `progress` will trigger on each update as the native platform downloads and caches the content.<br/>The event `complete` will trigger when the content has been successfully cached onto the device.<br/>The event `error` will trigger when an internal error occurs and the cache is aborted.<br/>The event `cancel` will trigger when `sync.cancel` is called.
+`event` | `String` Name of the event to listen to. See below for all the event names.
 `callback` | `Function` is called when the event is triggered.
 
-#### Event: `progress`
+### sync.on('progress', callback)
+
+The event `progress` will be triggered on each update as the native platform downloads and caches the content.
 
 Callback Parameter | Description
 ------------------ | -----------
 `data.progress` | `Integer` Progress percentage between `0 - 100`. The progress includes all actions required to cache the remote content locally. This is different on each platform, but often includes requesting, downloading, and extracting the cached content along with any system cleanup tasks.
 `data.status` | `String` Briefly describes the current task status, such as "Downloading" or "Extracting"
 
-#### Event: `complete`
+#### Example
+
+```javascript
+sync.on('progress', function(data) {
+    // data.progress
+    // data.status
+});
+```
+
+### sync.on('complete', callback)
+
+The event `complete` will be triggered when the content has been successfully cached onto the device.
 
 Callback Parameter | Description
 ------------------ | -----------
 `data.localPath` | `String` The file path to the cached content. The file path will be different on each platform and may be relative or absolute. However, it is guaraneteed to be a compatible reference in the browser.
 
-#### Event: `error`
+#### Example
+
+```javascript
+sync.on('complete', function(data) {
+    // data.localPath
+});
+```
+
+### sync.on('error', callback)
+
+The event `error` will trigger when an internal error occurs and the cache is aborted.
 
 Callback Parameter | Description
 ------------------ | -----------
 `e` | `Error` Standard JavaScript error object that describes the error.
 
-#### Event: `cancel`
+#### Example
+
+```javascript
+sync.on('error', function(e) {
+    // e.message
+});
+```
+
+### sync.on('cancel', callback)
+
+The event `cancel` will trigger when `sync.cancel` is called.
 
 Callback Parameter | Description
 ------------------ | -----------
 `no parameters` |
 
+#### Example
+
+```javascript
+sync.on('cancel', function() {
+    // user cancelled the sync operation
+});
+```
+
 #### sync.cancel()
 
-Cancels the content sync operation and fires the cancel callback.
+Cancels the content sync operation and triggers the cancel callback.
 
-```
+```javascript
 var sync = ContentSync.sync({ src: 'http://myserver/app/1', id: 'app-1' });
 
 sync.on('cancel', function() {
@@ -114,7 +157,9 @@ sync.cancel();
 
 ## Running Tests
 
-    $ npm test
+```
+npm test
+```
 
 ## Contributing
 
