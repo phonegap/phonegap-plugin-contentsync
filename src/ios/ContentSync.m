@@ -1,5 +1,19 @@
 #import "ContentSync.h"
 
+
+@implementation CDVContentSyncTask
+
+- (CDVContentSyncTask *)init {
+    self = (CDVContentSyncTask*)[super init];
+    if(self) {
+        self.downloadTask = nil;
+        self.command = nil;
+    }
+    
+    return self;
+}
+@end
+
 @implementation CDVContentSync
 
 - (void)pluginInitialize {
@@ -8,7 +22,6 @@
 
 - (void)sync:(CDVInvokedUrlCommand*)command
 {
-    self->_command = command;
     CDVPluginResult* pluginResult = nil;
     NSString* src = [command.arguments objectAtIndex:0];
 
@@ -16,10 +29,23 @@
         NSLog(@"Downloading and unzipping from %@", src);
         NSURL *downloadURL = [NSURL URLWithString:src];
         NSURLRequest *request = [NSURLRequest requestWithURL:downloadURL];
-        self.downloadTask = [self.session downloadTaskWithRequest:request];
-        [self.downloadTask resume];
-        NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:1];
+        
+        if(!self.syncTasks) {
+            self.syncTasks = [NSMutableArray arrayWithCapacity:1];
+        }
+        NSURLSessionDownloadTask *downloadTask = [self.session downloadTaskWithRequest:request];
+        
+        CDVContentSyncTask* sData = [[CDVContentSyncTask alloc] init];
+        
+        sData.downloadTask = downloadTask;
+        sData.command = command;
+        
+        [self.syncTasks addObject:sData];
+        
+        [downloadTask resume];
+        NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
         [message setObject:[NSNumber numberWithDouble:0.00] forKey:@"progress"];
+        [message setObject:@"download" forKey:@"status"];
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
     } else {
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Arg was null"];
@@ -30,47 +56,61 @@
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
+- (CDVContentSyncTask *)findSyncData:(NSURLSessionDownloadTask*)downloadTask {
+    for(CDVContentSyncTask* sTask in self.syncTasks) {
+        if(sTask.downloadTask == downloadTask || [sTask.archivePath isEqualToString:[self currentPath]]) {
+            return sTask;
+        }
+    }
+    return nil;
+}
+
 - (void)URLSession:(NSURLSession*)session downloadTask:(NSURLSessionDownloadTask *)downloadTask didWriteData:(int64_t)bytesWritten totalBytesWritten:(int64_t)totalBytesWritten totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite {
     
     CDVPluginResult* pluginResult = nil;
     
-    if(downloadTask == self.downloadTask) {
+    CDVContentSyncTask* sTask = [self findSyncData:downloadTask];
+    
+    if(sTask) {
         double progress = (double)totalBytesWritten / (double)totalBytesExpectedToWrite;
-        NSLog(@"DownloadTask: %@ progress: %lf callbackId: %@", downloadTask, progress, self->_command.callbackId);
-        NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:1];
+//        NSLog(@"DownloadTask: %@ progress: %lf callbackId: %@", downloadTask, progress, sTask.command.callbackId);
+        NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
         [message setObject:[NSNumber numberWithDouble:(progress / 2)] forKey:@"progress"];
+        [message setObject:@"download" forKey:@"status"];
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
     }
     [pluginResult setKeepCallbackAsBool:YES];
-    [self.commandDelegate sendPluginResult:pluginResult callbackId:self->_command.callbackId];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
 }
 
 - (void) URLSession:(NSURLSession*)session downloadTask:(NSURLSessionDownloadTask*)downloadTask didFinishDownloadingToURL:(NSURL *)downloadURL {
-        
+    
+    CDVContentSyncTask* sTask = [self findSyncData:downloadTask];
+    
+    if(sTask) {
         CDVPluginResult* pluginResult = nil;
-        NSString* id = [self->_command.arguments objectAtIndex:1];
+        NSString* id = [sTask.command.arguments objectAtIndex:1];
         [pluginResult setKeepCallbackAsBool:YES];
         
         NSLog(@"Download URL %@", downloadURL);
-    
+        
         NSFileManager *fileManager = [NSFileManager defaultManager];
         NSArray *URLs = [fileManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask];
         NSURL *documentsDirectory = [URLs objectAtIndex:0];
-
+        
         NSURL *originalURL = [[downloadTask originalRequest] URL];
         NSURL *sourceURL = [documentsDirectory URLByAppendingPathComponent:[originalURL lastPathComponent]];
         NSError *errorCopy;
-
+        
         [fileManager removeItemAtURL:sourceURL error:NULL];
         BOOL success = [fileManager copyItemAtURL:downloadURL toURL:sourceURL error:&errorCopy];
-    
+        
         @try {
             if(success) {
                 NSURL *extractURL = [documentsDirectory URLByAppendingPathComponent:id];
+                sTask.archivePath = [sourceURL path];
                 NSError *error;
-                if([SSZipArchive unzipFileAtPath:[sourceURL path] toDestination:[extractURL path] overwrite:YES password:nil error:&error delegate:self]) {
-                    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:[extractURL path]];
-                } else {
+                if(![SSZipArchive unzipFileAtPath:[sourceURL path] toDestination:[extractURL path] overwrite:YES password:nil error:&error delegate:self]) {
                     NSLog(@"Sync Failed - %@", [error localizedDescription]);
                     pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Sync Failed"];
                 }
@@ -84,40 +124,66 @@
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Sync Failed"];
         }
         
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:self->_command.callbackId];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
+    }
+}
+
+- (void)zipArchiveWillUnzipArchiveAtPath:(NSString *)path zipInfo:(unz_global_info)zipInfo {
+    self.currentPath = path;
 }
 
 - (void) zipArchiveProgressEvent:(NSInteger)loaded total:(NSInteger)total {
-    NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:1];
-    [message setObject:[NSNumber numberWithDouble:(0.5 + ( ((double)loaded / (double)total) ) / 2)] forKey:@"progress"];
-    
-    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
-    [pluginResult setKeepCallbackAsBool:YES];
-    [self.commandDelegate sendPluginResult:pluginResult callbackId:self->_command.callbackId];
+    CDVContentSyncTask* sTask = [self findSyncData:nil];
+    NSLog(@"unzipping %ld", (long)(loaded / total));
+    if(sTask) {
+        NSLog(@"Updating progress %ld", (long)(loaded / total));
+        NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
+        [message setObject:[NSNumber numberWithDouble:(0.5 + ( ((double)loaded / (double)total) ) / 2)] forKey:@"progress"];
+        [message setObject:@"unzip" forKey:@"status"];
+        
+        CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+        [pluginResult setKeepCallbackAsBool:YES];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
+    }
+}
+
+- (void) zipArchiveDidUnzipArchiveAtPath:(NSString *)path zipInfo:(unz_global_info)zipInfo unzippedPath:(NSString *)unzippedPath {
+    CDVContentSyncTask* sTask = [self findSyncData:nil];
+    if(sTask) {
+        CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:unzippedPath];
+        [pluginResult setKeepCallbackAsBool:NO];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
+        [[self syncTasks] removeObject:sTask];
+    }
 }
 
 - (void) URLSession:(NSURLSession*)session task:(NSURLSessionTask*)task didCompleteWithError:(NSError *)error {
-    CDVPluginResult* pluginResult = nil;
-    [pluginResult setKeepCallbackAsBool:YES];
     
-    if(error == nil) {
-        NSLog(@"Task: %@ completed successfully", task);
-        double progress = (double)task.countOfBytesReceived / (double)task.countOfBytesExpectedToReceive;
-        NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:1];
-        [message setObject:[NSNumber numberWithDouble:progress] forKey:@"progress"];
-        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
-    } else {
-        NSLog(@"Task: %@ completed with error: %@", task, [error localizedDescription]);
-        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:[error localizedDescription]];
+    CDVContentSyncTask* sTask = [self findSyncData:(NSURLSessionDownloadTask*)task];
+    
+    if(sTask) {
+        CDVPluginResult* pluginResult = nil;
+        [pluginResult setKeepCallbackAsBool:YES];
+        
+        if(error == nil) {
+            NSLog(@"Task: %@ completed successfully", task);
+            double progress = (double)task.countOfBytesReceived / (double)task.countOfBytesExpectedToReceive;
+            NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:1];
+            [message setObject:[NSNumber numberWithDouble:progress] forKey:@"progress"];
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+        } else {
+            NSLog(@"Task: %@ completed with error: %@", task, [error localizedDescription]);
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:[error localizedDescription]];
+        }
+        
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
     }
-    
-    [self.commandDelegate sendPluginResult:pluginResult callbackId:self->_command.callbackId];
 }
 
 - (void)URLSessionDidFinishEventsForBackgroundURLSession:(NSURLSession *)session {
-    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    
-    [self.commandDelegate sendPluginResult:pluginResult callbackId:self->_command.callbackId];
+//    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+//    
+//    [self.commandDelegate sendPluginResult:pluginResult callbackId:self->_command.callbackId];
     NSLog(@"All tasks are finished");
 }
 

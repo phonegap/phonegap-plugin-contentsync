@@ -2,11 +2,19 @@
 #import <Cordova/CDVPlugin.h>
 #import "SSZipArchive.h"
 
-@interface CDVContentSync : CDVPlugin <NSURLSessionDelegate, NSURLSessionTaskDelegate, NSURLSessionDownloadDelegate, SSZipArchiveDelegate> {
-    @private CDVInvokedUrlCommand* _command;
-}
+@interface CDVContentSyncTask: NSObject
+
+@property (nonatomic) CDVInvokedUrlCommand* command;
+@property (nonatomic) NSURLSessionDownloadTask* downloadTask;
+@property (nonatomic) NSString* archivePath;
+
+@end
+
+@interface CDVContentSync : CDVPlugin <NSURLSessionDelegate, NSURLSessionTaskDelegate, NSURLSessionDownloadDelegate, SSZipArchiveDelegate>
+
+@property (nonatomic) NSString* currentPath;
+@property (nonatomic) NSMutableArray *syncTasks;
 @property (nonatomic) NSURLSession* session;
-@property (nonatomic) NSURLSessionDownloadTask *downloadTask;
 - (void) sync:(CDVInvokedUrlCommand*)command;
 
 @end
