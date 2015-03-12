@@ -17,6 +17,7 @@ package com.adobe.phonegap.contentsync;
 import java.io.BufferedInputStream;
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FilterInputStream;
@@ -56,6 +57,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.net.Uri;
+import android.os.Environment;
+import android.os.StatFs;
 import android.util.Log;
 import android.webkit.CookieManager;
 
@@ -283,8 +286,17 @@ public class Sync extends CordovaPlugin {
                             if (connection.getContentEncoding() == null || connection.getContentEncoding().equalsIgnoreCase("gzip")) {
                                 // Only trust content-length header if we understand
                                 // the encoding -- identity or gzip
-                                if (connection.getContentLength() != -1) {
-                                    progress.setTotal(connection.getContentLength());
+                            	int connectionLength = connection.getContentLength();
+                                if (connectionLength != -1) {
+                                	if (connectionLength > getFreeSpace()) {
+                                		cached = true;
+                                		connection.disconnect();
+                                        JSONObject error = new JSONObject();
+                                        error.put("message", "Not enough free space to download");
+                                        result = new PluginResult(PluginResult.Status.ERROR, error);
+                                	} else {
+                                        progress.setTotal(connectionLength);
+                                	}
                                 }
                             }
                             inputStream = getInputStream(connection);
@@ -341,7 +353,7 @@ public class Sync extends CordovaPlugin {
                     result = new PluginResult(PluginResult.Status.IO_EXCEPTION, error);
                 } finally {
 //                    synchronized (activeRequests) {
-//                        activeRequests.remove(objectId);
+//                        activeRequests.remove(id);
 //                    }
 
                     if (connection != null) {
@@ -360,25 +372,61 @@ public class Sync extends CordovaPlugin {
                     if (!cached && result.getStatus() != PluginResult.Status.OK.ordinal() && file != null) {
                         file.delete();
                     }
+
+                    if (result.getStatus() != PluginResult.Status.OK.ordinal()) {
+                    	callbackContext.sendPluginResult(result);
+                    }
                 }
             }
         });
     }
 
+	private long getFreeSpace() {
+		File path = Environment.getDataDirectory();
+        StatFs stat = new StatFs(path.getPath());
+        long blockSize = stat.getBlockSize();
+        long availableBlocks = stat.getAvailableBlocks();
+        return availableBlocks * blockSize;
+    }
+
 	private void unzip(final File targetFile, final String id, String type, final CallbackContext callbackContext) throws JSONException {
+		Log.d(LOG_TAG, "type = " + type);
 		Log.d(LOG_TAG, "downloaded = " + targetFile.getAbsolutePath());
 
 		// unzip
-		String outputDirectory = cordova.getActivity().getFilesDir().getAbsolutePath();
+		//String outputDirectory = cordova.getActivity().getFilesDir().getAbsolutePath();
+		String outputDirectory = cordova.getActivity().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
 		outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
 		outputDirectory += id;
 		Log.d(LOG_TAG, "output dir = " + outputDirectory);
-		// TODO if output dir exists make a backup
-		unzipSync(targetFile, outputDirectory, callbackContext);
+
+		// Backup existing directory
+		File dir = new File(outputDirectory);
+		File backup = new File(outputDirectory + ".bak");
+		if (dir.exists()) {
+			if (type.equals(TYPE_MERGE)) {
+				try {
+					copyFolder(dir, backup);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} else {
+				dir.renameTo(backup);
+			}
+		}
+
+		if (unzipSync(targetFile, outputDirectory, callbackContext)) {
+			// success, remove backup
+			removeFolder(backup);
+		} else {
+			// failure, revert backup
+			removeFolder(dir);
+			backup.renameTo(dir);
+		}
 
 		// delete temp file
 		targetFile.delete();
-		// TODO delete backup if exists
 
 		// complete
 		JSONObject result = new JSONObject();
@@ -515,6 +563,7 @@ public class Sync extends CordovaPlugin {
         boolean anyEntries = false;
         try {
         	zip = new ZipFile(targetFile);
+
             // Since Cordova 3.3.0 and release of File plugins, files are accessed via cdvfile://
             // Accept a path or a URI for the source zip.
             Uri zipUri = getUriForArg(targetFile.getAbsolutePath());
@@ -579,6 +628,10 @@ public class Sync extends CordovaPlugin {
             {
                 anyEntries = true;
                 String compressedName = ze.getName();
+
+                if (ze.getSize() > getFreeSpace()) {
+                	return false;
+                }
 
                 if (ze.isDirectory()) {
                    File dir = new File(outputDirectory + compressedName);
@@ -684,4 +737,53 @@ public class Sync extends CordovaPlugin {
 
         }
     }
+
+    private void copyFolder(File src, File dest) throws IOException{
+
+    	if(src.isDirectory()) {
+    		if(!dest.exists()){
+    		   dest.mkdir();
+    		}
+
+    		//list all the directory contents
+    		String files[] = src.list();
+
+    		for (String file : files) {
+    		   //construct the src and dest file structure
+    		   File srcFile = new File(src, file);
+    		   File destFile = new File(dest, file);
+    		   //recursive copy
+    		   copyFolder(srcFile,destFile);
+    		}
+
+    	} else {
+    		//if file, then copy it
+    		//Use bytes stream to support all file types
+    		InputStream in = new FileInputStream(src);
+    	    OutputStream out = new FileOutputStream(dest);
+
+    	    byte[] buffer = new byte[1024];
+
+    	    int length;
+    	    //copy the file content in bytes
+    	    while ((length = in.read(buffer)) > 0){
+    	    	   out.write(buffer, 0, length);
+    	    }
+
+    	    in.close();
+    	    out.close();
+    	}
+    }
+
+    private void removeFolder(File directory) {
+    	if (directory.exists()) {
+            if (directory.isDirectory()) {
+                for (File file : directory.listFiles()) {
+                	removeFolder(file);
+                }
+            }
+    	}
+        directory.delete();
+	}
+
 }
