@@ -25,11 +25,13 @@ xmlns:android="http://schemas.android.com/apk/res/android"
 	</platform>
 
     <platform name="wp8">
-		<config-file target="config.xml" parent="/*">
-			<feature name = "Sync">
-				<param name="wp-package" value = "Sync" />
-			</feature>
-		</config-file>
-		<source-file src="src/wp8/Sync.cs" />
-	</platform>
+        <config-file target="config.xml" parent="/*">
+            <feature name = "Sync">
+                <param name="wp-package" value = "Sync" />
+            </feature>
+        </config-file>
+
+        <source-file src="src/wp8/Sync.cs" />
+        <source-file src="src/wp8/Unzip.cs" />
+    </platform>
 </plugin>
