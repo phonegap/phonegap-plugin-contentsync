@@ -340,17 +340,21 @@ public class Sync extends CordovaPlugin {
                     JSONObject error = new JSONObject();
                     Log.e(LOG_TAG, error.toString(), e);
                     result = new PluginResult(PluginResult.Status.IO_EXCEPTION, error);
+                    callbackContext.sendPluginResult(result);
                 } catch (IOException e) {
                     JSONObject error = new JSONObject();
                     Log.e(LOG_TAG, error.toString(), e);
                     result = new PluginResult(PluginResult.Status.IO_EXCEPTION, error);
+                    callbackContext.sendPluginResult(result);
                 } catch (JSONException e) {
                     Log.e(LOG_TAG, e.getMessage(), e);
                     result = new PluginResult(PluginResult.Status.JSON_EXCEPTION);
+                    callbackContext.sendPluginResult(result);
                 } catch (Throwable e) {
                     JSONObject error = new JSONObject();
                     Log.e(LOG_TAG, error.toString(), e);
                     result = new PluginResult(PluginResult.Status.IO_EXCEPTION, error);
+                    callbackContext.sendPluginResult(result);
                 } finally {
 //                    synchronized (activeRequests) {
 //                        activeRequests.remove(id);
@@ -365,16 +369,9 @@ public class Sync extends CordovaPlugin {
                         }
                     }
 
-                    if (result == null) {
-                        result = new PluginResult(PluginResult.Status.ERROR, new JSONObject());
-                    }
                     // Remove incomplete download.
                     if (!cached && result.getStatus() != PluginResult.Status.OK.ordinal() && file != null) {
                         file.delete();
-                    }
-
-                    if (result.getStatus() != PluginResult.Status.OK.ordinal()) {
-                    	callbackContext.sendPluginResult(result);
                     }
                 }
             }
