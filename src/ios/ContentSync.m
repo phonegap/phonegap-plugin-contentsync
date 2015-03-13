@@ -44,7 +44,7 @@
         
         [downloadTask resume];
         NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
-        [message setObject:[NSNumber numberWithDouble:0.00] forKey:@"progress"];
+        [message setObject:[NSNumber numberWithInteger:0] forKey:@"progress"];
         [message setObject:@"download" forKey:@"status"];
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
     } else {
@@ -56,9 +56,34 @@
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
-- (CDVContentSyncTask *)findSyncData:(NSURLSessionDownloadTask*)downloadTask {
+- (void)cancel:(CDVInvokedUrlCommand *)command {
+    CDVContentSyncTask* sTask = [self findSyncDataByCallbackID:command.callbackId];
+    if(sTask) {
+        [[sTask downloadTask] cancel];
+    }
+}
+
+- (CDVContentSyncTask *)findSyncDataByDownloadTask:(NSURLSessionDownloadTask*)downloadTask {
     for(CDVContentSyncTask* sTask in self.syncTasks) {
-        if(sTask.downloadTask == downloadTask || [sTask.archivePath isEqualToString:[self currentPath]]) {
+        if(sTask.downloadTask == downloadTask) {
+            return sTask;
+        }
+    }
+    return nil;
+}
+
+- (CDVContentSyncTask *)findSyncDataByPath {
+    for(CDVContentSyncTask* sTask in self.syncTasks) {
+        if([sTask.archivePath isEqualToString:[self currentPath]]) {
+            return sTask;
+        }
+    }
+    return nil;
+}
+
+- (CDVContentSyncTask *)findSyncDataByCallbackID:(NSString*)callbackId {
+    for(CDVContentSyncTask* sTask in self.syncTasks) {
+        if([sTask.command.callbackId isEqualToString:callbackId]) {
             return sTask;
         }
     }
@@ -69,23 +94,25 @@
     
     CDVPluginResult* pluginResult = nil;
     
-    CDVContentSyncTask* sTask = [self findSyncData:downloadTask];
+    CDVContentSyncTask* sTask = [self findSyncDataByDownloadTask:downloadTask];
     
     if(sTask) {
         double progress = (double)totalBytesWritten / (double)totalBytesExpectedToWrite;
-//        NSLog(@"DownloadTask: %@ progress: %lf callbackId: %@", downloadTask, progress, sTask.command.callbackId);
+        NSLog(@"DownloadTask: %@ progress: %lf callbackId: %@", downloadTask, progress, sTask.command.callbackId);
         NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
-        [message setObject:[NSNumber numberWithDouble:(progress / 2)] forKey:@"progress"];
+        [message setObject:[NSNumber numberWithInteger:((progress / 2) * 100)] forKey:@"progress"];
         [message setObject:@"download" forKey:@"status"];
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+        [pluginResult setKeepCallbackAsBool:YES];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
+    } else {
+        NSLog(@"Could not find download task");
     }
-    [pluginResult setKeepCallbackAsBool:YES];
-    [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
 }
 
 - (void) URLSession:(NSURLSession*)session downloadTask:(NSURLSessionDownloadTask*)downloadTask didFinishDownloadingToURL:(NSURL *)downloadURL {
     
-    CDVContentSyncTask* sTask = [self findSyncData:downloadTask];
+    CDVContentSyncTask* sTask = [self findSyncDataByDownloadTask:downloadTask];
     
     if(sTask) {
         CDVPluginResult* pluginResult = nil;
@@ -133,12 +160,11 @@
 }
 
 - (void) zipArchiveProgressEvent:(NSInteger)loaded total:(NSInteger)total {
-    CDVContentSyncTask* sTask = [self findSyncData:nil];
-    NSLog(@"unzipping %ld", (long)(loaded / total));
+    CDVContentSyncTask* sTask = [self findSyncDataByPath];
+//    NSLog(@"Extracting %ld", (long)(loaded / total));
     if(sTask) {
-        NSLog(@"Updating progress %ld", (long)(loaded / total));
         NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
-        [message setObject:[NSNumber numberWithDouble:(0.5 + ( ((double)loaded / (double)total) ) / 2)] forKey:@"progress"];
+        [message setObject:[NSNumber numberWithInteger:((0.5 + ( ((double)loaded / (double)total) ) / 2) * 100)] forKey:@"progress"];
         [message setObject:@"unzip" forKey:@"status"];
         
         CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
@@ -148,7 +174,7 @@
 }
 
 - (void) zipArchiveDidUnzipArchiveAtPath:(NSString *)path zipInfo:(unz_global_info)zipInfo unzippedPath:(NSString *)unzippedPath {
-    CDVContentSyncTask* sTask = [self findSyncData:nil];
+    CDVContentSyncTask* sTask = [self findSyncDataByPath];
     if(sTask) {
         CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:unzippedPath];
         [pluginResult setKeepCallbackAsBool:NO];
@@ -159,7 +185,7 @@
 
 - (void) URLSession:(NSURLSession*)session task:(NSURLSessionTask*)task didCompleteWithError:(NSError *)error {
     
-    CDVContentSyncTask* sTask = [self findSyncData:(NSURLSessionDownloadTask*)task];
+    CDVContentSyncTask* sTask = [self findSyncDataByDownloadTask:(NSURLSessionDownloadTask*)task];
     
     if(sTask) {
         CDVPluginResult* pluginResult = nil;

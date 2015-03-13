@@ -15,6 +15,8 @@
 @property (nonatomic) NSString* currentPath;
 @property (nonatomic) NSMutableArray *syncTasks;
 @property (nonatomic) NSURLSession* session;
+
 - (void) sync:(CDVInvokedUrlCommand*)command;
+- (void) cancel:(CDVInvokedUrlCommand*)command;
 
 @end
