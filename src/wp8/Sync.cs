@@ -291,7 +291,7 @@ namespace WPCordovaClassLib.Cordova.Commands
                                                 if (buffer.Length > 0)
                                                 {
                                                     writer.Write(buffer);
-                                                    DispatchSyncProgress(bytesRead, totalBytes, callbackId);
+                                                    DispatchSyncProgress(bytesRead, totalBytes, 1, callbackId);
                                                 }
                                                 else
                                                 {
@@ -403,13 +403,22 @@ namespace WPCordovaClassLib.Cordova.Commands
             }
         }
 
-        private void DispatchSyncProgress(long bytesLoaded, long bytesTotal, string callbackId, bool keepCallback = true)
+        private void DispatchSyncProgress(long bytesLoaded, long bytesTotal, int status, string callbackId, bool keepCallback = true)
         {
-            Debug.WriteLine("DispatchSyncProgress : " + callbackId);
+            //Debug.WriteLine("DispatchSyncProgress : " + callbackId);
             // send a progress change event
             SyncProgress progEvent = new SyncProgress(bytesTotal);
             progEvent.BytesLoaded = bytesLoaded;
-            string result = "{\"progress\":" + bytesLoaded + "}";
+
+            int percent = (int)((bytesLoaded / (double)bytesTotal) * 100);
+
+            // jump from 50 to 100 once unzip is done
+            if(bytesLoaded != bytesTotal && status != 3){
+                percent = percent / 2;
+            }
+
+            string result = "{\"progress\":" + percent + ", \"status\":" + status + "}";
+
             PluginResult plugRes = new PluginResult(PluginResult.Status.OK, result);
             plugRes.KeepCallback = keepCallback;
             plugRes.CallbackId = callbackId;
@@ -431,7 +440,7 @@ namespace WPCordovaClassLib.Cordova.Commands
                 HttpWebResponse response = (HttpWebResponse)request.EndGetResponse(asynchronousResult);
 
                 // send a progress change event
-                DispatchSyncProgress(0, response.ContentLength, callbackId);
+                DispatchSyncProgress(0, response.ContentLength, 0, callbackId);
 
                 using (IsolatedStorageFile isoFile = IsolatedStorageFile.GetUserStoreForApplication())
                 {
@@ -468,7 +477,7 @@ namespace WPCordovaClassLib.Cordova.Commands
                                     if (buffer.Length > 0 && !reqState.isCancelled)
                                     {
                                         writer.Write(buffer);
-                                        DispatchSyncProgress(bytesRead, totalBytes, callbackId);
+                                        DispatchSyncProgress(bytesRead, totalBytes, 1, callbackId);
                                     }
                                     else
                                     {
@@ -497,8 +506,11 @@ namespace WPCordovaClassLib.Cordova.Commands
                 {
                     UnZip unzipper = new UnZip();
                     string destFilePath = "www/" + reqState.options.FilePath;
+                    // at this point, bytesLoaded = bytesTotal so we'll just put the as '1'
+                    DispatchSyncProgress(1, 1, 2, callbackId);
                     unzipper.unzip(reqState.options.FilePath, destFilePath);
                     copyCordovaAssets(destFilePath);
+                    DispatchSyncProgress(1, 1, 3, callbackId);
                     string result = "{ \"localPath\": \"" + reqState.options.FilePath + "\" , \"Id\" : \"" + reqState.options.Id + "\"}";
                     DispatchCommandResult(new PluginResult(PluginResult.Status.OK, result), callbackId);
                 }
@@ -614,7 +626,7 @@ namespace WPCordovaClassLib.Cordova.Commands
 
                 for(var i=0;i<pluginsJSON.Length;i++)
                 {
-                    Debug.WriteLine("x-wmapp0:www/" + pluginsJSON[i].file + " to " + destFilePath + "/" + pluginsJSON[i].file);
+                    //Debug.WriteLine("x-wmapp0:www/" + pluginsJSON[i].file + " to " + destFilePath + "/" + pluginsJSON[i].file);
                     copyCordovaPlugins("x-wmapp0:www/" + pluginsJSON[i].file, destFilePath + "/" + pluginsJSON[i].file);
                 }
             }
@@ -655,7 +667,7 @@ namespace WPCordovaClassLib.Cordova.Commands
                                 int BUFFER_SIZE = 1024;
                                 byte[] buffer;
 
-                                Debug.WriteLine("Copying url : " + srcURL + " to : " + destURL);
+                                //Debug.WriteLine("Copying url : " + srcURL + " to : " + destURL);
                                 while (true)
                                 {
                                     buffer = reader.ReadBytes(BUFFER_SIZE);
