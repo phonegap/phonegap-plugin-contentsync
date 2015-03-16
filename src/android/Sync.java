@@ -18,7 +18,6 @@ import java.io.BufferedInputStream;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
@@ -89,6 +88,12 @@ public class Sync extends CordovaPlugin {
             this.target = target;
             this.callbackContext = callbackContext;
         }
+        public boolean isAborted() {
+        	return aborted;
+        }
+        public void setAborted(boolean aborted) {
+        	this.aborted = aborted;
+        }
         void sendPluginResult(PluginResult pluginResult) {
             synchronized (this) {
                 if (!aborted) {
@@ -114,7 +119,11 @@ public class Sync extends CordovaPlugin {
 
             return true;
         } else if (action.equals("cancel")) {
-        	Log.d(LOG_TAG, "not implemented, yet");
+        	String id = args.getString(0);
+            RequestContext context = activeRequests.get(id);
+            if (context != null) {
+            	context.setAborted(true);
+            }
         }
         return false;
     }
@@ -125,20 +134,20 @@ public class Sync extends CordovaPlugin {
      * the HTTP Content-Length header value from the server.
      */
     private static abstract class TrackingInputStream extends FilterInputStream {
-      public TrackingInputStream(final InputStream in) {
-        super(in);
-      }
-        public abstract long getTotalRawBytesRead();
-  }
+    	public TrackingInputStream(final InputStream in) {
+    		super(in);
+    	}
+    	public abstract long getTotalRawBytesRead();
+    }
 
     private static class ExposedGZIPInputStream extends GZIPInputStream {
-      public ExposedGZIPInputStream(final InputStream in) throws IOException {
-        super(in);
-      }
-      public Inflater getInflater() {
-        return inf;
-      }
-  }
+    	public ExposedGZIPInputStream(final InputStream in) throws IOException {
+    		super(in);
+    	}
+    	public Inflater getInflater() {
+    		return inf;
+    	}
+    }
 
     /**
      * Provides raw bytes-read tracking for a GZIP input stream. Reports the
@@ -146,15 +155,15 @@ public class Sync extends CordovaPlugin {
      * number of uncompressed bytes.
      */
     private static class TrackingGZIPInputStream extends TrackingInputStream {
-      private ExposedGZIPInputStream gzin;
-      public TrackingGZIPInputStream(final ExposedGZIPInputStream gzin) throws IOException {
-        super(gzin);
-        this.gzin = gzin;
-      }
-      public long getTotalRawBytesRead() {
-        return gzin.getInflater().getBytesRead();
-      }
-  }
+    	private ExposedGZIPInputStream gzin;
+    	public TrackingGZIPInputStream(final ExposedGZIPInputStream gzin) throws IOException {
+    		super(gzin);
+    		this.gzin = gzin;
+    	}
+    	public long getTotalRawBytesRead() {
+    		return gzin.getInflater().getBytesRead();
+    	}
+    }
 
     /**
      * Provides simple total-bytes-read tracking for an existing InputStream
@@ -208,8 +217,10 @@ public class Sync extends CordovaPlugin {
 
         cordova.getThreadPool().execute(new Runnable() {
             public void run() {
-                if (context.aborted) {
-                    return;
+                synchronized (context) {
+                    if (context.isAborted()) {
+                        return;
+                    }
                 }
                 HttpURLConnection connection = null;
                 HostnameVerifier oldHostnameVerifier = null;
@@ -279,9 +290,7 @@ public class Sync extends CordovaPlugin {
                         if (connection.getResponseCode() == HttpURLConnection.HTTP_NOT_MODIFIED) {
                             cached = true;
                             connection.disconnect();
-                            Log.d(LOG_TAG, "Resource not modified: " + source);
-                            JSONObject error = new JSONObject();
-                            result = new PluginResult(PluginResult.Status.ERROR, error);
+                            sendErrorMessage("Resource not modified: " + source, callbackContext);
                         } else {
                             if (connection.getContentEncoding() == null || connection.getContentEncoding().equalsIgnoreCase("gzip")) {
                                 // Only trust content-length header if we understand
@@ -291,9 +300,7 @@ public class Sync extends CordovaPlugin {
                                 	if (connectionLength > getFreeSpace()) {
                                 		cached = true;
                                 		connection.disconnect();
-                                        JSONObject error = new JSONObject();
-                                        error.put("message", "Not enough free space to download");
-                                        result = new PluginResult(PluginResult.Status.ERROR, error);
+                                        sendErrorMessage("Not enough free space to download", callbackContext);
                                 	} else {
                                         progress.setTotal(connectionLength);
                                 	}
@@ -306,7 +313,7 @@ public class Sync extends CordovaPlugin {
                     if (!cached) {
                         try {
                             synchronized (context) {
-                                if (context.aborted) {
+                                if (context.isAborted()) {
                                     return;
                                 }
                                 context.connection = connection;
@@ -317,6 +324,11 @@ public class Sync extends CordovaPlugin {
                             int bytesRead = 0;
                             outputStream = resourceApi.openOutputStream(targetUri);
                             while ((bytesRead = inputStream.read(buffer)) > 0) {
+                                synchronized (context) {
+                                    if (context.isAborted()) {
+                                        return;
+                                    }
+                                }
                                 Log.d(LOG_TAG, "bytes read = " + bytesRead);
                                 outputStream.write(buffer, 0, bytesRead);
                                 // Send a progress event.
@@ -326,7 +338,6 @@ public class Sync extends CordovaPlugin {
                             }
 
                             unzip(context.targetFile, id, type, callbackContext);
-
                         } finally {
                             synchronized (context) {
                                 context.connection = null;
@@ -336,30 +347,9 @@ public class Sync extends CordovaPlugin {
                         }
                     }
 
-                } catch (FileNotFoundException e) {
-                    JSONObject error = new JSONObject();
-                    Log.e(LOG_TAG, error.toString(), e);
-                    result = new PluginResult(PluginResult.Status.IO_EXCEPTION, error);
-                    callbackContext.sendPluginResult(result);
-                } catch (IOException e) {
-                    JSONObject error = new JSONObject();
-                    Log.e(LOG_TAG, error.toString(), e);
-                    result = new PluginResult(PluginResult.Status.IO_EXCEPTION, error);
-                    callbackContext.sendPluginResult(result);
-                } catch (JSONException e) {
-                    Log.e(LOG_TAG, e.getMessage(), e);
-                    result = new PluginResult(PluginResult.Status.JSON_EXCEPTION);
-                    callbackContext.sendPluginResult(result);
                 } catch (Throwable e) {
-                    JSONObject error = new JSONObject();
-                    Log.e(LOG_TAG, error.toString(), e);
-                    result = new PluginResult(PluginResult.Status.IO_EXCEPTION, error);
-                    callbackContext.sendPluginResult(result);
+                	sendErrorMessage(e.getLocalizedMessage(), callbackContext);
                 } finally {
-//                    synchronized (activeRequests) {
-//                        activeRequests.remove(id);
-//                    }
-
                     if (connection != null) {
                         // Revert back to the proper verifier and socket factories
                         if (trustEveryone && useHttps) {
@@ -370,12 +360,26 @@ public class Sync extends CordovaPlugin {
                     }
 
                     // Remove incomplete download.
-                    if (!cached && result.getStatus() != PluginResult.Status.OK.ordinal() && file != null) {
+                    if (!cached && result != null && result.getStatus() != PluginResult.Status.OK.ordinal() && file != null) {
+                    	Log.d(LOG_TAG, "Delete incomplete file");
                         file.delete();
                     }
                 }
             }
         });
+    }
+
+    private void sendErrorMessage(String message, CallbackContext callbackContext) {
+        Log.e(LOG_TAG, message);
+
+        JSONObject error = new JSONObject();
+        try {
+			error.put("message", message);
+		} catch (JSONException e) {
+			// never happens
+		}
+
+        callbackContext.error(error);
     }
 
 	private long getFreeSpace() {
@@ -391,8 +395,10 @@ public class Sync extends CordovaPlugin {
 		Log.d(LOG_TAG, "downloaded = " + targetFile.getAbsolutePath());
 
 		// unzip
-		//String outputDirectory = cordova.getActivity().getFilesDir().getAbsolutePath();
-		String outputDirectory = cordova.getActivity().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
+		// Production
+		String outputDirectory = cordova.getActivity().getFilesDir().getAbsolutePath();
+		// Testing
+		//String outputDirectory = cordova.getActivity().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
 		outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
 		outputDirectory += id;
 		Log.d(LOG_TAG, "output dir = " + outputDirectory);
@@ -405,7 +411,6 @@ public class Sync extends CordovaPlugin {
 				try {
 					copyFolder(dir, backup);
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			} else {
@@ -413,22 +418,33 @@ public class Sync extends CordovaPlugin {
 			}
 		}
 
-		if (unzipSync(targetFile, outputDirectory, callbackContext)) {
-			// success, remove backup
-			removeFolder(backup);
-		} else {
-			// failure, revert backup
-			removeFolder(dir);
-			backup.renameTo(dir);
+		RequestContext requestContext = null;
+		synchronized (activeRequests) {
+			requestContext = activeRequests.get(id);
 		}
+
+		boolean win = unzipSync(targetFile, outputDirectory, requestContext, callbackContext);
 
 		// delete temp file
 		targetFile.delete();
 
 		// complete
-		JSONObject result = new JSONObject();
-		result.put(PROP_LOCAL_PATH, getUriForArg(outputDirectory));
-        callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, result));
+		synchronized (activeRequests) {
+			activeRequests.remove(id);
+		}
+
+		if (win) {
+			// success, remove backup
+			removeFolder(backup);
+
+			JSONObject result = new JSONObject();
+			result.put(PROP_LOCAL_PATH, getUriForArg(outputDirectory));
+	        callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, result));
+		} else {
+			// failure, revert backup
+			removeFolder(dir);
+			backup.renameTo(dir);
+		}
 	}
 
 	private static TrackingInputStream getInputStream(URLConnection conn) throws IOException {
@@ -552,14 +568,20 @@ public class Sync extends CordovaPlugin {
         return a | b << 8 | c << 16 | d << 24;
     }
 
-    private boolean unzipSync(File targetFile, String outputDirectory, CallbackContext callbackContext) {
+    private boolean unzipSync(File targetFile, String outputDirectory, RequestContext requestContext, CallbackContext callbackContext) {
     	Log.d(LOG_TAG, "unzipSync called");
     	Log.d(LOG_TAG, "zip = " + targetFile.getAbsolutePath());
         InputStream inputStream = null;
         ZipFile zip = null;
         boolean anyEntries = false;
         try {
-        	zip = new ZipFile(targetFile);
+            synchronized (requestContext) {
+                if (requestContext.isAborted()) {
+                    return false;
+                }
+            }
+
+            zip = new ZipFile(targetFile);
 
             // Since Cordova 3.3.0 and release of File plugins, files are accessed via cdvfile://
             // Accept a path or a URI for the source zip.
@@ -570,9 +592,7 @@ public class Sync extends CordovaPlugin {
 
             File tempFile = resourceApi.mapUriToFile(zipUri);
             if (tempFile == null || !tempFile.exists()) {
-                String errorMessage = "Zip file does not exist";
-                callbackContext.error(errorMessage);
-                Log.e(LOG_TAG, errorMessage);
+                sendErrorMessage("Zip file does not exist", callbackContext);
                 return false;
             }
 
@@ -580,9 +600,7 @@ public class Sync extends CordovaPlugin {
             outputDirectory = outputDir.getAbsolutePath();
             outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
             if (outputDir == null || (!outputDir.exists() && !outputDir.mkdirs())){
-                String errorMessage = "Could not create output directory";
-                callbackContext.error(errorMessage);
-                Log.e(LOG_TAG, errorMessage);
+                sendErrorMessage("Could not create output directory", callbackContext);
                 return false;
             }
 
@@ -621,8 +639,13 @@ public class Sync extends CordovaPlugin {
             ZipEntry ze;
             byte[] buffer = new byte[32 * 1024];
 
-            while ((ze = zis.getNextEntry()) != null)
-            {
+            while ((ze = zis.getNextEntry()) != null) {
+                synchronized (requestContext) {
+                    if (requestContext.isAborted()) {
+                        return false;
+                    }
+                }
+
                 anyEntries = true;
                 String compressedName = ze.getName();
 
@@ -652,13 +675,9 @@ public class Sync extends CordovaPlugin {
                 updateProgress(callbackContext, progress);
                 zis.closeEntry();
             }
-
-            // final progress = 100%
-//            progress.setLoaded(progress.getTotal());
-//            updateProgress(callbackContext, progress);
         } catch (Exception e) {
             String errorMessage = "An error occurred while unzipping.";
-            callbackContext.error(errorMessage);
+            sendErrorMessage(errorMessage, callbackContext);
             Log.e(LOG_TAG, errorMessage, e);
         } finally {
             if (inputStream != null) {
