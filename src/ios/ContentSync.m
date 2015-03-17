@@ -45,7 +45,7 @@
         [downloadTask resume];
         NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
         [message setObject:[NSNumber numberWithInteger:0] forKey:@"progress"];
-        [message setObject:@"download" forKey:@"status"];
+        [message setObject:@"Downloading" forKey:@"status"];
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
     } else {
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Arg was null"];
