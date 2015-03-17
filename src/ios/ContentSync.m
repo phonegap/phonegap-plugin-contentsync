@@ -101,7 +101,7 @@
         NSLog(@"DownloadTask: %@ progress: %lf callbackId: %@", downloadTask, progress, sTask.command.callbackId);
         NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
         [message setObject:[NSNumber numberWithInteger:((progress / 2) * 100)] forKey:@"progress"];
-        [message setObject:@"download" forKey:@"status"];
+        [message setObject:@"Downloading" forKey:@"status"];
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
         [pluginResult setKeepCallbackAsBool:YES];
         [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
@@ -165,7 +165,7 @@
     if(sTask) {
         NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
         [message setObject:[NSNumber numberWithInteger:((0.5 + ( ((double)loaded / (double)total) ) / 2) * 100)] forKey:@"progress"];
-        [message setObject:@"unzip" forKey:@"status"];
+        [message setObject:@"Extracting" forKey:@"status"];
         
         CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
         [pluginResult setKeepCallbackAsBool:YES];
