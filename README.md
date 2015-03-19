@@ -133,7 +133,7 @@ sync.on('cancel', function() {
 });
 ```
 
-#### sync.cancel()
+### sync.cancel()
 
 Cancels the content sync operation and triggers the cancel callback.
 
@@ -147,9 +147,10 @@ sync.on('cancel', function() {
 sync.cancel();
 ```
 
-#### ContentSync.PROGRESS_STATE
+### ContentSync.PROGRESS_STATE
 
-An enumeration that describes the current progress state.
+An enumeration that describes the current progress state. The mapped `String`
+values can be customized for the user's app.
 
 Integer | Description
 ------- | -----------
@@ -157,6 +158,12 @@ Integer | Description
 `1`     | `DOWNLOADING`
 `2`     | `EXTRACTING`
 `3`     | `COMPLETE`
+
+#### Example
+
+```javascript
+ContentSync.PROGRESS_STATE[1] = 'Downloading the media content...';
+```
 
 ## Native Requirements
 

@@ -179,6 +179,8 @@ module.exports = {
      * PROGRESS_STATE enumeration.
      *
      * Maps to the `progress` event's `status` object.
+     * The plugin user can customize the enumeration's mapped string
+     * to a value that's appropriate for their app.
      */
 
     PROGRESS_STATE: {
