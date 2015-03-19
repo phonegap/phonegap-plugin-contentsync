@@ -71,7 +71,7 @@ var ContentSync = function(options) {
         }
     };
 
-    //triggered on error
+    // triggered on error
     var fail = function(msg) {
         var e = (typeof msg === 'string') ? new Error(msg) : msg;
         that.emit('error', e);
@@ -173,5 +173,18 @@ module.exports = {
      * .sync helper method.
      */
 
-    ContentSync: ContentSync
+    ContentSync: ContentSync,
+
+    /**
+     * PROGRESS_STATE enumeration.
+     *
+     * Maps to the `progress` event's `status` object.
+     */
+
+    PROGRESS_STATE: {
+        0: 'STOPPED',
+        1: 'DOWNLOADING',
+        2: 'EXTRACTING',
+        3: 'COMPLETE'
+    }
 };

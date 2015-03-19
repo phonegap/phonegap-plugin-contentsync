@@ -208,4 +208,22 @@ describe('phonegap-plugin-contentsync', function() {
             });
         });
     });
+
+    describe('PROGRESS_STATE enumeration', function() {
+        it('should defined 0 as STOPPED', function() {
+            expect(contentSync.PROGRESS_STATE[0]).toEqual('STOPPED');
+        });
+
+        it('should defined 1 as DOWNLOADING', function() {
+            expect(contentSync.PROGRESS_STATE[1]).toEqual('DOWNLOADING');
+        });
+
+        it('should defined 2 as EXTRACTING', function() {
+            expect(contentSync.PROGRESS_STATE[2]).toEqual('EXTRACTING');
+        });
+
+        it('should defined 3 as COMPLETE', function() {
+            expect(contentSync.PROGRESS_STATE[3]).toEqual('COMPLETE');
+        });
+    });
 });
