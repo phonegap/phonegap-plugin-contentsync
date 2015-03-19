@@ -74,7 +74,7 @@ The event `progress` will be triggered on each update as the native platform dow
 Callback Parameter | Description
 ------------------ | -----------
 `data.progress` | `Integer` Progress percentage between `0 - 100`. The progress includes all actions required to cache the remote content locally. This is different on each platform, but often includes requesting, downloading, and extracting the cached content along with any system cleanup tasks.
-`data.status` | `String` Briefly describes the current task status, such as "Downloading" or "Extracting"
+`data.status` | `Integer` Enumeration of `PROGRESS_STATE` to describe the current progress state.
 
 #### Example
 
@@ -146,6 +146,17 @@ sync.on('cancel', function() {
 
 sync.cancel();
 ```
+
+#### ContentSync.PROGRESS_STATE
+
+An enumeration that describes the current progress state.
+
+Integer | Description
+------- | -----------
+`0`     | `STOPPED`
+`1`     | `DOWNLOADING`
+`2`     | `EXTRACTING`
+`3`     | `COMPLETE`
 
 ## Native Requirements
 
