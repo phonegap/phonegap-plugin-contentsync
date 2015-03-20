@@ -49,6 +49,7 @@ Parameter | Description
 `options.id` | `String` Unique identifer to reference the cached content.
 `options.type` | `String` _(Optional)_ Defines the copy strategy for the cached content.<br/>The type `replace` is the default behaviour that deletes the old content and caches the new content.<br/> The type `merge` will add the new content to the existing content. This will replace existing files, add new files, but never delete files.
 `options.headers` | `Object` _(Optional)_ Set of headers to use when requesting the remote content from `options.src`.
+`options.copyCordovaAssets` | `Bool` _(Optional)_ copies cordova.js, cordova_plugins.js and plugins/ over to synced folder.
 
 #### Returns
 
