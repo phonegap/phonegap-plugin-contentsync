@@ -62,9 +62,10 @@ import android.util.Log;
 import android.webkit.CookieManager;
 
 public class Sync extends CordovaPlugin {
-	private static final String STATUS_INSTALLING = "installing";
 	private static final String PROP_LOCAL_PATH = "localPath";
-	private static final String STATUS_DOWNLOADING = "downloading";
+	private static final int STATUS_DOWNLOADING = 1;
+	private static final int STATUS_EXTRACTING = 2;
+	private static final int STATUS_COMPLETE = 3;
 	private static final String PROP_STATUS = "status";
 	private static final String PROP_PROGRESS = "progress";
 	// Type
@@ -606,7 +607,7 @@ public class Sync extends CordovaPlugin {
 
             OpenForReadResult zipFile = resourceApi.openForRead(zipUri);
             ProgressEvent progress = new ProgressEvent();
-            progress.setStatus(STATUS_INSTALLING);
+            progress.setStatus(STATUS_EXTRACTING);
             progress.setTotal(zip.size());
             Log.d(LOG_TAG, "zip file len = " + zip.size());
 
@@ -716,7 +717,7 @@ public class Sync extends CordovaPlugin {
     private static class ProgressEvent {
         private long loaded;
         private long total;
-        private String status;
+        private int status;
         public long getLoaded() {
             return loaded;
         }
@@ -732,10 +733,10 @@ public class Sync extends CordovaPlugin {
         public void setTotal(long total) {
             this.total = total;
         }
-        public String getStatus() {
+        public int getStatus() {
 			return status;
 		}
-		public void setStatus(String status) {
+		public void setStatus(int status) {
 			this.status = status;
 		}
 		public JSONObject toJSONObject() throws JSONException {
@@ -744,7 +745,7 @@ public class Sync extends CordovaPlugin {
 			double total = this.getTotal();
 			double percentage = Math.floor((loaded / total * 100) / 2);
 			// if we are installing then add 50% done
-			if (this.getStatus() == STATUS_INSTALLING) {
+			if (this.getStatus() == STATUS_EXTRACTING) {
 				percentage += 50;
 			}
 			jsonProgress.put(PROP_PROGRESS, percentage);
