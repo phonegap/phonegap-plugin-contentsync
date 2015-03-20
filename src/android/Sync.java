@@ -15,13 +15,16 @@
 package com.adobe.phonegap.contentsync;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -55,6 +58,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.content.res.AssetManager;
 import android.net.Uri;
 import android.os.Environment;
 import android.os.StatFs;
@@ -62,6 +66,8 @@ import android.util.Log;
 import android.webkit.CookieManager;
 
 public class Sync extends CordovaPlugin {
+	private static final String MODULE_EXPORTS_END = "];";
+	private static final String MODULE_EXPORTS = "module.exports = [";
 	private static final String PROP_LOCAL_PATH = "localPath";
 	private static final int STATUS_DOWNLOADING = 1;
 	private static final int STATUS_EXTRACTING = 2;
@@ -95,13 +101,6 @@ public class Sync extends CordovaPlugin {
         public void setAborted(boolean aborted) {
         	this.aborted = aborted;
         }
-        void sendPluginResult(PluginResult pluginResult) {
-            synchronized (this) {
-                if (!aborted) {
-                    callbackContext.sendPluginResult(pluginResult);
-                }
-            }
-        }
     }
 
 	@Override
@@ -114,9 +113,10 @@ public class Sync extends CordovaPlugin {
         	if (headers == null) {
         		headers = new JSONObject();
         	}
+        	boolean copyCordovaAssets = args.getBoolean(4);
         	Log.d(LOG_TAG, "sync called with id = " + id + " and src = " + src + "!");
 
-        	download(src, id, type, headers, callbackContext);
+        	download(src, id, type, headers, copyCordovaAssets, callbackContext);
 
             return true;
         } else if (action.equals("cancel")) {
@@ -199,7 +199,7 @@ public class Sync extends CordovaPlugin {
         }
     }
 
-	private void download(final String source, final String id, final String type, final JSONObject headers, final CallbackContext callbackContext) {
+	private void download(final String source, final String id, final String type, final JSONObject headers, final boolean copyCordovaAssets, final CallbackContext callbackContext) {
         Log.d(LOG_TAG, "download " + source);
 
         final CordovaResourceApi resourceApi = webView.getResourceApi();
@@ -338,7 +338,7 @@ public class Sync extends CordovaPlugin {
                                 updateProgress(callbackContext, progress);
                             }
 
-                            unzip(context.targetFile, id, type, callbackContext);
+                            unzip(context.targetFile, id, type, copyCordovaAssets, callbackContext);
                         } finally {
                             synchronized (context) {
                                 context.connection = null;
@@ -391,7 +391,7 @@ public class Sync extends CordovaPlugin {
         return availableBlocks * blockSize;
     }
 
-	private void unzip(final File targetFile, final String id, String type, final CallbackContext callbackContext) throws JSONException {
+	private void unzip(final File targetFile, final String id, String type, boolean copyCordovaAssets, final CallbackContext callbackContext) throws JSONException {
 		Log.d(LOG_TAG, "type = " + type);
 		Log.d(LOG_TAG, "downloaded = " + targetFile.getAbsolutePath());
 
@@ -429,6 +429,10 @@ public class Sync extends CordovaPlugin {
 		// delete temp file
 		targetFile.delete();
 
+		if (copyCordovaAssets) {
+			copyAssets(outputDirectory);
+		}
+
 		// complete
 		synchronized (activeRequests) {
 			activeRequests.remove(id);
@@ -446,6 +450,63 @@ public class Sync extends CordovaPlugin {
 			removeFolder(dir);
 			backup.renameTo(dir);
 		}
+	}
+
+	private void copyAssets(String outputDirectory) {
+		AssetManager assetManager = cordova.getActivity().getAssets();
+		try {
+			File www = new File(outputDirectory, "www");
+			if (!www.exists()) {
+				www.mkdir();
+			}
+
+			// cordova.js
+            this.copyAssetFile(www, "cordova.js");
+
+            // cordova_plugins.js
+            StringBuilder buf = new StringBuilder();
+            BufferedReader reader =
+                new BufferedReader(new InputStreamReader(assetManager.open("www/cordova_plugins.js"), "UTF-8"));
+            String str;
+
+            while ((str=reader.readLine()) != null) {
+              buf.append(str);
+            }
+            reader.close();
+
+            String cordovaPlugins = buf.toString();
+            buf = null;
+
+            FileWriter write = new FileWriter(new File(www, "cordova_plugins.js"));
+            write.write(cordovaPlugins);
+            write.close();
+
+            // all the plugins JS
+            int start = cordovaPlugins.indexOf(MODULE_EXPORTS);
+            int end = cordovaPlugins.indexOf(MODULE_EXPORTS_END, start);
+            String pluginsJson = cordovaPlugins.substring(start + MODULE_EXPORTS.length() -1, end+1);
+            Log.d(LOG_TAG, pluginsJson);
+
+            try {
+				JSONArray jsonArray = new JSONArray(pluginsJson);
+	            String jsFile = null;
+	            File jsDir = null;
+	            for (int i=0; i<jsonArray.length(); i++) {
+	            	jsFile = jsonArray.getJSONObject(i).getString("file");
+	            	jsDir = new File(www, jsFile.substring(0, jsFile.lastIndexOf("/")));
+	            	if (!jsDir.exists()) {
+	            		jsDir.mkdirs();
+	            	}
+	                this.copyAssetFile(www, jsFile);
+	            }
+
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}
+
+        } catch(IOException e) {
+            Log.e(LOG_TAG, "Failed to copy asset file: cordova.js", e);
+        }
 	}
 
 	private static TrackingInputStream getInputStream(URLConnection conn) throws IOException {
@@ -775,22 +836,32 @@ public class Sync extends CordovaPlugin {
 
     	} else {
     		//if file, then copy it
-    		//Use bytes stream to support all file types
     		InputStream in = new FileInputStream(src);
     	    OutputStream out = new FileOutputStream(dest);
 
-    	    byte[] buffer = new byte[1024];
-
-    	    int length;
-    	    //copy the file content in bytes
-    	    while ((length = in.read(buffer)) > 0){
-    	    	   out.write(buffer, 0, length);
-    	    }
-
-    	    in.close();
-    	    out.close();
+    	    copyFile(in, out);
     	}
     }
+
+    private void copyAssetFile(File www, String filename) throws IOException {
+		AssetManager assetManager = cordova.getActivity().getAssets();
+        InputStream in = assetManager.open("www/" + filename);
+        OutputStream out = new FileOutputStream(new File(www, filename));
+    	copyFile(in, out);
+    }
+
+	private void copyFile(InputStream in, OutputStream out) throws IOException {
+		byte[] buffer = new byte[1024];
+
+		int length;
+		//copy the file content in bytes
+		while ((length = in.read(buffer)) > 0){
+			   out.write(buffer, 0, length);
+		}
+
+		in.close();
+		out.close();
+	}
 
     private void removeFolder(File directory) {
     	if (directory.exists()) {

@@ -62,6 +62,10 @@ var ContentSync = function(options) {
         options.copyCordovaAssets = false;
     }
 
+    if (typeof options.copyCordovaAssets === 'undefined') {
+        options.copyCordovaAssets = false;
+    }
+
     // store the options to this object instance
     this.options = options;
 
