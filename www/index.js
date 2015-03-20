@@ -79,7 +79,7 @@ var ContentSync = function(options) {
 
     // wait at least one process tick to allow event subscriptions
     setTimeout(function() {
-        exec(success, fail, 'Sync', 'sync', [options.src, options.id, options.type, options.headers]);
+        exec(success, fail, 'Sync', 'sync', [options.src, options.id, options.type, options.headers, options.copyCordovaAssets]);
     }, 10);
 };
 
