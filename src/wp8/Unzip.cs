@@ -14,6 +14,9 @@ namespace WPCordovaClassLib.Cordova.Commands
 {
     public class UnZip : BaseCommand
     {
+        // Sync strategy codes
+        public const int Replace = 1;
+        public const int Merge = 2;
 
         /// <summary>
         /// Represents a singular progress event to be passed back to javascript
@@ -39,7 +42,7 @@ namespace WPCordovaClassLib.Cordova.Commands
             }
         }
 
-        public void unzip(string srcFilePath, string destPath)
+        public void unzip(string srcFilePath, string destPath, int type)
         {
             using (IsolatedStorageFile appStorage = IsolatedStorageFile.GetUserStoreForApplication())
             {
@@ -107,11 +110,27 @@ namespace WPCordovaClassLib.Cordova.Commands
                             {
                                 if (readStream != null)
                                 {
-                                    using (FileStream outStream = new IsolatedStorageFileStream(destFilePath, FileMode.OpenOrCreate, FileAccess.Write, appStorage))
+                                    if(type == Merge)
                                     {
-                                        WriteStreamToPath(readStream, outStream);
+                                        // only write file if it doesn't exist already
+                                        if (!appStorage.FileExists(destFilePath))
+                                        {
+                                            using (FileStream outStream = new IsolatedStorageFileStream(destFilePath, FileMode.OpenOrCreate, FileAccess.Write, appStorage))
+                                            {
+                                                WriteStreamToPath(readStream, outStream);
+                                            }
+                                        }
                                         FileUnzipProgress progEvt = new FileUnzipProgress(totalFiles, current++);
                                     }
+                                    else
+                                    {
+                                        using (FileStream outStream = new IsolatedStorageFileStream(destFilePath, FileMode.OpenOrCreate, FileAccess.Write, appStorage))
+                                        {
+                                            WriteStreamToPath(readStream, outStream);
+                                            FileUnzipProgress progEvt = new FileUnzipProgress(totalFiles, current++);
+                                        }
+                                    }
+
                                 }
                             }
                         }

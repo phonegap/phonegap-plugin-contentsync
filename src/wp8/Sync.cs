@@ -53,6 +53,8 @@ namespace WPCordovaClassLib.Cordova.Commands
             public string Headers { get; set; }
             public string CallbackId { get; set; }
             public bool ChunkedMode { get; set; }
+            public int Type { get; set; }
+
             /// Server address
             public string Server { get; set; }
             /// File key
@@ -83,6 +85,10 @@ namespace WPCordovaClassLib.Cordova.Commands
         public const int InvalidUrlError = 2;
         public const int ConnectionError = 3;
         public const int AbortError = 4; // not really an error, but whatevs
+
+        // Sync strategy codes
+        public const int Replace = 1;
+        public const int Merge = 2;
 
         private static Dictionary<string, DownloadRequestState> InProcDownloads = new Dictionary<string,DownloadRequestState>();
 
@@ -225,7 +231,17 @@ namespace WPCordovaClassLib.Cordova.Commands
                 downloadOptions.TrustAllHosts = trustAll;
 
                 downloadOptions.Id = optionStrings[1];
-                downloadOptions.FilePath = downloadOptions.Id;
+                downloadOptions.FilePath = "content_sync/downloads/" + downloadOptions.Id;
+
+                if (String.Equals(optionStrings[2], "replace"))
+                {
+                    downloadOptions.Type = Replace;
+                }
+                else
+                {
+                    downloadOptions.Type = Merge;
+                }
+
                 downloadOptions.Headers = optionStrings[3];
                 downloadOptions.CallbackId = callbackId = optionStrings[4];
             }
@@ -508,7 +524,7 @@ namespace WPCordovaClassLib.Cordova.Commands
                     string destFilePath = "www/" + reqState.options.FilePath;
                     // at this point, bytesLoaded = bytesTotal so we'll just put the as '1'
                     DispatchSyncProgress(1, 1, 2, callbackId);
-                    unzipper.unzip(reqState.options.FilePath, destFilePath);
+                    unzipper.unzip(reqState.options.FilePath, destFilePath, reqState.options.Type);
                     copyCordovaAssets(destFilePath);
                     DispatchSyncProgress(1, 1, 3, callbackId);
                     string result = "{ \"localPath\": \"" + reqState.options.FilePath + "\" , \"Id\" : \"" + reqState.options.Id + "\"}";
