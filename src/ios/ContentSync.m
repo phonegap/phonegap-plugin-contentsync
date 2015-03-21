@@ -28,7 +28,7 @@
     if(src != nil) {
         NSLog(@"Downloading and unzipping from %@", src);
         NSURL *downloadURL = [NSURL URLWithString:src];
-        NSURLRequest *request = [NSURLRequest requestWithURL:downloadURL];
+        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:downloadURL];
         
         if(!self.syncTasks) {
             self.syncTasks = [NSMutableArray arrayWithCapacity:1];
@@ -98,7 +98,7 @@
     
     if(sTask) {
         double progress = (double)totalBytesWritten / (double)totalBytesExpectedToWrite;
-        NSLog(@"DownloadTask: %@ progress: %lf callbackId: %@", downloadTask, progress, sTask.command.callbackId);
+        //NSLog(@"DownloadTask: %@ progress: %lf callbackId: %@", downloadTask, progress, sTask.command.callbackId);
         NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
         [message setObject:[NSNumber numberWithInteger:((progress / 2) * 100)] forKey:@"progress"];
         [message setObject:@"Downloading" forKey:@"status"];
@@ -137,7 +137,9 @@
                 NSURL *extractURL = [documentsDirectory URLByAppendingPathComponent:id];
                 sTask.archivePath = [sourceURL path];
                 NSError *error;
-                if(![SSZipArchive unzipFileAtPath:[sourceURL path] toDestination:[extractURL path] overwrite:YES password:nil error:&error delegate:self]) {
+                NSString* type = [sTask.command.arguments objectAtIndex:2];
+                bool overwrite = ([type compare:@"replace"] ? YES : NO);
+                if(![SSZipArchive unzipFileAtPath:[sourceURL path] toDestination:[extractURL path] overwrite:overwrite password:nil error:&error delegate:self]) {
                     NSLog(@"Sync Failed - %@", [error localizedDescription]);
                     pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Sync Failed"];
                 }
@@ -172,12 +174,41 @@
         [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
     }
 }
+// TODO GET RID OF THIS
+- (BOOL) copyCordovaAssets:(NSString*)unzippedPath {
+    
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSError *errorCopy;
+    NSArray* cordovaAssets = [NSArray arrayWithObjects:@"cordova.js",@"cordova_plugins.js",@"plugins", nil];
+    NSURL* destinationURL = [NSURL fileURLWithPath:unzippedPath];
+    
+    for(NSString* asset in cordovaAssets) {
+        NSURL* assetSourceURL = [NSURL fileURLWithPath:[[self commandDelegate] pathForResource:asset]];
+        NSURL* assetDestinationURL = [destinationURL URLByAppendingPathComponent:[assetSourceURL lastPathComponent]];
+        [fileManager removeItemAtURL:assetDestinationURL error:NULL];
+        BOOL success = [fileManager copyItemAtURL:assetSourceURL toURL:assetDestinationURL error:&errorCopy];
+        
+        if(!success) {
+            return NO;
+        }
+    }
+    
+    return YES;
+}
 
 - (void) zipArchiveDidUnzipArchiveAtPath:(NSString *)path zipInfo:(unz_global_info)zipInfo unzippedPath:(NSString *)unzippedPath {
     CDVContentSyncTask* sTask = [self findSyncDataByPath];
     if(sTask) {
         NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:1];
         [message setObject:unzippedPath forKey:@"localPath"];
+        
+        // FIXME: GET RID OF THIS SHIT / Copying cordova assets
+        if((BOOL)[sTask.command.arguments objectAtIndex:4] == YES) {
+            if(![self copyCordovaAssets:unzippedPath]) {
+                NSLog(@"Something fucked up!");
+            };
+        }
+        
         CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
         [pluginResult setKeepCallbackAsBool:NO];
         [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
