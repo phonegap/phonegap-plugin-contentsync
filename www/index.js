@@ -57,10 +57,6 @@ var ContentSync = function(options) {
     if (typeof options.headers === 'undefined') {
         options.headers = null;
     }
-    
-    if (typeof options.copyCordovaAssets=== 'undefined') {
-        options.copyCordovaAssets = false;
-    }
 
     if (typeof options.copyCordovaAssets === 'undefined') {
         options.copyCordovaAssets = false;
