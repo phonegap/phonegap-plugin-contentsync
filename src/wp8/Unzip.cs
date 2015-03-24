@@ -134,6 +134,8 @@ namespace WPCordovaClassLib.Cordova.Commands
                                 }
                             }
                         }
+                        zipStream.Close();
+
                     }
                     catch (Exception)
                     {

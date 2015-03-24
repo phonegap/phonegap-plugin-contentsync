@@ -288,7 +288,7 @@ namespace WPCordovaClassLib.Cordova.Commands
                                     destFile.Close();
                                 }
 
-                                using (FileStream fileStream = new IsolatedStorageFileStream(downloadOptions.FilePath, FileMode.Open, FileAccess.Write, isoFile))
+                                using (FileStream fileStream = new IsolatedStorageFileStream(downloadOptions.FilePath, FileMode.Create, FileAccess.Write, isoFile))
                                 {
                                     long totalBytes = resource.Stream.Length;
                                     int bytesRead = 0;
@@ -640,13 +640,13 @@ namespace WPCordovaClassLib.Cordova.Commands
                 result = result[1].Split(jsonSepTwo, StringSplitOptions.RemoveEmptyEntries);
                 cordova_plugin[] pluginsJSON = JSON.JsonHelper.Deserialize<cordova_plugin[]>(result[0]);
 
+                streamReader.Close();
                 for(var i=0;i<pluginsJSON.Length;i++)
                 {
                     //Debug.WriteLine("x-wmapp0:www/" + pluginsJSON[i].file + " to " + destFilePath + "/" + pluginsJSON[i].file);
                     copyCordovaPlugins("x-wmapp0:www/" + pluginsJSON[i].file, destFilePath + "/" + pluginsJSON[i].file);
                 }
             }
-
         }
 
         private void copyCordovaPlugins(string srcURL, string destURL)
@@ -672,7 +672,7 @@ namespace WPCordovaClassLib.Cordova.Commands
                         destFile.Close();
                     }
 
-                    using (FileStream fileStream = new IsolatedStorageFileStream(destURL, FileMode.Open, FileAccess.Write, isoFile))
+                    using (FileStream fileStream = new IsolatedStorageFileStream(destURL, FileMode.Create, FileAccess.Write, isoFile))
                     {
                         long totalBytes = resource.Stream.Length;
                         int bytesRead = 0;
