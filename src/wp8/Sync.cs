@@ -54,7 +54,7 @@ namespace WPCordovaClassLib.Cordova.Commands
             public string CallbackId { get; set; }
             public bool ChunkedMode { get; set; }
             public int Type { get; set; }
-
+            public bool CopyCordovaAssets { get; set; }
             /// Server address
             public string Server { get; set; }
             /// File key
@@ -243,7 +243,12 @@ namespace WPCordovaClassLib.Cordova.Commands
                 }
 
                 downloadOptions.Headers = optionStrings[3];
-                downloadOptions.CallbackId = callbackId = optionStrings[4];
+
+                bool copyCordovaAssets = false;
+                bool.TryParse(optionStrings[4], out copyCordovaAssets);
+                downloadOptions.CopyCordovaAssets = copyCordovaAssets;
+
+                downloadOptions.CallbackId = callbackId = optionStrings[5];
             }
             catch (Exception)
             {
@@ -525,7 +530,12 @@ namespace WPCordovaClassLib.Cordova.Commands
                     // at this point, bytesLoaded = bytesTotal so we'll just put the as '1'
                     DispatchSyncProgress(1, 1, 2, callbackId);
                     unzipper.unzip(reqState.options.FilePath, destFilePath, reqState.options.Type);
-                    copyCordovaAssets(destFilePath);
+
+                    if(reqState.options.CopyCordovaAssets)
+                    {
+                        copyCordovaAssets(destFilePath);
+                    }
+
                     DispatchSyncProgress(1, 1, 3, callbackId);
                     string result = "{ \"localPath\": \"" + reqState.options.FilePath + "\" , \"Id\" : \"" + reqState.options.Id + "\"}";
                     DispatchCommandResult(new PluginResult(PluginResult.Status.OK, result), callbackId);
