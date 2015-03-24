@@ -124,6 +124,24 @@ describe('phonegap-plugin-contentsync', function() {
                     contentSync.sync(options);
                 });
             });
+
+            describe('options.copyCordovaAssets', function() {
+                it('should default to false', function(done) {
+                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                        expect(args[4]).toEqual(false);
+                        done();
+                    });
+                    contentSync.sync(options);
+                });
+                it('should be passed as whatever we specify', function(done) {
+                    options.copyCordovaAssets = true;
+                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                        expect(args[4]).toEqual(options.copyCordovaAssets);
+                        done();
+                    });
+                    contentSync.sync(options);
+                });
+            });
         });
 
         describe('on "progress" event', function() {

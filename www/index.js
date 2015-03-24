@@ -59,7 +59,7 @@ var ContentSync = function(options) {
     }
     
     if (typeof options.copyCordovaAssets=== 'undefined') {
-        options.headers = false;
+        options.copyCordovaAssets = false;
     }
 
     // store the options to this object instance
