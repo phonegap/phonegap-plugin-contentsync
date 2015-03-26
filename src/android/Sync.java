@@ -69,6 +69,7 @@ public class Sync extends CordovaPlugin {
 	private static final String MODULE_EXPORTS_END = "];";
 	private static final String MODULE_EXPORTS = "module.exports = [";
 	private static final String PROP_LOCAL_PATH = "localPath";
+	private static final int STATUS_STOPPED = 0;
 	private static final int STATUS_DOWNLOADING = 1;
 	private static final int STATUS_EXTRACTING = 2;
 	private static final int STATUS_COMPLETE = 3;
@@ -80,28 +81,8 @@ public class Sync extends CordovaPlugin {
 
 	private static final String LOG_TAG = "ContentSync";
 
-	private static HashMap<String, RequestContext> activeRequests = new HashMap<String, RequestContext>();
+	private static HashMap<String, ProgressEvent> activeRequests = new HashMap<String, ProgressEvent>();
     private static final int MAX_BUFFER_SIZE = 16 * 1024;
-
-    private static final class RequestContext {
-        String source;
-        String target;
-        File targetFile;
-        CallbackContext callbackContext;
-        HttpURLConnection connection;
-        boolean aborted;
-        RequestContext(String source, String target, CallbackContext callbackContext) {
-            this.source = source;
-            this.target = target;
-            this.callbackContext = callbackContext;
-        }
-        public boolean isAborted() {
-        	return aborted;
-        }
-        public void setAborted(boolean aborted) {
-        	this.aborted = aborted;
-        }
-    }
 
 	@Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
@@ -121,9 +102,9 @@ public class Sync extends CordovaPlugin {
             return true;
         } else if (action.equals("cancel")) {
         	String id = args.getString(0);
-            RequestContext context = activeRequests.get(id);
-            if (context != null) {
-            	context.setAborted(true);
+        	ProgressEvent progress = activeRequests.get(id);
+            if (progress != null) {
+            	progress.setAborted(true);
             }
         }
         return false;
@@ -211,15 +192,15 @@ public class Sync extends CordovaPlugin {
         final boolean isLocalTransfer = !useHttps && uriType != CordovaResourceApi.URI_TYPE_HTTP;
 
 
-        final RequestContext context = new RequestContext(source, id, callbackContext);
+        final ProgressEvent progress = new ProgressEvent(id);
         synchronized (activeRequests) {
-            activeRequests.put(id, context);
+            activeRequests.put(id, progress);
         }
 
         cordova.getThreadPool().execute(new Runnable() {
             public void run() {
-                synchronized (context) {
-                    if (context.isAborted()) {
+                synchronized (progress) {
+                    if (progress.isAborted()) {
                         return;
                     }
                 }
@@ -240,14 +221,13 @@ public class Sync extends CordovaPlugin {
                     final Uri targetUri = resourceApi.remapUri(Uri.fromFile(file));
 
 
-                    context.targetFile = file;
+                    progress.setTargetFile(file);
+                    progress.setStatus(STATUS_DOWNLOADING);
 
                     Log.d(LOG_TAG, "Download file:" + sourceUri);
                     Log.d(LOG_TAG, "Target file:" + file);
                     Log.d(LOG_TAG, "size = " + file.length());
 
-                    ProgressEvent progress = new ProgressEvent();
-                    progress.setStatus(STATUS_DOWNLOADING);
 
                     if (isLocalTransfer) {
                         readResult = resourceApi.openForRead(sourceUri);
@@ -313,11 +293,11 @@ public class Sync extends CordovaPlugin {
 
                     if (!cached) {
                         try {
-                            synchronized (context) {
-                                if (context.isAborted()) {
+                            synchronized (progress) {
+                                if (progress.isAborted()) {
                                     return;
                                 }
-                                context.connection = connection;
+                                //progress.connection = connection;
                             }
 
                             // write bytes to file
@@ -325,8 +305,8 @@ public class Sync extends CordovaPlugin {
                             int bytesRead = 0;
                             outputStream = resourceApi.openOutputStream(targetUri);
                             while ((bytesRead = inputStream.read(buffer)) > 0) {
-                                synchronized (context) {
-                                    if (context.isAborted()) {
+                                synchronized (progress) {
+                                    if (progress.isAborted()) {
                                         return;
                                     }
                                 }
@@ -338,10 +318,10 @@ public class Sync extends CordovaPlugin {
                                 updateProgress(callbackContext, progress);
                             }
 
-                            unzip(context.targetFile, id, type, copyCordovaAssets, callbackContext);
+                            unzip(progress, type, copyCordovaAssets, callbackContext);
                         } finally {
-                            synchronized (context) {
-                                context.connection = null;
+                            synchronized (progress) {
+                            	//progress.connection = null;
                             }
                             safeClose(inputStream);
                             safeClose(outputStream);
@@ -391,8 +371,9 @@ public class Sync extends CordovaPlugin {
         return availableBlocks * blockSize;
     }
 
-	private void unzip(final File targetFile, final String id, String type, boolean copyCordovaAssets, final CallbackContext callbackContext) throws JSONException {
+	private void unzip(final ProgressEvent progress, String type, boolean copyCordovaAssets, final CallbackContext callbackContext) throws JSONException {
 		Log.d(LOG_TAG, "type = " + type);
+		File targetFile = progress.getTargetFile();
 		Log.d(LOG_TAG, "downloaded = " + targetFile.getAbsolutePath());
 
 		// unzip
@@ -419,12 +400,7 @@ public class Sync extends CordovaPlugin {
 			}
 		}
 
-		RequestContext requestContext = null;
-		synchronized (activeRequests) {
-			requestContext = activeRequests.get(id);
-		}
-
-		boolean win = unzipSync(targetFile, outputDirectory, requestContext, callbackContext);
+		boolean win = unzipSync(targetFile, outputDirectory, progress, callbackContext);
 
 		// delete temp file
 		targetFile.delete();
@@ -435,7 +411,7 @@ public class Sync extends CordovaPlugin {
 
 		// complete
 		synchronized (activeRequests) {
-			activeRequests.remove(id);
+			activeRequests.remove(progress.getId());
 		}
 
 		if (win) {
@@ -485,7 +461,7 @@ public class Sync extends CordovaPlugin {
             int start = cordovaPlugins.indexOf(MODULE_EXPORTS);
             int end = cordovaPlugins.indexOf(MODULE_EXPORTS_END, start);
             String pluginsJson = cordovaPlugins.substring(start + MODULE_EXPORTS.length() -1, end+1);
-            Log.d(LOG_TAG, pluginsJson);
+            //Log.d(LOG_TAG, pluginsJson);
 
             try {
 				JSONArray jsonArray = new JSONArray(pluginsJson);
@@ -630,15 +606,15 @@ public class Sync extends CordovaPlugin {
         return a | b << 8 | c << 16 | d << 24;
     }
 
-    private boolean unzipSync(File targetFile, String outputDirectory, RequestContext requestContext, CallbackContext callbackContext) {
+    private boolean unzipSync(File targetFile, String outputDirectory, ProgressEvent progress, CallbackContext callbackContext) {
     	Log.d(LOG_TAG, "unzipSync called");
     	Log.d(LOG_TAG, "zip = " + targetFile.getAbsolutePath());
         InputStream inputStream = null;
         ZipFile zip = null;
         boolean anyEntries = false;
         try {
-            synchronized (requestContext) {
-                if (requestContext.isAborted()) {
+            synchronized (progress) {
+                if (progress.isAborted()) {
                     return false;
                 }
             }
@@ -667,8 +643,8 @@ public class Sync extends CordovaPlugin {
             }
 
             OpenForReadResult zipFile = resourceApi.openForRead(zipUri);
-            ProgressEvent progress = new ProgressEvent();
             progress.setStatus(STATUS_EXTRACTING);
+            progress.setLoaded(0);
             progress.setTotal(zip.size());
             Log.d(LOG_TAG, "zip file len = " + zip.size());
 
@@ -702,8 +678,8 @@ public class Sync extends CordovaPlugin {
             byte[] buffer = new byte[32 * 1024];
 
             while ((ze = zis.getNextEntry()) != null) {
-                synchronized (requestContext) {
-                    if (requestContext.isAborted()) {
+                synchronized (progress) {
+                    if (progress.isAborted()) {
                         return false;
                     }
                 }
@@ -776,10 +752,17 @@ public class Sync extends CordovaPlugin {
     }
 
     private static class ProgressEvent {
+    	private String id;
         private long loaded;
         private long total;
         private int status;
-        public long getLoaded() {
+        private boolean aborted;
+        private File targetFile;
+        public ProgressEvent(String id) {
+        	this.id = id;
+        	this.status = STATUS_STOPPED;
+		}
+		public long getLoaded() {
             return loaded;
         }
         public void setLoaded(long loaded) {
@@ -799,6 +782,21 @@ public class Sync extends CordovaPlugin {
 		}
 		public void setStatus(int status) {
 			this.status = status;
+		}
+		public String getId() {
+			return id;
+		}
+        public boolean isAborted() {
+        	return aborted;
+        }
+        public void setAborted(boolean aborted) {
+        	this.aborted = aborted;
+        }
+		public File getTargetFile() {
+			return targetFile;
+		}
+		public void setTargetFile(File targetFile) {
+			this.targetFile = targetFile;
 		}
 		public JSONObject toJSONObject() throws JSONException {
 			JSONObject jsonProgress = new JSONObject();
