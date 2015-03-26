@@ -192,7 +192,7 @@ public class Sync extends CordovaPlugin {
         final boolean isLocalTransfer = !useHttps && uriType != CordovaResourceApi.URI_TYPE_HTTP;
 
 
-        final ProgressEvent progress = new ProgressEvent(id);
+        final ProgressEvent progress = new ProgressEvent();
         synchronized (activeRequests) {
             activeRequests.put(id, progress);
         }
@@ -318,7 +318,7 @@ public class Sync extends CordovaPlugin {
                                 updateProgress(callbackContext, progress);
                             }
 
-                            unzip(progress, type, copyCordovaAssets, callbackContext);
+                            unzip(id, progress, type, copyCordovaAssets, callbackContext);
                         } finally {
                             synchronized (progress) {
                             	//progress.connection = null;
@@ -371,7 +371,7 @@ public class Sync extends CordovaPlugin {
         return availableBlocks * blockSize;
     }
 
-	private void unzip(final ProgressEvent progress, String type, boolean copyCordovaAssets, final CallbackContext callbackContext) throws JSONException {
+	private void unzip(final String id, final ProgressEvent progress, String type, boolean copyCordovaAssets, final CallbackContext callbackContext) throws JSONException {
 		Log.d(LOG_TAG, "type = " + type);
 		File targetFile = progress.getTargetFile();
 		Log.d(LOG_TAG, "downloaded = " + targetFile.getAbsolutePath());
@@ -411,8 +411,12 @@ public class Sync extends CordovaPlugin {
 
 		// complete
 		synchronized (activeRequests) {
-			activeRequests.remove(progress.getId());
+			activeRequests.remove(id);
 		}
+
+		// Send last progress event
+		progress.setStatus(STATUS_COMPLETE);
+		updateProgress(callbackContext, progress);
 
 		if (win) {
 			// success, remove backup
@@ -739,9 +743,11 @@ public class Sync extends CordovaPlugin {
     }
 
     private void updateProgress(CallbackContext callbackContext, ProgressEvent progress) throws JSONException {
-        PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, progress.toJSONObject());
-        pluginResult.setKeepCallback(true);
-        callbackContext.sendPluginResult(pluginResult);
+        if (progress.getLoaded() != progress.getTotal() || progress.getStatus() == STATUS_COMPLETE) {
+	        PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, progress.toJSONObject());
+	        pluginResult.setKeepCallback(true);
+	        callbackContext.sendPluginResult(pluginResult);
+        }
     }
 
     private Uri getUriForArg(String arg) {
@@ -752,14 +758,13 @@ public class Sync extends CordovaPlugin {
     }
 
     private static class ProgressEvent {
-    	private String id;
         private long loaded;
         private long total;
+        private double percentage;
         private int status;
         private boolean aborted;
         private File targetFile;
-        public ProgressEvent(String id) {
-        	this.id = id;
+        public ProgressEvent() {
         	this.status = STATUS_STOPPED;
 		}
 		public long getLoaded() {
@@ -767,24 +772,24 @@ public class Sync extends CordovaPlugin {
         }
         public void setLoaded(long loaded) {
             this.loaded = loaded;
+            updatePercentage();
         }
         public void addLoaded(long add) {
             this.loaded += add;
+            updatePercentage();
         }
         public long getTotal() {
             return total;
         }
         public void setTotal(long total) {
             this.total = total;
+            updatePercentage();
         }
         public int getStatus() {
 			return status;
 		}
 		public void setStatus(int status) {
 			this.status = status;
-		}
-		public String getId() {
-			return id;
 		}
         public boolean isAborted() {
         	return aborted;
@@ -800,18 +805,19 @@ public class Sync extends CordovaPlugin {
 		}
 		public JSONObject toJSONObject() throws JSONException {
 			JSONObject jsonProgress = new JSONObject();
-			double loaded = this.getLoaded();
-			double total = this.getTotal();
-			double percentage = Math.floor((loaded / total * 100) / 2);
-			// if we are installing then add 50% done
-			if (this.getStatus() == STATUS_EXTRACTING) {
-				percentage += 50;
-			}
-			jsonProgress.put(PROP_PROGRESS, percentage);
+			jsonProgress.put(PROP_PROGRESS, this.percentage);
 			jsonProgress.put(PROP_STATUS, this.getStatus());
 			return jsonProgress;
 
         }
+		private void updatePercentage() {
+			double loaded = this.getLoaded();
+			double total = this.getTotal();
+			this.percentage = Math.floor((loaded / total * 100) / 2);
+			if (this.getStatus() == STATUS_EXTRACTING) {
+				this.percentage += 50;
+			}
+		}
     }
 
     private void copyFolder(File src, File dest) throws IOException{
