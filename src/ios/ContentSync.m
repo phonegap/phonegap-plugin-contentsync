@@ -30,6 +30,15 @@
         NSURL *downloadURL = [NSURL URLWithString:src];
         NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:downloadURL];
         
+        // Setting headers
+        NSDictionary *headers = (NSDictionary *)[command argumentAtIndex:3 withDefault:nil];
+        if(headers != nil) {
+            for (NSString* header in [headers allKeys]) {
+                NSLog(@"Setting header %@ %@", header, [headers objectForKey:header]);
+                [request addValue:[headers objectForKey:header] forHTTPHeaderField:header];
+            }
+        }
+        
         if(!self.syncTasks) {
             self.syncTasks = [NSMutableArray arrayWithCapacity:1];
         }
@@ -52,7 +61,6 @@
     }
     
     [pluginResult setKeepCallbackAsBool:YES];
-    
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
@@ -112,48 +120,52 @@
 
 - (void) URLSession:(NSURLSession*)session downloadTask:(NSURLSessionDownloadTask*)downloadTask didFinishDownloadingToURL:(NSURL *)downloadURL {
     
+    __weak CDVContentSync* weakSelf = self;
     CDVContentSyncTask* sTask = [self findSyncDataByDownloadTask:downloadTask];
     
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSArray *URLs = [fileManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask];
+    NSURL *documentsDirectory = [URLs objectAtIndex:0];
+    
+    NSURL *originalURL = [[downloadTask originalRequest] URL];
+    NSURL *sourceURL = [documentsDirectory URLByAppendingPathComponent:[originalURL lastPathComponent]];
+    NSError *errorCopy;
+    
+    [fileManager removeItemAtURL:sourceURL error:NULL];
+    BOOL success = [fileManager copyItemAtURL:downloadURL toURL:sourceURL error:&errorCopy];
+    
+    __block NSString* callbackId = sTask.command.callbackId;
+    
     if(sTask) {
-        CDVPluginResult* pluginResult = nil;
-        NSString* id = [sTask.command.arguments objectAtIndex:1];
-        [pluginResult setKeepCallbackAsBool:YES];
-        
-        NSLog(@"Download URL %@", downloadURL);
-        
-        NSFileManager *fileManager = [NSFileManager defaultManager];
-        NSArray *URLs = [fileManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask];
-        NSURL *documentsDirectory = [URLs objectAtIndex:0];
-        
-        NSURL *originalURL = [[downloadTask originalRequest] URL];
-        NSURL *sourceURL = [documentsDirectory URLByAppendingPathComponent:[originalURL lastPathComponent]];
-        NSError *errorCopy;
-        
-        [fileManager removeItemAtURL:sourceURL error:NULL];
-        BOOL success = [fileManager copyItemAtURL:downloadURL toURL:sourceURL error:&errorCopy];
-        
-        @try {
-            if(success) {
-                NSURL *extractURL = [documentsDirectory URLByAppendingPathComponent:id];
-                sTask.archivePath = [sourceURL path];
-                NSError *error;
-                NSString* type = [sTask.command.arguments objectAtIndex:2];
-                bool overwrite = ([type compare:@"replace"] ? YES : NO);
-                if(![SSZipArchive unzipFileAtPath:[sourceURL path] toDestination:[extractURL path] overwrite:overwrite password:nil error:&error delegate:self]) {
-                    NSLog(@"Sync Failed - %@", [error localizedDescription]);
+        [self.commandDelegate runInBackground:^{
+            CDVPluginResult* pluginResult = nil;
+            NSString* id = [sTask.command.arguments objectAtIndex:1];
+            
+            //NSLog(@"Download URL %@", downloadURL);
+            @try {
+                if(success) {
+                    NSURL *extractURL = [documentsDirectory URLByAppendingPathComponent:id];
+                    sTask.archivePath = [sourceURL path];
+                    NSError *error;
+                    NSString* type = [sTask.command.arguments objectAtIndex:2];
+                    bool overwrite = ([type compare:@"replace"] ? YES : NO);
+                    if(![SSZipArchive unzipFileAtPath:[sourceURL path] toDestination:[extractURL path] overwrite:overwrite password:nil error:&error delegate:weakSelf]) {
+                        NSLog(@"Sync Failed - %@", [error localizedDescription]);
+                        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Sync Failed"];
+                    }
+                } else {
+                    NSLog(@"Sync Failed - Copy Failed - %@", [errorCopy localizedDescription]);
                     pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Sync Failed"];
                 }
-            } else {
-                NSLog(@"Sync Failed - Copy Failed - %@", [errorCopy localizedDescription]);
+            }
+            @catch (NSException *exception) {
+                NSLog(@"Sync Failed - %@", [exception debugDescription]);
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Sync Failed"];
             }
-        }
-        @catch (NSException *exception) {
-            NSLog(@"Sync Failed - %@", [exception debugDescription]);
-            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Sync Failed"];
-        }
-        
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
+            [pluginResult setKeepCallbackAsBool:YES];
+            
+            [weakSelf.commandDelegate sendPluginResult:pluginResult callbackId:callbackId];
+        }];
     }
 }
 
@@ -163,8 +175,8 @@
 
 - (void) zipArchiveProgressEvent:(NSInteger)loaded total:(NSInteger)total {
     CDVContentSyncTask* sTask = [self findSyncDataByPath];
-//    NSLog(@"Extracting %ld", (long)(loaded / total));
     if(sTask) {
+        //NSLog(@"Extracting %ld / %ld", (long)loaded, (long)total);
         NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
         [message setObject:[NSNumber numberWithInteger:((0.5 + ( ((double)loaded / (double)total) ) / 2) * 100)] forKey:@"progress"];
         [message setObject:@"Extracting" forKey:@"status"];
@@ -197,6 +209,7 @@
 }
 
 - (void) zipArchiveDidUnzipArchiveAtPath:(NSString *)path zipInfo:(unz_global_info)zipInfo unzippedPath:(NSString *)unzippedPath {
+    NSLog(@"unzipped path %@", unzippedPath);
     CDVContentSyncTask* sTask = [self findSyncDataByPath];
     if(sTask) {
         NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:1];
@@ -222,19 +235,19 @@
     
     if(sTask) {
         CDVPluginResult* pluginResult = nil;
-        [pluginResult setKeepCallbackAsBool:YES];
         
         if(error == nil) {
             NSLog(@"Task: %@ completed successfully", task);
             double progress = (double)task.countOfBytesReceived / (double)task.countOfBytesExpectedToReceive;
-            NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:1];
-            [message setObject:[NSNumber numberWithDouble:progress] forKey:@"progress"];
+            NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
+            [message setObject:[NSNumber numberWithDouble:((progress / 2) * 100)] forKey:@"progress"];
+            [message setObject:@"Downloading" forKey:@"status"];
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
         } else {
             NSLog(@"Task: %@ completed with error: %@", task, [error localizedDescription]);
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:[error localizedDescription]];
         }
-        
+        [pluginResult setKeepCallbackAsBool:YES];
         [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
     }
 }
