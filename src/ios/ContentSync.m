@@ -193,6 +193,12 @@
     NSError *errorCopy;
     NSArray* cordovaAssets = [NSArray arrayWithObjects:@"cordova.js",@"cordova_plugins.js",@"plugins", nil];
     NSURL* destinationURL = [NSURL fileURLWithPath:unzippedPath];
+    NSString* suffix = @"/www";
+    
+    if([fileManager fileExistsAtPath:[unzippedPath stringByAppendingString:suffix]]) {
+        destinationURL = [destinationURL URLByAppendingPathComponent:suffix];
+        NSLog(@"Found %@ folder. Will copy Cordova assets to it.", suffix);
+    }
     
     for(NSString* asset in cordovaAssets) {
         NSURL* assetSourceURL = [NSURL fileURLWithPath:[[self commandDelegate] pathForResource:asset]];
