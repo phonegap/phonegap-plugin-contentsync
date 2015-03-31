@@ -16,6 +16,7 @@ package com.adobe.phonegap.contentsync;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
@@ -449,17 +450,17 @@ public class Sync extends CordovaPlugin {
                 new BufferedReader(new InputStreamReader(assetManager.open("www/cordova_plugins.js"), "UTF-8"));
             String str;
 
+            BufferedWriter write = new BufferedWriter(new FileWriter(new File(targetDir, "cordova_plugins.js")));
             while ((str=reader.readLine()) != null) {
               buf.append(str);
+              write.write(str);
+              write.newLine();
             }
             reader.close();
+            write.close();
 
             String cordovaPlugins = buf.toString();
             buf = null;
-
-            FileWriter write = new FileWriter(new File(targetDir, "cordova_plugins.js"));
-            write.write(cordovaPlugins);
-            write.close();
 
             // all the plugins JS
             int start = cordovaPlugins.indexOf(MODULE_EXPORTS);
