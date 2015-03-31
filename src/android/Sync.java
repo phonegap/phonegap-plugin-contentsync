@@ -101,8 +101,7 @@ public class Sync extends CordovaPlugin {
 
             return true;
         } else if (action.equals("cancel")) {
-        	String id = args.getString(0);
-        	ProgressEvent progress = activeRequests.get(id);
+        	ProgressEvent progress = activeRequests.get(args.getString(0));
             if (progress != null) {
             	progress.setAborted(true);
             }
@@ -435,13 +434,14 @@ public class Sync extends CordovaPlugin {
 	private void copyAssets(String outputDirectory) {
 		AssetManager assetManager = cordova.getActivity().getAssets();
 		try {
-			File www = new File(outputDirectory, "www");
-			if (!www.exists()) {
-				www.mkdir();
+			File targetDir =  new File(outputDirectory);
+			File www = new File(targetDir, "www");
+			if (www.exists()) {
+				targetDir = www;
 			}
 
 			// cordova.js
-            this.copyAssetFile(www, "cordova.js");
+            this.copyAssetFile(targetDir, "cordova.js");
 
             // cordova_plugins.js
             StringBuilder buf = new StringBuilder();
@@ -457,7 +457,7 @@ public class Sync extends CordovaPlugin {
             String cordovaPlugins = buf.toString();
             buf = null;
 
-            FileWriter write = new FileWriter(new File(www, "cordova_plugins.js"));
+            FileWriter write = new FileWriter(new File(targetDir, "cordova_plugins.js"));
             write.write(cordovaPlugins);
             write.close();
 
@@ -465,19 +465,19 @@ public class Sync extends CordovaPlugin {
             int start = cordovaPlugins.indexOf(MODULE_EXPORTS);
             int end = cordovaPlugins.indexOf(MODULE_EXPORTS_END, start);
             String pluginsJson = cordovaPlugins.substring(start + MODULE_EXPORTS.length() -1, end+1);
-            //Log.d(LOG_TAG, pluginsJson);
 
             try {
 				JSONArray jsonArray = new JSONArray(pluginsJson);
 	            String jsFile = null;
 	            File jsDir = null;
+
 	            for (int i=0; i<jsonArray.length(); i++) {
 	            	jsFile = jsonArray.getJSONObject(i).getString("file");
-	            	jsDir = new File(www, jsFile.substring(0, jsFile.lastIndexOf("/")));
+	            	jsDir = new File(targetDir, jsFile.substring(0, jsFile.lastIndexOf("/")));
 	            	if (!jsDir.exists()) {
 	            		jsDir.mkdirs();
 	            	}
-	                this.copyAssetFile(www, jsFile);
+	                this.copyAssetFile(targetDir, jsFile);
 	            }
 
 			} catch (JSONException e) {
