@@ -49,18 +49,29 @@ var app = {
 
     syncThisShit: function() {
         var url = "https://github.com/timkim/zipTest/archive/master.zip"; 
-        var sync = ContentSync.sync({ src: url, id: 'myapps/myapp', type: 'replace' });
+        var sync = ContentSync.sync({ src: url, id: 'myapps/myapp', type: 'replace', copyCordovaAssets: false, headers: false });
         
         var setProgress = function(progress) {
 
             if(progress.status) {
-                document.getElementById('status').innerHTML = (progress.status == "Downloading" ? "Downloading..." : "Extracting...");
-            } else {
-                document.getElementById('status').innerHTML = ""; 
+                switch(progress.status) {
+                    case 1:
+                        document.getElementById('status').innerHTML = "Downloading...";
+                        break;
+                    case 2:
+                        document.getElementById('status').innerHTML = "Extracting...";
+                        break;
+                    case 3:
+                        document.getElementById('status').innerHTML = "Complete!";
+                        break;
+                    default:
+                        document.getElementById('status').innerHTML = "";
+                }
             }
-
-            var progressBar = document.getElementById('progressbar').children[0];
-            progressBar.style.width = progress.progress + '%';
+            if(progress.progress) {
+                var progressBar = document.getElementById('progressbar').children[0];
+                progressBar.style.width = progress.progress + '%';
+            }
         };
 
         sync.on('progress', function(progress) {
@@ -68,7 +79,6 @@ var app = {
             setProgress(progress);
         });
         sync.on('complete', function(data) {
-            setProgress({progress: 100})
             console.log("Complete", data);
             //document.location = data.localPath + "/zipTest-master/index.html";
         });
