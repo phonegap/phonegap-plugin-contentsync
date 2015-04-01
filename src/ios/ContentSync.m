@@ -1,10 +1,10 @@
 #import "ContentSync.h"
 
 
-@implementation CDVContentSyncTask
+@implementation ContentSyncTask
 
-- (CDVContentSyncTask *)init {
-    self = (CDVContentSyncTask*)[super init];
+- (ContentSyncTask *)init {
+    self = (ContentSyncTask*)[super init];
     if(self) {
         self.downloadTask = nil;
         self.command = nil;
@@ -14,7 +14,7 @@
 }
 @end
 
-@implementation CDVContentSync
+@implementation ContentSync
 
 - (void)pluginInitialize {
     self.session = [self backgroundSession];
@@ -44,7 +44,7 @@
         }
         NSURLSessionDownloadTask *downloadTask = [self.session downloadTaskWithRequest:request];
         
-        CDVContentSyncTask* sData = [[CDVContentSyncTask alloc] init];
+        ContentSyncTask* sData = [[ContentSyncTask alloc] init];
         
         sData.downloadTask = downloadTask;
         sData.command = command;
@@ -54,7 +54,7 @@
         [downloadTask resume];
         NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
         [message setObject:[NSNumber numberWithInteger:0] forKey:@"progress"];
-        [message setObject:@"Downloading" forKey:@"status"];
+        [message setObject:[NSNumber numberWithInteger:Downloading] forKey:@"status"];
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
     } else {
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Arg was null"];
@@ -65,14 +65,15 @@
 }
 
 - (void)cancel:(CDVInvokedUrlCommand *)command {
-    CDVContentSyncTask* sTask = [self findSyncDataByCallbackID:command.callbackId];
+    CDVPluginResult* pluginResult = nil;
+    ContentSyncTask* sTask = [self findSyncDataByCallbackID:command.callbackId];
     if(sTask) {
         [[sTask downloadTask] cancel];
     }
 }
 
-- (CDVContentSyncTask *)findSyncDataByDownloadTask:(NSURLSessionDownloadTask*)downloadTask {
-    for(CDVContentSyncTask* sTask in self.syncTasks) {
+- (ContentSyncTask *)findSyncDataByDownloadTask:(NSURLSessionDownloadTask*)downloadTask {
+    for(ContentSyncTask* sTask in self.syncTasks) {
         if(sTask.downloadTask == downloadTask) {
             return sTask;
         }
@@ -80,8 +81,8 @@
     return nil;
 }
 
-- (CDVContentSyncTask *)findSyncDataByPath {
-    for(CDVContentSyncTask* sTask in self.syncTasks) {
+- (ContentSyncTask *)findSyncDataByPath {
+    for(ContentSyncTask* sTask in self.syncTasks) {
         if([sTask.archivePath isEqualToString:[self currentPath]]) {
             return sTask;
         }
@@ -89,8 +90,8 @@
     return nil;
 }
 
-- (CDVContentSyncTask *)findSyncDataByCallbackID:(NSString*)callbackId {
-    for(CDVContentSyncTask* sTask in self.syncTasks) {
+- (ContentSyncTask *)findSyncDataByCallbackID:(NSString*)callbackId {
+    for(ContentSyncTask* sTask in self.syncTasks) {
         if([sTask.command.callbackId isEqualToString:callbackId]) {
             return sTask;
         }
@@ -102,14 +103,14 @@
     
     CDVPluginResult* pluginResult = nil;
     
-    CDVContentSyncTask* sTask = [self findSyncDataByDownloadTask:downloadTask];
+    ContentSyncTask* sTask = [self findSyncDataByDownloadTask:downloadTask];
     
     if(sTask) {
         double progress = (double)totalBytesWritten / (double)totalBytesExpectedToWrite;
         //NSLog(@"DownloadTask: %@ progress: %lf callbackId: %@", downloadTask, progress, sTask.command.callbackId);
         NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
         [message setObject:[NSNumber numberWithInteger:((progress / 2) * 100)] forKey:@"progress"];
-        [message setObject:@"Downloading" forKey:@"status"];
+        [message setObject:[NSNumber numberWithInteger:Downloading] forKey:@"status"];
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
         [pluginResult setKeepCallbackAsBool:YES];
         [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
@@ -120,8 +121,8 @@
 
 - (void) URLSession:(NSURLSession*)session downloadTask:(NSURLSessionDownloadTask*)downloadTask didFinishDownloadingToURL:(NSURL *)downloadURL {
     
-    __weak CDVContentSync* weakSelf = self;
-    CDVContentSyncTask* sTask = [self findSyncDataByDownloadTask:downloadTask];
+    __weak ContentSync* weakSelf = self;
+    ContentSyncTask* sTask = [self findSyncDataByDownloadTask:downloadTask];
     
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSArray *URLs = [fileManager URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask];
@@ -174,12 +175,12 @@
 }
 
 - (void) zipArchiveProgressEvent:(NSInteger)loaded total:(NSInteger)total {
-    CDVContentSyncTask* sTask = [self findSyncDataByPath];
+    ContentSyncTask* sTask = [self findSyncDataByPath];
     if(sTask) {
         //NSLog(@"Extracting %ld / %ld", (long)loaded, (long)total);
         NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
         [message setObject:[NSNumber numberWithInteger:((0.5 + ( ((double)loaded / (double)total) ) / 2) * 100)] forKey:@"progress"];
-        [message setObject:@"Extracting" forKey:@"status"];
+        [message setObject:[NSNumber numberWithInteger:Extracting] forKey:@"status"];
         
         CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
         [pluginResult setKeepCallbackAsBool:YES];
@@ -216,7 +217,7 @@
 
 - (void) zipArchiveDidUnzipArchiveAtPath:(NSString *)path zipInfo:(unz_global_info)zipInfo unzippedPath:(NSString *)unzippedPath {
     NSLog(@"unzipped path %@", unzippedPath);
-    CDVContentSyncTask* sTask = [self findSyncDataByPath];
+    ContentSyncTask* sTask = [self findSyncDataByPath];
     if(sTask) {
         NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:1];
         [message setObject:unzippedPath forKey:@"localPath"];
@@ -237,7 +238,7 @@
 
 - (void) URLSession:(NSURLSession*)session task:(NSURLSessionTask*)task didCompleteWithError:(NSError *)error {
     
-    CDVContentSyncTask* sTask = [self findSyncDataByDownloadTask:(NSURLSessionDownloadTask*)task];
+    ContentSyncTask* sTask = [self findSyncDataByDownloadTask:(NSURLSessionDownloadTask*)task];
     
     if(sTask) {
         CDVPluginResult* pluginResult = nil;

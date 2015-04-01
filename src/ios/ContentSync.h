@@ -2,7 +2,15 @@
 #import <Cordova/CDVPlugin.h>
 #import "SSZipArchive.h"
 
-@interface CDVContentSyncTask: NSObject
+enum ProgressState {
+    Stopped = 0,
+    Downloading,
+    Extracting,
+    Complete
+};
+typedef NSUInteger ProgressState;
+
+@interface ContentSyncTask: NSObject
 
 @property (nonatomic) CDVInvokedUrlCommand* command;
 @property (nonatomic) NSURLSessionDownloadTask* downloadTask;
@@ -10,7 +18,7 @@
 
 @end
 
-@interface CDVContentSync : CDVPlugin <NSURLSessionDelegate, NSURLSessionTaskDelegate, NSURLSessionDownloadDelegate, SSZipArchiveDelegate>
+@interface ContentSync : CDVPlugin <NSURLSessionDelegate, NSURLSessionTaskDelegate, NSURLSessionDownloadDelegate, SSZipArchiveDelegate>
 
 @property (nonatomic) NSString* currentPath;
 @property (nonatomic) NSMutableArray *syncTasks;

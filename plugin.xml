@@ -51,7 +51,7 @@ xmlns:android="http://schemas.android.com/apk/res/android"
         <header-file src="src/ios/minizip/crypt.h" target-dir="Plugins/minizip" />
         <config-file target="config.xml" parent="/*">
             <feature name="Sync">
-                <param name="ios-package" value="CDVContentSync" />
+                <param name="ios-package" value="ContentSync" />
             </feature>
         </config-file>
         <framework src="libz.dylib" />
