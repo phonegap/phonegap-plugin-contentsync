@@ -382,6 +382,8 @@ public class Sync extends CordovaPlugin {
 		// Testing
 		//String outputDirectory = cordova.getActivity().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
 		outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
+		outputDirectory += "files";
+		outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
 		outputDirectory += id;
 		Log.d(LOG_TAG, "output dir = " + outputDirectory);
 
