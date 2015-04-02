@@ -65,7 +65,6 @@
 }
 
 - (void)cancel:(CDVInvokedUrlCommand *)command {
-    CDVPluginResult* pluginResult = nil;
     ContentSyncTask* sTask = [self findSyncDataByCallbackID:command.callbackId];
     if(sTask) {
         [[sTask downloadTask] cancel];
