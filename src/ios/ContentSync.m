@@ -31,7 +31,7 @@
         NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:downloadURL];
         
         // Setting headers
-        NSDictionary *headers = (NSDictionary *)[command argumentAtIndex:3 withDefault:nil];
+        NSDictionary *headers = [command argumentAtIndex:3 withDefault:nil andClass:[NSDictionary class]];
         if(headers != nil) {
             for (NSString* header in [headers allKeys]) {
                 NSLog(@"Setting header %@ %@", header, [headers objectForKey:header]);
@@ -67,7 +67,10 @@
 - (void)cancel:(CDVInvokedUrlCommand *)command {
     ContentSyncTask* sTask = [self findSyncDataByCallbackID:command.callbackId];
     if(sTask) {
+        CDVPluginResult* pluginResult = nil;
         [[sTask downloadTask] cancel];
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
     }
 }
 
@@ -218,17 +221,27 @@
     NSLog(@"unzipped path %@", unzippedPath);
     ContentSyncTask* sTask = [self findSyncDataByPath];
     if(sTask) {
-        NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:1];
-        [message setObject:unzippedPath forKey:@"localPath"];
-        
         // FIXME: GET RID OF THIS SHIT / Copying cordova assets
-        if((BOOL)[sTask.command.arguments objectAtIndex:4] == YES) {
+        if([[[sTask command] argumentAtIndex:4 withDefault:@(NO)] boolValue] == YES) {
+            NSLog(@"Copying Cordova Assets to %@ as requested", unzippedPath);
             if(![self copyCordovaAssets:unzippedPath]) {
                 NSLog(@"Something fucked up!");
             };
         }
+        // XXX this is to match the Android implementation
         
-        CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+        NSMutableDictionary* message = nil;
+        CDVPluginResult* pluginResult = nil;
+        message = [NSMutableDictionary dictionaryWithCapacity:2];
+        [message setObject:[NSNumber numberWithInteger:100] forKey:@"progress"];
+        [message setObject:[NSNumber numberWithInteger:Complete] forKey:@"status"];
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+        [pluginResult setKeepCallbackAsBool:YES];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
+        
+        message = [NSMutableDictionary dictionaryWithCapacity:1];
+        [message setObject:unzippedPath forKey:@"localPath"];
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
         [pluginResult setKeepCallbackAsBool:NO];
         [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
         [[self syncTasks] removeObject:sTask];
@@ -247,7 +260,7 @@
             double progress = (double)task.countOfBytesReceived / (double)task.countOfBytesExpectedToReceive;
             NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
             [message setObject:[NSNumber numberWithDouble:((progress / 2) * 100)] forKey:@"progress"];
-            [message setObject:@"Downloading" forKey:@"status"];
+            [message setObject:[NSNumber numberWithInt:Downloading] forKey:@"status"];
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
         } else {
             NSLog(@"Task: %@ completed with error: %@", task, [error localizedDescription]);
@@ -269,7 +282,15 @@
     static NSURLSession *session = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:@"com.example.apple-samplecode.SimpleBackgroundTransfer.BackgroundSession"];
+        NSURLSessionConfiguration *configuration;
+        if ([[[UIDevice currentDevice] systemVersion] floatValue] >=8.0f)
+        {
+            configuration = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:@"com.example.apple-samplecode.SimpleBackgroundTransfer.BackgroundSession"];
+        }
+        else
+        {
+            configuration = [NSURLSessionConfiguration backgroundSessionConfiguration:@"com.example.apple-samplecode.SimpleBackgroundTransfer.BackgroundSession"];
+        }
         session = [NSURLSession sessionWithConfiguration:configuration delegate:self delegateQueue:nil];
     });
     return session;
