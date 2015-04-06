@@ -425,7 +425,7 @@ public class Sync extends CordovaPlugin {
 			removeFolder(backup);
 
 			JSONObject result = new JSONObject();
-			result.put(PROP_LOCAL_PATH, getUriForArg(outputDirectory));
+			result.put(PROP_LOCAL_PATH, outputDirectory);
 	        callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, result));
 		} else {
 			// failure, revert backup
