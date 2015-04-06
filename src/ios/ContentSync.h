@@ -15,6 +15,8 @@ typedef NSUInteger ProgressState;
 @property (nonatomic) CDVInvokedUrlCommand* command;
 @property (nonatomic) NSURLSessionDownloadTask* downloadTask;
 @property (nonatomic) NSString* archivePath;
+@property (nonatomic) NSInteger progress;
+@property (nonatomic) BOOL extractArchive;
 
 @end
 
@@ -26,5 +28,7 @@ typedef NSUInteger ProgressState;
 
 - (void) sync:(CDVInvokedUrlCommand*)command;
 - (void) cancel:(CDVInvokedUrlCommand*)command;
+- (void) download:(CDVInvokedUrlCommand*)command;
+- (void) unzip:(CDVInvokedUrlCommand*)command;
 
 @end
