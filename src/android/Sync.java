@@ -217,7 +217,7 @@ public class Sync extends CordovaPlugin {
                     OpenForReadResult readResult = null;
 
                     File outputDir = cordova.getActivity().getCacheDir();
-                    file = File.createTempFile(id, ".tmp", outputDir);
+                    file = File.createTempFile(("cdv_" + id), ".tmp", outputDir);
                     final Uri targetUri = resourceApi.remapUri(Uri.fromFile(file));
 
 
