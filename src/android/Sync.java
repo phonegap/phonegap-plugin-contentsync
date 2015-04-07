@@ -93,6 +93,17 @@ public class Sync extends CordovaPlugin {
             sync(args, callbackContext);
             return true;
         } else if (action.equals("download")) {
+        	final String source = args.getString(0);
+        	final File target = new File(args.getString(1));
+        	final JSONObject headers = args.optJSONObject(2);
+        	final CallbackContext finalContext = callbackContext;
+            cordova.getThreadPool().execute(new Runnable() {
+                public void run() {
+                	download(source, target, headers, createProgressEvent("download"), finalContext);
+                	finalContext.sendPluginResult(new PluginResult(PluginResult.Status.OK));
+                }
+            });
+            return true;
         } else if (action.equals("unzip")) {
         	final File source = new File(args.getString(0));
         	final String target = args.getString(1);
@@ -183,8 +194,7 @@ public class Sync extends CordovaPlugin {
         }
     }
 
-	private void download(final String source, final String id, final String type, final JSONObject headers, final boolean copyCordovaAssets,
-			final ProgressEvent progress, final CallbackContext callbackContext) {
+	private void download(final String source, final File file, final JSONObject headers, final ProgressEvent progress, final CallbackContext callbackContext) {
         Log.d(LOG_TAG, "download " + source);
 
         final CordovaResourceApi resourceApi = webView.getResourceApi();
@@ -203,7 +213,6 @@ public class Sync extends CordovaPlugin {
         HttpURLConnection connection = null;
         HostnameVerifier oldHostnameVerifier = null;
         SSLSocketFactory oldSocketFactory = null;
-        File file = null;
         PluginResult result = null;
         TrackingInputStream inputStream = null;
         boolean cached = false;
@@ -211,11 +220,7 @@ public class Sync extends CordovaPlugin {
         OutputStream outputStream = null;
         try {
             OpenForReadResult readResult = null;
-
-            File outputDir = cordova.getActivity().getCacheDir();
-            file = File.createTempFile(("cdv_" + id), ".tmp", outputDir);
             final Uri targetUri = resourceApi.remapUri(Uri.fromFile(file));
-
 
             progress.setTargetFile(file);
             progress.setStatus(STATUS_DOWNLOADING);
@@ -395,8 +400,17 @@ public class Sync extends CordovaPlugin {
                     }
                 }
 
+                // download file location
+                File file = null;
+                try {
+					file = File.createTempFile(("cdv_" + id), ".tmp", cordova.getActivity().getCacheDir());
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+
 		    	// download file
-		    	download(src, id, type, headers, copyCordovaAssets, progress, callbackContext);
+		    	download(src, file, headers, progress, callbackContext);
 
 		    	// update progress with zip file
 				Log.d(LOG_TAG, "type = " + type);
