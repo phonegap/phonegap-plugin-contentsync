@@ -88,19 +88,13 @@ public class Sync extends CordovaPlugin {
 	@Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
         if (action.equals("sync")) {
-        	String src = args.getString(0);
-        	String id = args.getString(1);
-        	String type = args.optString(2, TYPE_REPLACE);
-        	JSONObject headers = args.optJSONObject(3);
-        	if (headers == null) {
-        		headers = new JSONObject();
-        	}
-        	boolean copyCordovaAssets = args.getBoolean(4);
-        	Log.d(LOG_TAG, "sync called with id = " + id + " and src = " + src + "!");
+            sync(args, callbackContext);
 
-        	download(src, id, type, headers, copyCordovaAssets, callbackContext);
+        	// download(src, id, type, headers, copyCordovaAssets, callbackContext);
 
             return true;
+        } else if (action.equals("download")) {
+        } else if (action.equals("unzip")) {
         } else if (action.equals("cancel")) {
         	ProgressEvent progress = activeRequests.get(args.getString(0));
             if (progress != null) {
@@ -180,7 +174,8 @@ public class Sync extends CordovaPlugin {
         }
     }
 
-	private void download(final String source, final String id, final String type, final JSONObject headers, final boolean copyCordovaAssets, final CallbackContext callbackContext) {
+	private void download(final String source, final String id, final String type, final JSONObject headers, final boolean copyCordovaAssets,
+			final ProgressEvent progress, final CallbackContext callbackContext) {
         Log.d(LOG_TAG, "download " + source);
 
         final CordovaResourceApi resourceApi = webView.getResourceApi();
@@ -191,163 +186,151 @@ public class Sync extends CordovaPlugin {
         final boolean useHttps = uriType == CordovaResourceApi.URI_TYPE_HTTPS;
         final boolean isLocalTransfer = !useHttps && uriType != CordovaResourceApi.URI_TYPE_HTTP;
 
-
-        final ProgressEvent progress = new ProgressEvent();
-        synchronized (activeRequests) {
-            activeRequests.put(id, progress);
+        synchronized (progress) {
+            if (progress.isAborted()) {
+                return;
+            }
         }
+        HttpURLConnection connection = null;
+        HostnameVerifier oldHostnameVerifier = null;
+        SSLSocketFactory oldSocketFactory = null;
+        File file = null;
+        PluginResult result = null;
+        TrackingInputStream inputStream = null;
+        boolean cached = false;
 
-        cordova.getThreadPool().execute(new Runnable() {
-            public void run() {
-                synchronized (progress) {
-                    if (progress.isAborted()) {
-                        return;
-                    }
+        OutputStream outputStream = null;
+        try {
+            OpenForReadResult readResult = null;
+
+            File outputDir = cordova.getActivity().getCacheDir();
+            file = File.createTempFile(("cdv_" + id), ".tmp", outputDir);
+            final Uri targetUri = resourceApi.remapUri(Uri.fromFile(file));
+
+
+            progress.setTargetFile(file);
+            progress.setStatus(STATUS_DOWNLOADING);
+
+            Log.d(LOG_TAG, "Download file:" + sourceUri);
+            Log.d(LOG_TAG, "Target file:" + file);
+            Log.d(LOG_TAG, "size = " + file.length());
+
+
+            if (isLocalTransfer) {
+                readResult = resourceApi.openForRead(sourceUri);
+                if (readResult.length != -1) {
+                    progress.setTotal(readResult.length);
                 }
-                HttpURLConnection connection = null;
-                HostnameVerifier oldHostnameVerifier = null;
-                SSLSocketFactory oldSocketFactory = null;
-                File file = null;
-                PluginResult result = null;
-                TrackingInputStream inputStream = null;
-                boolean cached = false;
+                inputStream = new SimpleTrackingInputStream(readResult.inputStream);
+            } else {
+                // connect to server
+                // Open a HTTP connection to the URL based on protocol
+                connection = resourceApi.createHttpConnection(sourceUri);
+                if (useHttps && trustEveryone) {
+                    // Setup the HTTPS connection class to trust everyone
+                    HttpsURLConnection https = (HttpsURLConnection)connection;
+                    oldSocketFactory = trustAllHosts(https);
+                    // Save the current hostnameVerifier
+                    oldHostnameVerifier = https.getHostnameVerifier();
+                    // Setup the connection not to verify hostnames
+                    https.setHostnameVerifier(DO_NOT_VERIFY);
+                }
 
-                OutputStream outputStream = null;
-                try {
-                    OpenForReadResult readResult = null;
+                connection.setRequestMethod("GET");
 
-                    File outputDir = cordova.getActivity().getCacheDir();
-                    file = File.createTempFile(("cdv_" + id), ".tmp", outputDir);
-                    final Uri targetUri = resourceApi.remapUri(Uri.fromFile(file));
+                // TODO: Make OkHttp use this CookieManager by default.
+                String cookie = getCookies(sourceUri.toString());
 
+                if(cookie != null)
+                {
+                    connection.setRequestProperty("cookie", cookie);
+                }
 
-                    progress.setTargetFile(file);
-                    progress.setStatus(STATUS_DOWNLOADING);
+                // This must be explicitly set for gzip progress tracking to work.
+                connection.setRequestProperty("Accept-Encoding", "gzip");
 
-                    Log.d(LOG_TAG, "Download file:" + sourceUri);
-                    Log.d(LOG_TAG, "Target file:" + file);
-                    Log.d(LOG_TAG, "size = " + file.length());
+                // Handle the other headers
+                if (headers != null) {
+                    addHeadersToRequest(connection, headers);
+                }
 
-
-                    if (isLocalTransfer) {
-                        readResult = resourceApi.openForRead(sourceUri);
-                        if (readResult.length != -1) {
-                            progress.setTotal(readResult.length);
-                        }
-                        inputStream = new SimpleTrackingInputStream(readResult.inputStream);
-                    } else {
-                        // connect to server
-                        // Open a HTTP connection to the URL based on protocol
-                        connection = resourceApi.createHttpConnection(sourceUri);
-                        if (useHttps && trustEveryone) {
-                            // Setup the HTTPS connection class to trust everyone
-                            HttpsURLConnection https = (HttpsURLConnection)connection;
-                            oldSocketFactory = trustAllHosts(https);
-                            // Save the current hostnameVerifier
-                            oldHostnameVerifier = https.getHostnameVerifier();
-                            // Setup the connection not to verify hostnames
-                            https.setHostnameVerifier(DO_NOT_VERIFY);
-                        }
-
-                        connection.setRequestMethod("GET");
-
-                        // TODO: Make OkHttp use this CookieManager by default.
-                        String cookie = getCookies(sourceUri.toString());
-
-                        if(cookie != null)
-                        {
-                            connection.setRequestProperty("cookie", cookie);
-                        }
-
-                        // This must be explicitly set for gzip progress tracking to work.
-                        connection.setRequestProperty("Accept-Encoding", "gzip");
-
-                        // Handle the other headers
-                        if (headers != null) {
-                            addHeadersToRequest(connection, headers);
-                        }
-
-                        connection.connect();
-                        if (connection.getResponseCode() == HttpURLConnection.HTTP_NOT_MODIFIED) {
-                            cached = true;
-                            connection.disconnect();
-                            sendErrorMessage("Resource not modified: " + source, callbackContext);
-                        } else {
-                            if (connection.getContentEncoding() == null || connection.getContentEncoding().equalsIgnoreCase("gzip")) {
-                                // Only trust content-length header if we understand
-                                // the encoding -- identity or gzip
-                            	int connectionLength = connection.getContentLength();
-                                if (connectionLength != -1) {
-                                	if (connectionLength > getFreeSpace()) {
-                                		cached = true;
-                                		connection.disconnect();
-                                        sendErrorMessage("Not enough free space to download", callbackContext);
-                                	} else {
-                                        progress.setTotal(connectionLength);
-                                	}
-                                }
-                            }
-                            inputStream = getInputStream(connection);
+                connection.connect();
+                if (connection.getResponseCode() == HttpURLConnection.HTTP_NOT_MODIFIED) {
+                    cached = true;
+                    connection.disconnect();
+                    sendErrorMessage("Resource not modified: " + source, callbackContext);
+                } else {
+                    if (connection.getContentEncoding() == null || connection.getContentEncoding().equalsIgnoreCase("gzip")) {
+                        // Only trust content-length header if we understand
+                        // the encoding -- identity or gzip
+                    	int connectionLength = connection.getContentLength();
+                        if (connectionLength != -1) {
+                        	if (connectionLength > getFreeSpace()) {
+                        		cached = true;
+                        		connection.disconnect();
+                                sendErrorMessage("Not enough free space to download", callbackContext);
+                        	} else {
+                                progress.setTotal(connectionLength);
+                        	}
                         }
                     }
-
-                    if (!cached) {
-                        try {
-                            synchronized (progress) {
-                                if (progress.isAborted()) {
-                                    return;
-                                }
-                                //progress.connection = connection;
-                            }
-
-                            // write bytes to file
-                            byte[] buffer = new byte[MAX_BUFFER_SIZE];
-                            int bytesRead = 0;
-                            outputStream = resourceApi.openOutputStream(targetUri);
-                            while ((bytesRead = inputStream.read(buffer)) > 0) {
-                                synchronized (progress) {
-                                    if (progress.isAborted()) {
-                                        return;
-                                    }
-                                }
-                                Log.d(LOG_TAG, "bytes read = " + bytesRead);
-                                outputStream.write(buffer, 0, bytesRead);
-                                // Send a progress event.
-                                progress.setLoaded(inputStream.getTotalRawBytesRead());
-
-                                updateProgress(callbackContext, progress);
-                            }
-
-                            unzip(id, progress, type, copyCordovaAssets, callbackContext);
-                        } finally {
-                            synchronized (progress) {
-                            	//progress.connection = null;
-                            }
-                            safeClose(inputStream);
-                            safeClose(outputStream);
-                        }
-                    }
-
-                } catch (Throwable e) {
-                	sendErrorMessage(e.getLocalizedMessage(), callbackContext);
-                } finally {
-                    if (connection != null) {
-                        // Revert back to the proper verifier and socket factories
-                        if (trustEveryone && useHttps) {
-                            HttpsURLConnection https = (HttpsURLConnection) connection;
-                            https.setHostnameVerifier(oldHostnameVerifier);
-                            https.setSSLSocketFactory(oldSocketFactory);
-                        }
-                    }
-
-                    // Remove incomplete download.
-                    if (!cached && result != null && result.getStatus() != PluginResult.Status.OK.ordinal() && file != null) {
-                    	Log.d(LOG_TAG, "Delete incomplete file");
-                        file.delete();
-                    }
+                    inputStream = getInputStream(connection);
                 }
             }
-        });
+
+            if (!cached) {
+                try {
+                    synchronized (progress) {
+                        if (progress.isAborted()) {
+                            return;
+                        }
+                        //progress.connection = connection;
+                    }
+
+                    // write bytes to file
+                    byte[] buffer = new byte[MAX_BUFFER_SIZE];
+                    int bytesRead = 0;
+                    outputStream = resourceApi.openOutputStream(targetUri);
+                    while ((bytesRead = inputStream.read(buffer)) > 0) {
+                        synchronized (progress) {
+                            if (progress.isAborted()) {
+                                return;
+                            }
+                        }
+                        Log.d(LOG_TAG, "bytes read = " + bytesRead);
+                        outputStream.write(buffer, 0, bytesRead);
+                        // Send a progress event.
+                        progress.setLoaded(inputStream.getTotalRawBytesRead());
+
+                        updateProgress(callbackContext, progress);
+                    }
+                } finally {
+                    synchronized (progress) {
+                    	//progress.connection = null;
+                    }
+                    safeClose(inputStream);
+                    safeClose(outputStream);
+                }
+            }
+
+        } catch (Throwable e) {
+        	sendErrorMessage(e.getLocalizedMessage(), callbackContext);
+        } finally {
+            if (connection != null) {
+                // Revert back to the proper verifier and socket factories
+                if (trustEveryone && useHttps) {
+                    HttpsURLConnection https = (HttpsURLConnection) connection;
+                    https.setHostnameVerifier(oldHostnameVerifier);
+                    https.setSSLSocketFactory(oldSocketFactory);
+                }
+            }
+
+            // Remove incomplete download.
+            if (!cached && result != null && result.getStatus() != PluginResult.Status.OK.ordinal() && file != null) {
+            	Log.d(LOG_TAG, "Delete incomplete file");
+                file.delete();
+            }
+                }
     }
 
     private void sendErrorMessage(String message, CallbackContext callbackContext) {
@@ -371,67 +354,107 @@ public class Sync extends CordovaPlugin {
         return availableBlocks * blockSize;
     }
 
-	private void unzip(final String id, final ProgressEvent progress, String type, boolean copyCordovaAssets, final CallbackContext callbackContext) throws JSONException {
-		Log.d(LOG_TAG, "type = " + type);
-		File targetFile = progress.getTargetFile();
-		Log.d(LOG_TAG, "downloaded = " + targetFile.getAbsolutePath());
-
-		// unzip
-		// Production
-		String outputDirectory = cordova.getActivity().getFilesDir().getAbsolutePath();
-		// Testing
-		//String outputDirectory = cordova.getActivity().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
-		outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
-		outputDirectory += "files";
-		outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
-		outputDirectory += id;
-		Log.d(LOG_TAG, "output dir = " + outputDirectory);
-
-		// Backup existing directory
-		File dir = new File(outputDirectory);
-		File backup = new File(outputDirectory + ".bak");
-		if (dir.exists()) {
-			if (type.equals(TYPE_MERGE)) {
-				try {
-					copyFolder(dir, backup);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			} else {
-				dir.renameTo(backup);
-			}
-		}
-
-		boolean win = unzipSync(targetFile, outputDirectory, progress, callbackContext);
-
-		// delete temp file
-		targetFile.delete();
-
-		if (copyCordovaAssets) {
-			copyAssets(outputDirectory);
-		}
-
-		// complete
+	private ProgressEvent createProgressEvent(String id) {
+		ProgressEvent progress = new ProgressEvent();
 		synchronized (activeRequests) {
-			activeRequests.remove(id);
+		    activeRequests.put(id, progress);
 		}
+		return progress;
+	}
 
-		// Send last progress event
-		progress.setStatus(STATUS_COMPLETE);
-		updateProgress(callbackContext, progress);
+	private void sync(final JSONArray args, final CallbackContext callbackContext) throws JSONException {
+		// get args
+    	final String src = args.getString(0);
+    	final String id = args.getString(1);
+    	final String type = args.optString(2, TYPE_REPLACE);
+    	final JSONObject headers;
+    	if (args.optJSONObject(3) != null) {
+        	headers = args.optJSONObject(3);
+    	} else {
+    		headers = new JSONObject();
+    	}
+    	final boolean copyCordovaAssets = args.getBoolean(4);
+    	Log.d(LOG_TAG, "sync called with id = " + id + " and src = " + src + "!");
 
-		if (win) {
-			// success, remove backup
-			removeFolder(backup);
+    	final ProgressEvent progress = createProgressEvent(id);
 
-			JSONObject result = new JSONObject();
-			result.put(PROP_LOCAL_PATH, outputDirectory);
-	        callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, result));
-		} else {
-			// failure, revert backup
-			removeFolder(dir);
-			backup.renameTo(dir);
-		}
+        cordova.getThreadPool().execute(new Runnable() {
+            public void run() {
+                synchronized (progress) {
+                    if (progress.isAborted()) {
+                        return;
+                    }
+                }
+
+		    	// download file
+		    	download(src, id, type, headers, copyCordovaAssets, progress, callbackContext);
+
+		    	// update progress with zip file
+				Log.d(LOG_TAG, "type = " + type);
+				File targetFile = progress.getTargetFile();
+				Log.d(LOG_TAG, "downloaded = " + targetFile.getAbsolutePath());
+
+				// unzip
+				// Production
+				//String outputDirectory = cordova.getActivity().getFilesDir().getAbsolutePath();
+				// Testing
+				String outputDirectory = cordova.getActivity().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
+				outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
+				outputDirectory += "files";
+				outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
+				outputDirectory += id;
+				Log.d(LOG_TAG, "output dir = " + outputDirectory);
+
+				// Backup existing directory
+				File dir = new File(outputDirectory);
+				File backup = new File(outputDirectory + ".bak");
+				if (dir.exists()) {
+					if (type.equals(TYPE_MERGE)) {
+						try {
+							copyFolder(dir, backup);
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					} else {
+						dir.renameTo(backup);
+					}
+				}
+
+				boolean win = unzipSync(targetFile, outputDirectory, progress, callbackContext);
+
+				// delete temp file
+				targetFile.delete();
+
+				if (copyCordovaAssets) {
+					copyAssets(outputDirectory);
+				}
+
+				// complete
+				synchronized (activeRequests) {
+					activeRequests.remove(id);
+				}
+
+				// Send last progress event
+				progress.setStatus(STATUS_COMPLETE);
+				updateProgress(callbackContext, progress);
+
+				if (win) {
+					// success, remove backup
+					removeFolder(backup);
+					try {
+						JSONObject result = new JSONObject();
+						result.put(PROP_LOCAL_PATH, outputDirectory);
+				        callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, result));
+					} catch (JSONException e) {
+						// never happens
+					}
+				} else {
+					// failure, revert backup
+					removeFolder(dir);
+					backup.renameTo(dir);
+				}
+            }
+        });
 	}
 
 	private void copyAssets(String outputDirectory) {
@@ -745,18 +768,21 @@ public class Sync extends CordovaPlugin {
             return false;
     }
 
-    private void updateProgress(CallbackContext callbackContext, ProgressEvent progress) throws JSONException {
-        if (progress.getLoaded() != progress.getTotal() || progress.getStatus() == STATUS_COMPLETE) {
-	        PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, progress.toJSONObject());
-	        pluginResult.setKeepCallback(true);
-	        callbackContext.sendPluginResult(pluginResult);
-        }
+    private void updateProgress(CallbackContext callbackContext, ProgressEvent progress) {
+    	try {
+            if (progress.getLoaded() != progress.getTotal() || progress.getStatus() == STATUS_COMPLETE) {
+    	        PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, progress.toJSONObject());
+    	        pluginResult.setKeepCallback(true);
+    	        callbackContext.sendPluginResult(pluginResult);
+            }
+    	} catch (JSONException e) {
+    		// never happens
+    	}
     }
 
     private Uri getUriForArg(String arg) {
-        CordovaResourceApi resourceApi = webView.getResourceApi();
         Uri tmpTarget = Uri.parse(arg);
-        return resourceApi.remapUri(
+        return webView.getResourceApi().remapUri(
                 tmpTarget.getScheme() != null ? tmpTarget : Uri.fromFile(new File(arg)));
     }
 
@@ -824,7 +850,6 @@ public class Sync extends CordovaPlugin {
     }
 
     private void copyFolder(File src, File dest) throws IOException{
-
     	if(src.isDirectory()) {
     		if(!dest.exists()){
     		   dest.mkdir();
@@ -834,31 +859,22 @@ public class Sync extends CordovaPlugin {
     		String files[] = src.list();
 
     		for (String file : files) {
-    		   //construct the src and dest file structure
-    		   File srcFile = new File(src, file);
-    		   File destFile = new File(dest, file);
     		   //recursive copy
-    		   copyFolder(srcFile,destFile);
+    		   copyFolder(new File(src, file), new File(dest, file));
     		}
 
     	} else {
     		//if file, then copy it
-    		InputStream in = new FileInputStream(src);
-    	    OutputStream out = new FileOutputStream(dest);
-
-    	    copyFile(in, out);
+    	    copyFile(new FileInputStream(src), new FileOutputStream(dest));
     	}
     }
 
     private void copyAssetFile(File www, String filename) throws IOException {
-		AssetManager assetManager = cordova.getActivity().getAssets();
-        InputStream in = assetManager.open("www/" + filename);
-        OutputStream out = new FileOutputStream(new File(www, filename));
-    	copyFile(in, out);
+    	copyFile(cordova.getActivity().getAssets().open("www/" + filename), new FileOutputStream(new File(www, filename)));
     }
 
 	private void copyFile(InputStream in, OutputStream out) throws IOException {
-		byte[] buffer = new byte[1024];
+		byte[] buffer = new byte[4096];
 
 		int length;
 		//copy the file content in bytes
@@ -871,14 +887,11 @@ public class Sync extends CordovaPlugin {
 	}
 
     private void removeFolder(File directory) {
-    	if (directory.exists()) {
-            if (directory.isDirectory()) {
-                for (File file : directory.listFiles()) {
-                	removeFolder(file);
-                }
+    	if (directory.exists() && directory.isDirectory()) {
+            for (File file : directory.listFiles()) {
+            	removeFolder(file);
             }
     	}
         directory.delete();
 	}
-
 }
