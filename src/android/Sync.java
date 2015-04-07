@@ -76,6 +76,8 @@ public class Sync extends CordovaPlugin {
 	private static final int STATUS_COMPLETE = 3;
 	private static final String PROP_STATUS = "status";
 	private static final String PROP_PROGRESS = "progress";
+	private static final String PROP_LOADED = "loaded";
+	private static final String PROP_TOTAL = "total";
 	// Type
 	private static final String TYPE_REPLACE = "replace";
 	private static final String TYPE_MERGE = "merge";
@@ -89,12 +91,19 @@ public class Sync extends CordovaPlugin {
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
         if (action.equals("sync")) {
             sync(args, callbackContext);
-
-        	// download(src, id, type, headers, copyCordovaAssets, callbackContext);
-
             return true;
         } else if (action.equals("download")) {
         } else if (action.equals("unzip")) {
+        	final File source = new File(args.getString(0));
+        	final String target = args.getString(1);
+        	final CallbackContext finalContext = callbackContext;
+            cordova.getThreadPool().execute(new Runnable() {
+                public void run() {
+                	unzipSync(source, target, createProgressEvent("unzip"), finalContext);
+                	finalContext.sendPluginResult(new PluginResult(PluginResult.Status.OK));
+                }
+            });
+            return true;
         } else if (action.equals("cancel")) {
         	ProgressEvent progress = activeRequests.get(args.getString(0));
             if (progress != null) {
@@ -836,6 +845,8 @@ public class Sync extends CordovaPlugin {
 			JSONObject jsonProgress = new JSONObject();
 			jsonProgress.put(PROP_PROGRESS, this.percentage);
 			jsonProgress.put(PROP_STATUS, this.getStatus());
+			jsonProgress.put(PROP_LOADED, this.getLoaded());
+			jsonProgress.put(PROP_TOTAL, this.getTotal());
 			return jsonProgress;
 
         }
