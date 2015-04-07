@@ -209,7 +209,7 @@ public class Sync extends CordovaPlugin {
                 SSLSocketFactory oldSocketFactory = null;
                 File file = null;
                 PluginResult result = null;
-                TrackingInputStream inputStream = null;
+                InputStream inputStream = null;
                 boolean cached = false;
 
                 OutputStream outputStream = null;
@@ -287,7 +287,8 @@ public class Sync extends CordovaPlugin {
                                 	}
                                 }
                             }
-                            inputStream = getInputStream(connection);
+                            //inputStream = getInputStream(connection);
+                            inputStream = new BufferedInputStream(connection.getInputStream());
                         }
                     }
 
@@ -299,7 +300,6 @@ public class Sync extends CordovaPlugin {
                                 }
                                 //progress.connection = connection;
                             }
-
                             // write bytes to file
                             byte[] buffer = new byte[MAX_BUFFER_SIZE];
                             int bytesRead = 0;
@@ -313,7 +313,7 @@ public class Sync extends CordovaPlugin {
                                 Log.d(LOG_TAG, "bytes read = " + bytesRead);
                                 outputStream.write(buffer, 0, bytesRead);
                                 // Send a progress event.
-                                progress.setLoaded(inputStream.getTotalRawBytesRead());
+                                //progress.setLoaded(inputStream.getTotalRawBytesRead());
 
                                 updateProgress(callbackContext, progress);
                             }
@@ -494,6 +494,7 @@ public class Sync extends CordovaPlugin {
 
 	private static TrackingInputStream getInputStream(URLConnection conn) throws IOException {
         String encoding = conn.getContentEncoding();
+        Log.d(LOG_TAG, "encoding = " + encoding);
         if (encoding != null && encoding.equalsIgnoreCase("gzip")) {
           return new TrackingGZIPInputStream(new ExposedGZIPInputStream(conn.getInputStream()));
         }
