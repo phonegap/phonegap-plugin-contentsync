@@ -170,20 +170,20 @@ module.exports = {
     },
 
     /**
-     * Unzip 
-     * 
-     * This call is to replicate Zip::unzip plugin 
+     * Unzip
+     *
+     * This call is to replicate Zip::unzip plugin
      *
      */
 
     unzip: function(fileUrl, dirUrl, callback) {
-        exec(callback, callback, 'Zip', 'unzip', [fileUrl, dirUrl]);
+        exec(callback, callback, 'Sync', 'unzip', [fileUrl, dirUrl]);
     },
-    
+
     /**
-     * Download 
-     * 
-     * This call is to replicate nothing but might be used instead of FileTransfer 
+     * Download
+     *
+     * This call is to replicate nothing but might be used instead of FileTransfer
      *
      */
 

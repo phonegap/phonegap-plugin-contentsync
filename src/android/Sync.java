@@ -94,13 +94,25 @@ public class Sync extends CordovaPlugin {
             return true;
         } else if (action.equals("download")) {
         	final String source = args.getString(0);
-        	final File target = new File(args.getString(1));
-        	final JSONObject headers = args.optJSONObject(2);
+			// Production
+			String outputDirectory = cordova.getActivity().getCacheDir().getAbsolutePath();
+			// Testing
+        	//String outputDirectory = cordova.getActivity().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
+        	String filename = source.substring(source.lastIndexOf("/")+1, source.length());
+        	final File target = new File(outputDirectory, filename);
+        	// @TODO we need these
+        	final JSONObject headers = new JSONObject();
         	final CallbackContext finalContext = callbackContext;
             cordova.getThreadPool().execute(new Runnable() {
                 public void run() {
                 	download(source, target, headers, createProgressEvent("download"), finalContext);
-                	finalContext.sendPluginResult(new PluginResult(PluginResult.Status.OK));
+                	JSONObject retval = new JSONObject();
+                	try {
+						retval.put("archiveURL", target.getAbsolutePath());
+					} catch (JSONException e) {
+						// never happens
+					}
+                	finalContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, retval));
                 }
             });
             return true;
@@ -225,8 +237,8 @@ public class Sync extends CordovaPlugin {
             progress.setTargetFile(file);
             progress.setStatus(STATUS_DOWNLOADING);
 
-            Log.d(LOG_TAG, "Download file:" + sourceUri);
-            Log.d(LOG_TAG, "Target file:" + file);
+            Log.d(LOG_TAG, "Download file: " + sourceUri);
+            Log.d(LOG_TAG, "Target file: " + file);
             Log.d(LOG_TAG, "size = " + file.length());
 
 
@@ -340,11 +352,11 @@ public class Sync extends CordovaPlugin {
             }
 
             // Remove incomplete download.
-            if (!cached && result != null && result.getStatus() != PluginResult.Status.OK.ordinal() && file != null) {
-            	Log.d(LOG_TAG, "Delete incomplete file");
-                file.delete();
-            }
-                }
+//            if (!cached && result != null && result.getStatus() != PluginResult.Status.OK.ordinal() && file != null) {
+//            	Log.d(LOG_TAG, "Delete incomplete file");
+//                file.delete();
+//            }
+        }
     }
 
     private void sendErrorMessage(String message, CallbackContext callbackContext) {

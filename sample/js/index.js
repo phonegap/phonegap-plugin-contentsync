@@ -74,10 +74,10 @@ var app = {
 
 
     sync: function() {
-        var url = "https://github.com/timkim/zipTest/archive/master.zip"; 
+        var url = "https://github.com/timkim/zipTest/archive/master.zip";
         var sync = ContentSync.sync({ src: url, id: 'myapps/myapp', type: 'replace', copyCordovaAssets: false, headers: false });
-        
-        var setProgress = this.setProgress; 
+
+        var setProgress = this.setProgress;
 
         sync.on('progress', function(progress) {
             console.log("Progress event", progress);
@@ -90,9 +90,9 @@ var app = {
     },
     download: function() {
         document.getElementById("downloadExtractBtn").disabled = true;
-        var url = "https://github.com/timkim/zipTest/archive/master.zip"; 
+        var url = "https://github.com/timkim/zipTest/archive/master.zip";
         var extract = this.extract;
-        var setProgress = this.setProgress; 
+        var setProgress = this.setProgress;
         var callback = function(response) {
             console.log(response);
             if(response.progress) {
@@ -100,15 +100,15 @@ var app = {
 
             }
             if(response.archiveURL) {
-                var archiveURL = response.archiveURL;
+               var archiveURL = response.archiveURL;
                document.getElementById("downloadExtractBtn").disabled = false;
                document.getElementById("downloadExtractBtn").innerHTML = "Extract";
                document.getElementById("downloadExtractBtn").onclick = function() {
-                    app.extract(archiveURL);   
+                    app.extract(archiveURL);
                };
                document.getElementById("status").innerHTML = archiveURL;
             }
-        }; 
+        };
         ContentSync.download(url, callback);
     },
     extract: function(archiveURL) {
