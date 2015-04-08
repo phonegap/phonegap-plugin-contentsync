@@ -187,8 +187,9 @@ module.exports = {
      *
      */
 
-    download: function(url, callback) {
-        exec(callback, callback, 'Sync', 'download', [url]);
+    download: function(url, headers, cb) {
+        var callback = (typeof headers == "function" ? headers : cb);
+        exec(callback, callback, 'Sync', 'download', [url, null, headers]);
     },
 
 
