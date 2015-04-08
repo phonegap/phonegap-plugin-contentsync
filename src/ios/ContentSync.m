@@ -127,7 +127,7 @@
     
     CDVPluginResult* pluginResult = nil;
     
-    ContentSyncTask* sTask = [self findSyncDataByDownloadTask:downloadTask];
+    ContentSyncTask* sTask = [self findSyncDataByDownloadTask:(NSURLSessionDownloadTask*)downloadTask];
     
     if(sTask) {
         double progress = (double)totalBytesWritten / (double)totalBytesExpectedToWrite;
@@ -159,16 +159,20 @@
     if(success) {
         ContentSyncTask* sTask = [self findSyncDataByDownloadTask:downloadTask];
         
-        if(sTask && sTask.extractArchive) {
-            sTask.archivePath = [sourceURL path];
-            // FIXME there is probably a better way to do this
-            NSString* appId = [sTask.command.arguments objectAtIndex:1];
-            NSURL *extractURL = [libraryDirectory URLByAppendingPathComponent:appId];
-            NSString* type = [sTask.command.arguments objectAtIndex:2];
-            bool overwrite = ([type compare:@"replace"] ? YES : NO);
-            
-            CDVInvokedUrlCommand* command = [CDVInvokedUrlCommand commandFromJson:[NSArray arrayWithObjects:sTask.command.callbackId, @"Zip", @"unzip", [NSMutableArray arrayWithObjects:sourceURL, extractURL, overwrite, nil], nil]];
-            [self unzip:command];
+        if(sTask) {
+            if(sTask.extractArchive == YES) {
+                sTask.archivePath = [sourceURL path];
+                // FIXME there is probably a better way to do this
+                NSString* appId = [sTask.command.arguments objectAtIndex:1];
+                NSURL *extractURL = [libraryDirectory URLByAppendingPathComponent:appId];
+                NSString* type = [sTask.command.arguments objectAtIndex:2];
+                bool overwrite = ([type compare:@"replace"] ? YES : NO);
+                
+                CDVInvokedUrlCommand* command = [CDVInvokedUrlCommand commandFromJson:[NSArray arrayWithObjects:sTask.command.callbackId, @"Zip", @"unzip", [NSMutableArray arrayWithObjects:[sourceURL absoluteString], [extractURL absoluteString], overwrite, nil], nil]];
+                [self unzip:command];
+            } else {
+                sTask.archivePath = [sourceURL absoluteString];
+            }
         }
     } else {
         NSLog(@"Sync Failed - Copy Failed - %@", [errorCopy localizedDescription]);
@@ -189,13 +193,15 @@
                 progress = ((progress / 2) * 100);
                 pluginResult = [self preparePluginResult:progress status:Downloading];
                 [pluginResult setKeepCallbackAsBool:YES];
-            } else {
+            }
+            else {
                 progress = progress * 100;
                 NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:3];
                 [message setObject:[NSNumber numberWithInteger:progress] forKey:@"progress"];
                 [message setObject:[NSNumber numberWithInteger:Complete] forKey:@"status"];
-                [message setObject:[sTask archivePath] forKey:@"localPath"];
+                [message setObject:[sTask archivePath] forKey:@"archiveURL"];
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+                [[self syncTasks] removeObject:sTask];
             }
         } else {
             NSLog(@"Task: %@ completed with error: %@", task, [error localizedDescription]);
@@ -216,9 +222,10 @@
     [self.commandDelegate runInBackground:^{
         CDVPluginResult* pluginResult = nil;
         
-        NSURL* sourceURL = [command argumentAtIndex:0];
-        NSURL* destinationURL = [command argumentAtIndex:1];
-        BOOL overwrite = [command argumentAtIndex:2];
+        NSURL* sourceURL = [NSURL URLWithString:[command argumentAtIndex:0]];
+        NSURL* destinationURL = [NSURL URLWithString:[command argumentAtIndex:1]];
+        BOOL overwrite = [command argumentAtIndex:2 withDefault:@(YES)];
+        
         @try {
             NSError *error;
             if(![SSZipArchive unzipFileAtPath:[sourceURL path] toDestination:[destinationURL path] overwrite:overwrite password:nil error:&error delegate:weakSelf]) {

@@ -170,6 +170,29 @@ module.exports = {
     },
 
     /**
+     * Unzip 
+     * 
+     * This call is to replicate Zip::unzip plugin 
+     *
+     */
+
+    unzip: function(fileUrl, dirUrl, callback) {
+        exec(callback, callback, 'Zip', 'unzip', [fileUrl, dirUrl]);
+    },
+    
+    /**
+     * Download 
+     * 
+     * This call is to replicate nothing but might be used instead of FileTransfer 
+     *
+     */
+
+    download: function(url, callback) {
+        exec(callback, callback, 'Sync', 'download', [url]);
+    },
+
+
+    /**
      * ContentSync Object.
      *
      * Expose the ContentSync object for direct use
