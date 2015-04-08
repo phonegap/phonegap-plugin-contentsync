@@ -177,7 +177,7 @@ module.exports = {
      */
 
     unzip: function(fileUrl, dirUrl, callback) {
-        exec(callback, callback, 'Sync', 'unzip', [fileUrl, dirUrl]);
+        exec(callback, callback, 'Zip', 'unzip', [fileUrl, dirUrl]);
     },
 
     /**
