@@ -45,42 +45,84 @@ var app = {
         receivedElement.setAttribute('style', 'display:block;');
 
         console.log('Received Event: ' + id);
+
+        document.getElementById("syncBtn").onclick = this.sync;
+        document.getElementById("downloadExtractBtn").onclick = this.download;
     },
 
-    syncThisShit: function() {
+    setProgress: function(progress) {
+        if(progress.status) {
+            switch(progress.status) {
+                case 1:
+                    document.getElementById('status').innerHTML = "Downloading...";
+                    break;
+                case 2:
+                    document.getElementById('status').innerHTML = "Extracting...";
+                    break;
+                case 3:
+                    document.getElementById('status').innerHTML = "Complete!";
+                    break;
+                default:
+                    document.getElementById('status').innerHTML = "";
+            }
+        }
+        if(progress.progress) {
+            var progressBar = document.getElementById('progressbar').children[0];
+            progressBar.style.width = progress.progress + '%';
+        }
+     },
+
+
+    sync: function() {
         var url = "https://github.com/timkim/zipTest/archive/master.zip"; 
         var sync = ContentSync.sync({ src: url, id: 'myapps/myapp', type: 'replace', copyCordovaAssets: false, headers: false });
         
-        var setProgress = function(progress) {
-
-            if(progress.status) {
-                switch(progress.status) {
-                    case 1:
-                        document.getElementById('status').innerHTML = "Downloading...";
-                        break;
-                    case 2:
-                        document.getElementById('status').innerHTML = "Extracting...";
-                        break;
-                    case 3:
-                        document.getElementById('status').innerHTML = "Complete!";
-                        break;
-                    default:
-                        document.getElementById('status').innerHTML = "";
-                }
-            }
-            if(progress.progress) {
-                var progressBar = document.getElementById('progressbar').children[0];
-                progressBar.style.width = progress.progress + '%';
-            }
-        };
+        var setProgress = this.setProgress; 
 
         sync.on('progress', function(progress) {
             console.log("Progress event", progress);
-            setProgress(progress);
+            app.setProgress(progress);
         });
         sync.on('complete', function(data) {
             console.log("Complete", data);
             //document.location = data.localPath + "/zipTest-master/index.html";
+        });
+    },
+    download: function() {
+        document.getElementById("downloadExtractBtn").disabled = true;
+        var url = "https://github.com/timkim/zipTest/archive/master.zip"; 
+        var extract = this.extract;
+        var setProgress = this.setProgress; 
+        var callback = function(response) {
+            console.log(response);
+            if(response.progress) {
+                app.setProgress(response);
+
+            }
+            if(response.archiveURL) {
+                var archiveURL = response.archiveURL;
+               document.getElementById("downloadExtractBtn").disabled = false;
+               document.getElementById("downloadExtractBtn").innerHTML = "Extract";
+               document.getElementById("downloadExtractBtn").onclick = function() {
+                    app.extract(archiveURL);   
+               };
+               document.getElementById("status").innerHTML = archiveURL;
+            }
+        }; 
+        ContentSync.download(url, callback);
+    },
+    extract: function(archiveURL) {
+        window.requestFileSystem(PERSISTENT, 1024 * 1024, function(fs) {
+            fs.root.getDirectory('zipOutPut', {create: true}, function(fileEntry) {
+                var dirUrl = fileEntry.toURL();
+                var callback = function(response) {
+                    console.log(response);
+                    document.getElementById("downloadExtractBtn").style.display = "none";
+                    document.getElementById("status").innerHTML = "Extracted";
+                }
+                console.log(dirUrl, archiveURL);
+                Zip.unzip(archiveURL, dirUrl, callback);
+            });
         });
     }
 };
