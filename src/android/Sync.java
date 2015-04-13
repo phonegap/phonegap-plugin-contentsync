@@ -415,7 +415,13 @@ public class Sync extends CordovaPlugin {
                 // download file location
                 File file = null;
                 try {
-					file = File.createTempFile(("cdv_" + id), ".tmp", cordova.getActivity().getCacheDir());
+                	String tempId = id;
+                	if (tempId.lastIndexOf("/") > -1) {
+                		tempId = tempId.substring(tempId.lastIndexOf("/")+1, tempId.length());
+                	}
+                	Log.d(LOG_TAG, "index = " + tempId.lastIndexOf("/"));
+                	Log.d(LOG_TAG, "temp id = " + tempId);
+					file = File.createTempFile(("cdv_" + tempId), ".tmp", cordova.getActivity().getCacheDir());
 				} catch (IOException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
@@ -431,9 +437,9 @@ public class Sync extends CordovaPlugin {
 
 				// unzip
 				// Production
-				//String outputDirectory = cordova.getActivity().getFilesDir().getAbsolutePath();
+				String outputDirectory = cordova.getActivity().getFilesDir().getAbsolutePath();
 				// Testing
-				String outputDirectory = cordova.getActivity().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
+				//String outputDirectory = cordova.getActivity().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
 				outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
 				outputDirectory += "files";
 				outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
