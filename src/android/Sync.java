@@ -415,12 +415,7 @@ public class Sync extends CordovaPlugin {
                 // download file location
                 File file = null;
                 try {
-                	String tempId = id;
-                	if (tempId.lastIndexOf("/") > -1) {
-                		tempId = tempId.substring(tempId.lastIndexOf("/")+1, tempId.length());
-                	}
-                	Log.d(LOG_TAG, "index = " + tempId.lastIndexOf("/"));
-                	Log.d(LOG_TAG, "temp id = " + tempId);
+                	String tempId = (id.lastIndexOf("/") > -1) ? id.substring(id.lastIndexOf("/")+1, id.length()) : id;
 					file = File.createTempFile(("cdv_" + tempId), ".tmp", cordova.getActivity().getCacheDir());
 				} catch (IOException e1) {
 					// TODO Auto-generated catch block
