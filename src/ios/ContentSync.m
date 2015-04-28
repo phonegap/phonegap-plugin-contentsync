@@ -230,7 +230,8 @@
         
         NSURL* sourceURL = [NSURL URLWithString:[command argumentAtIndex:0]];
         NSURL* destinationURL = [NSURL URLWithString:[command argumentAtIndex:1]];
-        BOOL overwrite = [command argumentAtIndex:2 withDefault:@(YES)];
+        NSString* type = [command argumentAtIndex:2 withDefault:@"replace"];
+        BOOL overwrite = ([type isEqualToString:@"replace"] ? YES : NO);
         
         @try {
             NSError *error;
