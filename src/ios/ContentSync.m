@@ -30,6 +30,28 @@
 }
 
 - (void)sync:(CDVInvokedUrlCommand*)command {
+    
+    NSString* type = [command argumentAtIndex:2];
+    BOOL local = [type isEqualToString:@"local"];
+    
+    if(local == YES) {
+        NSString* appId = [command argumentAtIndex:1];
+        NSLog(@"Requesting local copy of %@", appId);
+        NSFileManager *fileManager = [NSFileManager defaultManager];
+        NSArray *URLs = [fileManager URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask];
+        NSURL *libraryDirectoryUrl = [URLs objectAtIndex:0];
+        
+        NSURL *appPath = [libraryDirectoryUrl URLByAppendingPathComponent:appId];
+        
+        if([fileManager fileExistsAtPath:[appPath path]]) {
+            NSLog(@"Found local copy %@", [appPath path]);
+            CDVPluginResult *pluginResult = nil;
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:[appPath path]];
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+            return;
+        }
+    }
+    
     __weak ContentSync* weakSelf = self;
     
     [self.commandDelegate runInBackground:^{
@@ -172,7 +194,7 @@
                 NSString* appId = [sTask.command.arguments objectAtIndex:1];
                 NSURL *extractURL = [libraryDirectory URLByAppendingPathComponent:appId];
                 NSString* type = [sTask.command.arguments objectAtIndex:2];
-                bool overwrite = ([type compare:@"replace"] ? YES : NO);
+                bool overwrite = [type isEqualToString:@"replace"];
                 
                 CDVInvokedUrlCommand* command = [CDVInvokedUrlCommand commandFromJson:[NSArray arrayWithObjects:sTask.command.callbackId, @"Zip", @"unzip", [NSMutableArray arrayWithObjects:[sourceURL absoluteString], [extractURL absoluteString], overwrite, nil], nil]];
                 [self unzip:command];
@@ -231,7 +253,7 @@
         NSURL* sourceURL = [NSURL URLWithString:[command argumentAtIndex:0]];
         NSURL* destinationURL = [NSURL URLWithString:[command argumentAtIndex:1]];
         NSString* type = [command argumentAtIndex:2 withDefault:@"replace"];
-        BOOL overwrite = ([type isEqualToString:@"replace"] ? YES : NO);
+        BOOL overwrite = [type isEqualToString:@"replace"];
         
         @try {
             NSError *error;
