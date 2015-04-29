@@ -46,7 +46,12 @@
         if([fileManager fileExistsAtPath:[appPath path]]) {
             NSLog(@"Found local copy %@", [appPath path]);
             CDVPluginResult *pluginResult = nil;
-            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:[appPath path]];
+            
+            NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
+            [message setObject:[appPath path] forKey:@"localPath"];
+            [message setObject:@"true" forKey:@"cached"];
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+            
             [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
             return;
         }
@@ -310,8 +315,9 @@
         [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
         // END
 
-        NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:1];
+        NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
         [message setObject:unzippedPath forKey:@"localPath"];
+        [message setObject:@"false" forKey:@"cached"];
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
         [pluginResult setKeepCallbackAsBool:NO];
         [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
