@@ -106,7 +106,7 @@
         
         pluginResult = [self preparePluginResult:sData.progress status:Downloading];
     } else {
-        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Arg was null"];
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"URL can't be null"];
     }
     
     [pluginResult setKeepCallbackAsBool:YES];
