@@ -93,7 +93,6 @@ The event `complete` will be triggered when the content has been successfully ca
 Callback Parameter | Description
 ------------------ | -----------
 `data.localPath` | `String` The file path to the cached content. The file path will be different on each platform and may be relative or absolute. However, it is guaraneteed to be a compatible reference in the browser.
-
 `data.cached` | `Boolean` Set to `true` if options.type is set to `local` and cached content exists. Set to `false` otherwise.
 
 #### Example
