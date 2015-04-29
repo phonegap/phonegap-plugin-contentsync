@@ -199,9 +199,8 @@
                 NSString* appId = [sTask.command.arguments objectAtIndex:1];
                 NSURL *extractURL = [libraryDirectory URLByAppendingPathComponent:appId];
                 NSString* type = [sTask.command argumentAtIndex:2 withDefault:@"replace"];
-                bool overwrite = [type isEqualToString:@"replace"];
                 
-                CDVInvokedUrlCommand* command = [CDVInvokedUrlCommand commandFromJson:[NSArray arrayWithObjects:sTask.command.callbackId, @"Zip", @"unzip", [NSMutableArray arrayWithObjects:[sourceURL absoluteString], [extractURL absoluteString], overwrite, nil], nil]];
+                CDVInvokedUrlCommand* command = [CDVInvokedUrlCommand commandFromJson:[NSArray arrayWithObjects:sTask.command.callbackId, @"Zip", @"unzip", [NSMutableArray arrayWithObjects:[sourceURL absoluteString], [extractURL absoluteString], type, nil], nil]];
                 [self unzip:command];
             } else {
                 sTask.archivePath = [sourceURL absoluteString];
