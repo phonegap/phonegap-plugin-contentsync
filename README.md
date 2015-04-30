@@ -100,6 +100,7 @@ Callback Parameter | Description
 ```javascript
 sync.on('complete', function(data) {
     // data.localPath
+    // data.cached
 });
 ```
 

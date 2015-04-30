@@ -67,94 +67,96 @@ import android.util.Log;
 import android.webkit.CookieManager;
 
 public class Sync extends CordovaPlugin {
-	private static final String MODULE_EXPORTS_END = "];";
-	private static final String MODULE_EXPORTS = "module.exports = [";
-	private static final String PROP_LOCAL_PATH = "localPath";
-	private static final int STATUS_STOPPED = 0;
-	private static final int STATUS_DOWNLOADING = 1;
-	private static final int STATUS_EXTRACTING = 2;
-	private static final int STATUS_COMPLETE = 3;
-	private static final String PROP_STATUS = "status";
-	private static final String PROP_PROGRESS = "progress";
-	private static final String PROP_LOADED = "loaded";
-	private static final String PROP_TOTAL = "total";
-	// Type
-	private static final String TYPE_REPLACE = "replace";
-	private static final String TYPE_MERGE = "merge";
+    private static final String MODULE_EXPORTS_END = "];";
+    private static final String MODULE_EXPORTS = "module.exports = [";
+    private static final int STATUS_STOPPED = 0;
+    private static final int STATUS_DOWNLOADING = 1;
+    private static final int STATUS_EXTRACTING = 2;
+    private static final int STATUS_COMPLETE = 3;
+    private static final String PROP_LOCAL_PATH = "localPath";
+    private static final String PROP_STATUS = "status";
+    private static final String PROP_PROGRESS = "progress";
+    private static final String PROP_LOADED = "loaded";
+    private static final String PROP_TOTAL = "total";
+    private static final String PROP_CACHED = "cached";
+    // Type
+    private static final String TYPE_REPLACE = "replace";
+    private static final String TYPE_MERGE = "merge";
+    private static final String TYPE_LOCAL = "local";
 
-	private static final String LOG_TAG = "ContentSync";
+    private static final String LOG_TAG = "ContentSync";
 
-	private static HashMap<String, ProgressEvent> activeRequests = new HashMap<String, ProgressEvent>();
+    private static HashMap<String, ProgressEvent> activeRequests = new HashMap<String, ProgressEvent>();
     private static final int MAX_BUFFER_SIZE = 16 * 1024;
 
-	@Override
+    @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
         if (action.equals("sync")) {
             sync(args, callbackContext);
             return true;
         } else if (action.equals("download")) {
-        	final String source = args.getString(0);
-			// Production
-			String outputDirectory = cordova.getActivity().getCacheDir().getAbsolutePath();
-			// Testing
-        	//String outputDirectory = cordova.getActivity().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
-        	String filename = source.substring(source.lastIndexOf("/")+1, source.length());
-        	final File target = new File(outputDirectory, filename);
-        	// @TODO we need these
-        	final JSONObject headers = new JSONObject();
-        	final CallbackContext finalContext = callbackContext;
+            final String source = args.getString(0);
+            // Production
+            String outputDirectory = cordova.getActivity().getCacheDir().getAbsolutePath();
+            // Testing
+            //String outputDirectory = cordova.getActivity().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
+            String filename = source.substring(source.lastIndexOf("/")+1, source.length());
+            final File target = new File(outputDirectory, filename);
+            // @TODO we need these
+            final JSONObject headers = new JSONObject();
+            final CallbackContext finalContext = callbackContext;
             cordova.getThreadPool().execute(new Runnable() {
                 public void run() {
-                	download(source, target, headers, createProgressEvent("download"), finalContext);
-                	JSONObject retval = new JSONObject();
-                	try {
-						retval.put("archiveURL", target.getAbsolutePath());
-					} catch (JSONException e) {
-						// never happens
-					}
-                	finalContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, retval));
+                    download(source, target, headers, createProgressEvent("download"), finalContext);
+                    JSONObject retval = new JSONObject();
+                    try {
+                        retval.put("archiveURL", target.getAbsolutePath());
+                    } catch (JSONException e) {
+                        // never happens
+                    }
+                    finalContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, retval));
                 }
             });
             return true;
         } else if (action.equals("unzip")) {
-        	final File source = new File(args.getString(0));
-        	final String target = args.getString(1);
-        	final CallbackContext finalContext = callbackContext;
+            final File source = new File(args.getString(0));
+            final String target = args.getString(1);
+            final CallbackContext finalContext = callbackContext;
             cordova.getThreadPool().execute(new Runnable() {
                 public void run() {
-                	unzipSync(source, target, createProgressEvent("unzip"), finalContext);
-                	finalContext.sendPluginResult(new PluginResult(PluginResult.Status.OK));
+                    unzipSync(source, target, createProgressEvent("unzip"), finalContext);
+                    finalContext.sendPluginResult(new PluginResult(PluginResult.Status.OK));
                 }
             });
             return true;
         } else if (action.equals("cancel")) {
-        	ProgressEvent progress = activeRequests.get(args.getString(0));
+            ProgressEvent progress = activeRequests.get(args.getString(0));
             if (progress != null) {
-            	progress.setAborted(true);
+                progress.setAborted(true);
             }
         }
         return false;
     }
 
-	/**
+    /**
      * Adds an interface method to an InputStream to return the number of bytes
      * read from the raw stream. This is used to track total progress against
      * the HTTP Content-Length header value from the server.
      */
     private static abstract class TrackingInputStream extends FilterInputStream {
-    	public TrackingInputStream(final InputStream in) {
-    		super(in);
-    	}
-    	public abstract long getTotalRawBytesRead();
+        public TrackingInputStream(final InputStream in) {
+            super(in);
+        }
+        public abstract long getTotalRawBytesRead();
     }
 
     private static class ExposedGZIPInputStream extends GZIPInputStream {
-    	public ExposedGZIPInputStream(final InputStream in) throws IOException {
-    		super(in);
-    	}
-    	public Inflater getInflater() {
-    		return inf;
-    	}
+        public ExposedGZIPInputStream(final InputStream in) throws IOException {
+            super(in);
+        }
+        public Inflater getInflater() {
+            return inf;
+        }
     }
 
     /**
@@ -163,14 +165,14 @@ public class Sync extends CordovaPlugin {
      * number of uncompressed bytes.
      */
     private static class TrackingGZIPInputStream extends TrackingInputStream {
-    	private ExposedGZIPInputStream gzin;
-    	public TrackingGZIPInputStream(final ExposedGZIPInputStream gzin) throws IOException {
-    		super(gzin);
-    		this.gzin = gzin;
-    	}
-    	public long getTotalRawBytesRead() {
-    		return gzin.getInflater().getBytesRead();
-    	}
+        private ExposedGZIPInputStream gzin;
+        public TrackingGZIPInputStream(final ExposedGZIPInputStream gzin) throws IOException {
+            super(gzin);
+            this.gzin = gzin;
+        }
+        public long getTotalRawBytesRead() {
+            return gzin.getInflater().getBytesRead();
+        }
     }
 
     /**
@@ -206,7 +208,7 @@ public class Sync extends CordovaPlugin {
         }
     }
 
-	private void download(final String source, final File file, final JSONObject headers, final ProgressEvent progress, final CallbackContext callbackContext) {
+    private void download(final String source, final File file, final JSONObject headers, final ProgressEvent progress, final CallbackContext callbackContext) {
         Log.d(LOG_TAG, "download " + source);
 
         final CordovaResourceApi resourceApi = webView.getResourceApi();
@@ -289,15 +291,15 @@ public class Sync extends CordovaPlugin {
                     if (connection.getContentEncoding() == null || connection.getContentEncoding().equalsIgnoreCase("gzip")) {
                         // Only trust content-length header if we understand
                         // the encoding -- identity or gzip
-                    	int connectionLength = connection.getContentLength();
+                        int connectionLength = connection.getContentLength();
                         if (connectionLength != -1) {
-                        	if (connectionLength > getFreeSpace()) {
-                        		cached = true;
-                        		connection.disconnect();
+                            if (connectionLength > getFreeSpace()) {
+                                cached = true;
+                                connection.disconnect();
                                 sendErrorMessage("Not enough free space to download", callbackContext);
-                        	} else {
+                            } else {
                                 progress.setTotal(connectionLength);
-                        	}
+                            }
                         }
                     }
                     inputStream = getInputStream(connection);
@@ -332,7 +334,7 @@ public class Sync extends CordovaPlugin {
                     }
                 } finally {
                     synchronized (progress) {
-                    	//progress.connection = null;
+                        //progress.connection = null;
                     }
                     safeClose(inputStream);
                     safeClose(outputStream);
@@ -340,7 +342,7 @@ public class Sync extends CordovaPlugin {
             }
 
         } catch (Throwable e) {
-        	sendErrorMessage(e.getLocalizedMessage(), callbackContext);
+            sendErrorMessage(e.getLocalizedMessage(), callbackContext);
         } finally {
             if (connection != null) {
                 // Revert back to the proper verifier and socket factories
@@ -353,7 +355,7 @@ public class Sync extends CordovaPlugin {
 
             // Remove incomplete download.
 //            if (!cached && result != null && result.getStatus() != PluginResult.Status.OK.ordinal() && file != null) {
-//            	Log.d(LOG_TAG, "Delete incomplete file");
+//              Log.d(LOG_TAG, "Delete incomplete file");
 //                file.delete();
 //            }
         }
@@ -364,45 +366,44 @@ public class Sync extends CordovaPlugin {
 
         JSONObject error = new JSONObject();
         try {
-			error.put("message", message);
-		} catch (JSONException e) {
-			// never happens
-		}
+            error.put("message", message);
+        } catch (JSONException e) {
+            // never happens
+        }
 
         callbackContext.error(error);
     }
 
-	private long getFreeSpace() {
-		File path = Environment.getDataDirectory();
+    private long getFreeSpace() {
+        File path = Environment.getDataDirectory();
         StatFs stat = new StatFs(path.getPath());
         long blockSize = stat.getBlockSize();
         long availableBlocks = stat.getAvailableBlocks();
         return availableBlocks * blockSize;
     }
 
-	private ProgressEvent createProgressEvent(String id) {
-		ProgressEvent progress = new ProgressEvent();
-		synchronized (activeRequests) {
-		    activeRequests.put(id, progress);
-		}
-		return progress;
-	}
+    private ProgressEvent createProgressEvent(String id) {
+        ProgressEvent progress = new ProgressEvent();
+        synchronized (activeRequests) {
+            activeRequests.put(id, progress);
+        }
+        return progress;
+    }
 
-	private void sync(final JSONArray args, final CallbackContext callbackContext) throws JSONException {
-		// get args
-    	final String src = args.getString(0);
-    	final String id = args.getString(1);
-    	final String type = args.optString(2, TYPE_REPLACE);
-    	final JSONObject headers;
-    	if (args.optJSONObject(3) != null) {
-        	headers = args.optJSONObject(3);
-    	} else {
-    		headers = new JSONObject();
-    	}
-    	final boolean copyCordovaAssets = args.getBoolean(4);
-    	Log.d(LOG_TAG, "sync called with id = " + id + " and src = " + src + "!");
+    private void sync(final JSONArray args, final CallbackContext callbackContext) throws JSONException {
+        // get args
+        final String src = args.getString(0);
+        final String id = args.getString(1);
+        final JSONObject headers;
+        if (args.optJSONObject(3) != null) {
+            headers = args.optJSONObject(3);
+        } else {
+            headers = new JSONObject();
+        }
+        final boolean copyCordovaAssets = args.getBoolean(4);
+        Log.d(LOG_TAG, "sync called with id = " + id + " and src = " + src + "!");
 
-    	final ProgressEvent progress = createProgressEvent(id);
+        final ProgressEvent progress = createProgressEvent(id);
 
         cordova.getThreadPool().execute(new Runnable() {
             public void run() {
@@ -412,97 +413,120 @@ public class Sync extends CordovaPlugin {
                     }
                 }
 
-                // download file location
-                File file = null;
+                String outputDirectory = getOutputDirectory(id);
+
+                // Check to see if we should just return the cached version
+                String type = args.optString(2, TYPE_REPLACE);
+                Log.d(LOG_TAG, "type = " + type);
+                File dir = new File(outputDirectory);
+                if (type.equals(TYPE_LOCAL) && !dir.exists()) {
+                    type = TYPE_REPLACE;
+                }
+
+                if (!type.equals(TYPE_LOCAL)) {
+                    // download file
+                    download(src, createDownloadFileLocation(id), headers, progress, callbackContext);
+
+                    // update progress with zip file
+                    File targetFile = progress.getTargetFile();
+                    Log.d(LOG_TAG, "downloaded = " + targetFile.getAbsolutePath());
+
+                    // Backup existing directory
+                    File backup = backupExistingDirectory(outputDirectory, type, dir);
+
+                    // unzip
+                    boolean win = unzipSync(targetFile, outputDirectory, progress, callbackContext);
+
+                    // delete temp file
+                    targetFile.delete();
+
+                    if (copyCordovaAssets) {
+                        copyAssets(outputDirectory);
+                    }
+
+                    if (win) {
+                        // success, remove backup
+                        removeFolder(backup);
+                    } else {
+                        // failure, revert backup
+                        removeFolder(dir);
+                        backup.renameTo(dir);
+                    }
+                }
+
+                // complete
+                synchronized (activeRequests) {
+                    activeRequests.remove(id);
+                }
+
+                // Send last progress event
+                progress.setStatus(STATUS_COMPLETE);
+                updateProgress(callbackContext, progress);
+
+                // Send completion message
                 try {
-                	String tempId = (id.lastIndexOf("/") > -1) ? id.substring(id.lastIndexOf("/")+1, id.length()) : id;
-					file = File.createTempFile(("cdv_" + tempId), ".tmp", cordova.getActivity().getCacheDir());
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-
-		    	// download file
-		    	download(src, file, headers, progress, callbackContext);
-
-		    	// update progress with zip file
-				Log.d(LOG_TAG, "type = " + type);
-				File targetFile = progress.getTargetFile();
-				Log.d(LOG_TAG, "downloaded = " + targetFile.getAbsolutePath());
-
-				// unzip
-				// Production
-				String outputDirectory = cordova.getActivity().getFilesDir().getAbsolutePath();
-				// Testing
-				//String outputDirectory = cordova.getActivity().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
-				outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
-				outputDirectory += "files";
-				outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
-				outputDirectory += id;
-				Log.d(LOG_TAG, "output dir = " + outputDirectory);
-
-				// Backup existing directory
-				File dir = new File(outputDirectory);
-				File backup = new File(outputDirectory + ".bak");
-				if (dir.exists()) {
-					if (type.equals(TYPE_MERGE)) {
-						try {
-							copyFolder(dir, backup);
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-					} else {
-						dir.renameTo(backup);
-					}
-				}
-
-				boolean win = unzipSync(targetFile, outputDirectory, progress, callbackContext);
-
-				// delete temp file
-				targetFile.delete();
-
-				if (copyCordovaAssets) {
-					copyAssets(outputDirectory);
-				}
-
-				// complete
-				synchronized (activeRequests) {
-					activeRequests.remove(id);
-				}
-
-				// Send last progress event
-				progress.setStatus(STATUS_COMPLETE);
-				updateProgress(callbackContext, progress);
-
-				if (win) {
-					// success, remove backup
-					removeFolder(backup);
-					try {
-						JSONObject result = new JSONObject();
-						result.put(PROP_LOCAL_PATH, outputDirectory);
-				        callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, result));
-					} catch (JSONException e) {
-						// never happens
-					}
-				} else {
-					// failure, revert backup
-					removeFolder(dir);
-					backup.renameTo(dir);
-				}
+                    JSONObject result = new JSONObject();
+                    result.put(PROP_LOCAL_PATH, outputDirectory);
+                    result.put(PROP_CACHED, type.equals(TYPE_LOCAL));
+                    callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, result));
+                } catch (JSONException e) {
+                    // never happens
+                }
             }
         });
-	}
+    }
 
-	private void copyAssets(String outputDirectory) {
-		AssetManager assetManager = cordova.getActivity().getAssets();
-		try {
-			File targetDir =  new File(outputDirectory);
-			File www = new File(targetDir, "www");
-			if (www.exists()) {
-				targetDir = www;
-			}
+    private String getOutputDirectory(final String id) {
+        // Production
+        String outputDirectory = cordova.getActivity().getFilesDir().getAbsolutePath();
+        // Testing
+        //String outputDirectory = cordova.getActivity().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
+        outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
+        outputDirectory += "files";
+        outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
+        outputDirectory += id;
+        Log.d(LOG_TAG, "output dir = " + outputDirectory);
+        return outputDirectory;
+    }
 
-			// cordova.js
+
+    private File createDownloadFileLocation(final String id) {
+        File file = null;
+        try {
+            String tempId = (id.lastIndexOf("/") > -1) ? id.substring(id.lastIndexOf("/")+1, id.length()) : id;
+            file = File.createTempFile(("cdv_" + tempId), ".tmp", cordova.getActivity().getCacheDir());
+        } catch (IOException e1) {
+            Log.e(LOG_TAG, e1.getLocalizedMessage(), e1);
+        }
+        return file;
+    }
+
+    private File backupExistingDirectory(String outputDirectory, String type, File dir) {
+        File backup = new File(outputDirectory + ".bak");
+        if (dir.exists()) {
+            if (type.equals(TYPE_MERGE)) {
+                try {
+                    copyFolder(dir, backup);
+                } catch (IOException e) {
+                    Log.e(LOG_TAG, e.getLocalizedMessage(), e);
+                }
+            } else {
+                dir.renameTo(backup);
+            }
+        }
+        return backup;
+    }
+
+    private void copyAssets(String outputDirectory) {
+        AssetManager assetManager = cordova.getActivity().getAssets();
+        try {
+            File targetDir =  new File(outputDirectory);
+            File www = new File(targetDir, "www");
+            if (www.exists()) {
+                targetDir = www;
+            }
+
+            // cordova.js
             this.copyAssetFile(targetDir, "cordova.js");
 
             // cordova_plugins.js
@@ -529,29 +553,29 @@ public class Sync extends CordovaPlugin {
             String pluginsJson = cordovaPlugins.substring(start + MODULE_EXPORTS.length() -1, end+1);
 
             try {
-				JSONArray jsonArray = new JSONArray(pluginsJson);
-	            String jsFile = null;
-	            File jsDir = null;
+                JSONArray jsonArray = new JSONArray(pluginsJson);
+                String jsFile = null;
+                File jsDir = null;
 
-	            for (int i=0; i<jsonArray.length(); i++) {
-	            	jsFile = jsonArray.getJSONObject(i).getString("file");
-	            	jsDir = new File(targetDir, jsFile.substring(0, jsFile.lastIndexOf("/")));
-	            	if (!jsDir.exists()) {
-	            		jsDir.mkdirs();
-	            	}
-	                this.copyAssetFile(targetDir, jsFile);
-	            }
+                for (int i=0; i<jsonArray.length(); i++) {
+                    jsFile = jsonArray.getJSONObject(i).getString("file");
+                    jsDir = new File(targetDir, jsFile.substring(0, jsFile.lastIndexOf("/")));
+                    if (!jsDir.exists()) {
+                        jsDir.mkdirs();
+                    }
+                    this.copyAssetFile(targetDir, jsFile);
+                }
 
-			} catch (JSONException e) {
-				e.printStackTrace();
-			}
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
 
         } catch(IOException e) {
             Log.e(LOG_TAG, "Failed to copy asset file: cordova.js", e);
         }
-	}
+    }
 
-	private static TrackingInputStream getInputStream(URLConnection conn) throws IOException {
+    private static TrackingInputStream getInputStream(URLConnection conn) throws IOException {
         String encoding = conn.getContentEncoding();
         if (encoding != null && encoding.equalsIgnoreCase("gzip")) {
           return new TrackingGZIPInputStream(new ExposedGZIPInputStream(conn.getInputStream()));
@@ -673,8 +697,8 @@ public class Sync extends CordovaPlugin {
     }
 
     private boolean unzipSync(File targetFile, String outputDirectory, ProgressEvent progress, CallbackContext callbackContext) {
-    	Log.d(LOG_TAG, "unzipSync called");
-    	Log.d(LOG_TAG, "zip = " + targetFile.getAbsolutePath());
+        Log.d(LOG_TAG, "unzipSync called");
+        Log.d(LOG_TAG, "zip = " + targetFile.getAbsolutePath());
         InputStream inputStream = null;
         ZipFile zip = null;
         boolean anyEntries = false;
@@ -754,7 +778,7 @@ public class Sync extends CordovaPlugin {
                 String compressedName = ze.getName();
 
                 if (ze.getSize() > getFreeSpace()) {
-                	return false;
+                    return false;
                 }
 
                 if (ze.isDirectory()) {
@@ -791,9 +815,9 @@ public class Sync extends CordovaPlugin {
                 }
             }
             if (zip != null) {
-            	try {
-            		zip.close();
-            	} catch (IOException e) {
+                try {
+                    zip.close();
+                } catch (IOException e) {
                 }
             }
         }
@@ -805,15 +829,15 @@ public class Sync extends CordovaPlugin {
     }
 
     private void updateProgress(CallbackContext callbackContext, ProgressEvent progress) {
-    	try {
+        try {
             if (progress.getLoaded() != progress.getTotal() || progress.getStatus() == STATUS_COMPLETE) {
-    	        PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, progress.toJSONObject());
-    	        pluginResult.setKeepCallback(true);
-    	        callbackContext.sendPluginResult(pluginResult);
+                PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, progress.toJSONObject());
+                pluginResult.setKeepCallback(true);
+                callbackContext.sendPluginResult(pluginResult);
             }
-    	} catch (JSONException e) {
-    		// never happens
-    	}
+        } catch (JSONException e) {
+            // never happens
+        }
     }
 
     private Uri getUriForArg(String arg) {
@@ -830,9 +854,9 @@ public class Sync extends CordovaPlugin {
         private boolean aborted;
         private File targetFile;
         public ProgressEvent() {
-        	this.status = STATUS_STOPPED;
-		}
-		public long getLoaded() {
+            this.status = STATUS_STOPPED;
+        }
+        public long getLoaded() {
             return loaded;
         }
         public void setLoaded(long loaded) {
@@ -851,85 +875,85 @@ public class Sync extends CordovaPlugin {
             updatePercentage();
         }
         public int getStatus() {
-			return status;
-		}
-		public void setStatus(int status) {
-			this.status = status;
-		}
+            return status;
+        }
+        public void setStatus(int status) {
+            this.status = status;
+        }
         public boolean isAborted() {
-        	return aborted;
+            return aborted;
         }
         public void setAborted(boolean aborted) {
-        	this.aborted = aborted;
+            this.aborted = aborted;
         }
-		public File getTargetFile() {
-			return targetFile;
-		}
-		public void setTargetFile(File targetFile) {
-			this.targetFile = targetFile;
-		}
-		public JSONObject toJSONObject() throws JSONException {
-			JSONObject jsonProgress = new JSONObject();
-			jsonProgress.put(PROP_PROGRESS, this.percentage);
-			jsonProgress.put(PROP_STATUS, this.getStatus());
-			jsonProgress.put(PROP_LOADED, this.getLoaded());
-			jsonProgress.put(PROP_TOTAL, this.getTotal());
-			return jsonProgress;
+        public File getTargetFile() {
+            return targetFile;
+        }
+        public void setTargetFile(File targetFile) {
+            this.targetFile = targetFile;
+        }
+        public JSONObject toJSONObject() throws JSONException {
+            JSONObject jsonProgress = new JSONObject();
+            jsonProgress.put(PROP_PROGRESS, this.percentage);
+            jsonProgress.put(PROP_STATUS, this.getStatus());
+            jsonProgress.put(PROP_LOADED, this.getLoaded());
+            jsonProgress.put(PROP_TOTAL, this.getTotal());
+            return jsonProgress;
 
         }
-		private void updatePercentage() {
-			double loaded = this.getLoaded();
-			double total = this.getTotal();
-			this.percentage = Math.floor((loaded / total * 100) / 2);
-			if (this.getStatus() == STATUS_EXTRACTING) {
-				this.percentage += 50;
-			}
-		}
+        private void updatePercentage() {
+            double loaded = this.getLoaded();
+            double total = this.getTotal();
+            this.percentage = Math.floor((loaded / total * 100) / 2);
+            if (this.getStatus() == STATUS_EXTRACTING) {
+                this.percentage += 50;
+            }
+        }
     }
 
     private void copyFolder(File src, File dest) throws IOException{
-    	if(src.isDirectory()) {
-    		if(!dest.exists()){
-    		   dest.mkdir();
-    		}
+        if(src.isDirectory()) {
+            if(!dest.exists()){
+               dest.mkdir();
+            }
 
-    		//list all the directory contents
-    		String files[] = src.list();
+            //list all the directory contents
+            String files[] = src.list();
 
-    		for (String file : files) {
-    		   //recursive copy
-    		   copyFolder(new File(src, file), new File(dest, file));
-    		}
+            for (String file : files) {
+               //recursive copy
+               copyFolder(new File(src, file), new File(dest, file));
+            }
 
-    	} else {
-    		//if file, then copy it
-    	    copyFile(new FileInputStream(src), new FileOutputStream(dest));
-    	}
+        } else {
+            //if file, then copy it
+            copyFile(new FileInputStream(src), new FileOutputStream(dest));
+        }
     }
 
     private void copyAssetFile(File www, String filename) throws IOException {
-    	copyFile(cordova.getActivity().getAssets().open("www/" + filename), new FileOutputStream(new File(www, filename)));
+        copyFile(cordova.getActivity().getAssets().open("www/" + filename), new FileOutputStream(new File(www, filename)));
     }
 
-	private void copyFile(InputStream in, OutputStream out) throws IOException {
-		byte[] buffer = new byte[4096];
+    private void copyFile(InputStream in, OutputStream out) throws IOException {
+        byte[] buffer = new byte[4096];
 
-		int length;
-		//copy the file content in bytes
-		while ((length = in.read(buffer)) > 0){
-			   out.write(buffer, 0, length);
-		}
+        int length;
+        //copy the file content in bytes
+        while ((length = in.read(buffer)) > 0){
+               out.write(buffer, 0, length);
+        }
 
-		in.close();
-		out.close();
-	}
+        in.close();
+        out.close();
+    }
 
     private void removeFolder(File directory) {
-    	if (directory.exists() && directory.isDirectory()) {
+        if (directory.exists() && directory.isDirectory()) {
             for (File file : directory.listFiles()) {
-            	removeFolder(file);
+                removeFolder(file);
             }
-    	}
+        }
         directory.delete();
-	}
+    }
 }
