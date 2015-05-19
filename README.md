@@ -2,8 +2,6 @@
 
 > Download and cache remotely hosted content.
 
-_This plugin is a work in progress and it is not production ready._
-
 ## Installation
 
 ```
