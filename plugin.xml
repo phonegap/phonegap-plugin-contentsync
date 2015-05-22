@@ -14,6 +14,7 @@ xmlns:android="http://schemas.android.com/apk/res/android"
     <js-module src="www/index.js" name="ContentSync">
         <clobbers target="window.ContentSync" />
         <clobbers target="window.Zip" />
+        <clobbers target="window.zip" />
     </js-module>
 
 	<platform name="android">
