@@ -534,7 +534,7 @@ public class Sync extends CordovaPlugin {
             this.copyAssetFile(outputDirectory, path);
         } else {
             for (String file : assets) {
-                copyAssetFileOrDir(path + File.separator + file, outputDirectory);
+                copyAssetFileOrDir(outputDirectory, path + File.separator + file);
             }
         }
     }
