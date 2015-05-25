@@ -15,17 +15,13 @@
 package com.adobe.phonegap.contentsync;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -67,8 +63,6 @@ import android.util.Log;
 import android.webkit.CookieManager;
 
 public class Sync extends CordovaPlugin {
-    private static final String MODULE_EXPORTS_END = "];";
-    private static final String MODULE_EXPORTS = "module.exports = [";
     private static final int STATUS_STOPPED = 0;
     private static final int STATUS_DOWNLOADING = 1;
     private static final int STATUS_EXTRACTING = 2;
@@ -518,60 +512,30 @@ public class Sync extends CordovaPlugin {
     }
 
     private void copyAssets(String outputDirectory) {
-        AssetManager assetManager = cordova.getActivity().getAssets();
         try {
-            File targetDir =  new File(outputDirectory);
-            File www = new File(targetDir, "www");
-            if (www.exists()) {
-                targetDir = www;
-            }
-
             // cordova.js
-            this.copyAssetFile(targetDir, "cordova.js");
+            this.copyAssetFile(outputDirectory, "www/cordova.js");
 
             // cordova_plugins.js
-            StringBuilder buf = new StringBuilder();
-            BufferedReader reader =
-                new BufferedReader(new InputStreamReader(assetManager.open("www/cordova_plugins.js"), "UTF-8"));
-            String str;
+            this.copyAssetFile(outputDirectory, "www/cordova_plugins.js");
 
-            BufferedWriter write = new BufferedWriter(new FileWriter(new File(targetDir, "cordova_plugins.js")));
-            while ((str=reader.readLine()) != null) {
-              buf.append(str);
-              write.write(str);
-              write.newLine();
-            }
-            reader.close();
-            write.close();
-
-            String cordovaPlugins = buf.toString();
-            buf = null;
-
-            // all the plugins JS
-            int start = cordovaPlugins.indexOf(MODULE_EXPORTS);
-            int end = cordovaPlugins.indexOf(MODULE_EXPORTS_END, start);
-            String pluginsJson = cordovaPlugins.substring(start + MODULE_EXPORTS.length() -1, end+1);
-
-            try {
-                JSONArray jsonArray = new JSONArray(pluginsJson);
-                String jsFile = null;
-                File jsDir = null;
-
-                for (int i=0; i<jsonArray.length(); i++) {
-                    jsFile = jsonArray.getJSONObject(i).getString("file");
-                    jsDir = new File(targetDir, jsFile.substring(0, jsFile.lastIndexOf("/")));
-                    if (!jsDir.exists()) {
-                        jsDir.mkdirs();
-                    }
-                    this.copyAssetFile(targetDir, jsFile);
-                }
-
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-
+            // plugins folder
+            this.copyAssetFileOrDir(outputDirectory, "www/plugins");
         } catch(IOException e) {
-            Log.e(LOG_TAG, "Failed to copy asset file: cordova.js", e);
+            Log.e(LOG_TAG, "Failed to copy asset file", e);
+        }
+    }
+
+    private void copyAssetFileOrDir(String outputDirectory, String path) throws IOException {
+        AssetManager assetManager = cordova.getActivity().getAssets();
+        String assets[] = null;
+        assets = assetManager.list(path);
+        if (assets.length == 0) {
+            this.copyAssetFile(outputDirectory, path);
+        } else {
+            for (String file : assets) {
+                copyAssetFileOrDir(path + File.separator + file, outputDirectory);
+            }
         }
     }
 
@@ -931,8 +895,13 @@ public class Sync extends CordovaPlugin {
         }
     }
 
-    private void copyAssetFile(File www, String filename) throws IOException {
-        copyFile(cordova.getActivity().getAssets().open("www/" + filename), new FileOutputStream(new File(www, filename)));
+    private void copyAssetFile(String outputDirectory, String filename) throws IOException {
+        File targetDir =  new File(outputDirectory + "/" + filename.substring(0, filename.lastIndexOf("/")));
+        if (!targetDir.exists()) {
+            targetDir.mkdirs();
+        }
+
+        copyFile(cordova.getActivity().getAssets().open(filename), new FileOutputStream(new File(outputDirectory, filename)));
     }
 
     private void copyFile(InputStream in, OutputStream out) throws IOException {
