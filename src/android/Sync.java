@@ -400,7 +400,13 @@ public class Sync extends CordovaPlugin {
         } else {
             headers = new JSONObject();
         }
-        final boolean copyCordovaAssets = args.getBoolean(4);
+        final boolean copyCordovaAssets;
+        final boolean copyRootApp = args.getBoolean(5);
+        if (copyRootApp) {
+            copyCordovaAssets = true;
+        } else {
+            copyCordovaAssets = args.getBoolean(4);
+        }
         Log.d(LOG_TAG, "sync called with id = " + id + " and src = " + src + "!");
 
         final ProgressEvent progress = createProgressEvent(id);
@@ -443,15 +449,35 @@ public class Sync extends CordovaPlugin {
                         // Backup existing directory
                         File backup = backupExistingDirectory(outputDirectory, type, dir);
 
+<<<<<<< HEAD
                         // unzip
                         boolean win = unzipSync(targetFile, outputDirectory, progress, callbackContext);
+=======
+                    // @TODO: Do we do this even when type is local?
+                    if (copyRootApp) {
+                        try {
+                            copyAssetFileOrDir(outputDirectory, "www");
+                        } catch (IOException e) {
+                            Log.e(LOG_TAG, e.getLocalizedMessage(), e);
+                        }
+                    }
+
+                    // unzip
+                    boolean win = unzipSync(targetFile, outputDirectory, progress, callbackContext);
+>>>>>>> Implement copyRootApp for Android
 
                         // delete temp file
                         targetFile.delete();
 
+<<<<<<< HEAD
                         if (copyCordovaAssets) {
                             copyAssets(outputDirectory);
                         }
+=======
+                    if (copyCordovaAssets) {
+                        copyCordovaAssets(outputDirectory);
+                    }
+>>>>>>> Implement copyRootApp for Android
 
                         if (win) {
                             // success, remove backup
@@ -529,7 +555,7 @@ public class Sync extends CordovaPlugin {
         return backup;
     }
 
-    private void copyAssets(String outputDirectory) {
+    private void copyCordovaAssets(String outputDirectory) {
         try {
             // cordova.js
             this.copyAssetFile(outputDirectory, "www/cordova.js");

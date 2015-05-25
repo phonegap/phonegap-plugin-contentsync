@@ -212,6 +212,14 @@
                 NSURL *extractURL = [libraryDirectory URLByAppendingPathComponent:[@"files" stringByAppendingPathComponent:appId]];
                 NSString* type = [sTask.command argumentAtIndex:2 withDefault:@"replace"];
                 
+                // copy root app right before we extract
+                if([[[sTask command] argumentAtIndex:5 withDefault:@(NO)] boolValue] == YES) {
+                    NSLog(@"Copying Cordova Root App to %@ as requested", [extractURL path]);
+                    if(![self copyCordovaAssets:[extractURL path] copyRootApp:YES]) {
+                        NSLog(@"Error copying Cordova Root App");
+                    };
+                }
+                
                 CDVInvokedUrlCommand* command = [CDVInvokedUrlCommand commandFromJson:[NSArray arrayWithObjects:sTask.command.callbackId, @"Zip", @"unzip", [NSMutableArray arrayWithObjects:[sourceURL absoluteString], [extractURL absoluteString], type, nil], nil]];
                 [self unzip:command];
             } else {
@@ -317,8 +325,9 @@
     NSLog(@"unzipped path %@", unzippedPath);
     ContentSyncTask* sTask = [self findSyncDataByPath];
     if(sTask) {
-        // FIXME: GET RID OF THIS SHIT / Copying cordova assets
-        if([[[sTask command] argumentAtIndex:4 withDefault:@(NO)] boolValue] == YES) {
+        // FIXME: Copying cordova assets only if copyRootApp is false because why do it twice
+        if([[[sTask command] argumentAtIndex:5 withDefault:@(NO)] boolValue] == NO &&
+           [[[sTask command] argumentAtIndex:4 withDefault:@(NO)] boolValue] == YES) {
             NSLog(@"Copying Cordova Assets to %@ as requested", unzippedPath);
             if(![self copyCordovaAssets:unzippedPath]) {
                 NSLog(@"Error copying Cordova Assets");
@@ -340,13 +349,32 @@
     }
 }
 
-// TODO GET RID OF THIS
 - (BOOL) copyCordovaAssets:(NSString*)unzippedPath {
-    
-    NSFileManager *fileManager = [NSFileManager defaultManager];
+    return [self copyCordovaAssets:unzippedPath copyRootApp:false];
+}
+
+// TODO GET RID OF THIS
+- (BOOL) copyCordovaAssets:(NSString*)unzippedPath copyRootApp:(BOOL)copyRootApp {
     NSError *errorCopy;
-    NSArray* cordovaAssets = [NSArray arrayWithObjects:@"cordova.js",@"cordova_plugins.js",@"plugins", nil];
+    NSFileManager *fileManager = [NSFileManager defaultManager];
     NSURL* destinationURL = [NSURL fileURLWithPath:unzippedPath];
+    
+    if(copyRootApp == YES) {
+        // we use cordova.js as a way to find the root www/
+        NSString* root = [[[self commandDelegate] pathForResource:@"cordova.js"] stringByDeletingLastPathComponent];
+        
+        NSURL* sourceURL = [NSURL fileURLWithPath:root];
+        [fileManager removeItemAtURL:destinationURL error:NULL];
+        BOOL success = [fileManager copyItemAtURL:sourceURL toURL:destinationURL error:&errorCopy];
+        
+        if(!success) {
+            return NO;
+        }
+        
+        return YES;
+    }
+    
+    NSArray* cordovaAssets = [NSArray arrayWithObjects:@"cordova.js",@"cordova_plugins.js",@"plugins", nil];
     NSString* suffix = @"/www";
     
     if([fileManager fileExistsAtPath:[unzippedPath stringByAppendingString:suffix]]) {
