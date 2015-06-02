@@ -113,12 +113,12 @@ public class Sync extends CordovaPlugin {
             });
             return true;
         } else if (action.equals("unzip")) {
-            final File source = new File(args.getString(0));
-            String tempPath = args.getString(1);
+            String tempPath = args.getString(0);
             if (tempPath.startsWith("file://")) {
                 tempPath = tempPath.substring(7);
             }
-            final String target = tempPath;
+            final File source = new File(tempPath);
+            final String target = args.getString(1);
             final CallbackContext finalContext = callbackContext;
             cordova.getThreadPool().execute(new Runnable() {
                 public void run() {
