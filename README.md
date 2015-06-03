@@ -37,7 +37,7 @@ sync.on('complete', function(data) {
 });
 
 sync.on('error', function(e) {
-    // e.message
+    // e
 });
 
 sync.on('cancel', function() {
@@ -116,13 +116,13 @@ The event `error` will trigger when an internal error occurs and the cache is ab
 
 Callback Parameter | Description
 ------------------ | -----------
-`e` | `Error` Standard JavaScript error object that describes the error.
+`e` | `Integer` Enumeration of `ERROR_STATE` to describe the current error 
 
 #### Example
 
 ```javascript
 sync.on('error', function(e) {
-    // e.message
+    // e
 });
 ```
 
@@ -168,6 +168,16 @@ Integer | Description
 `2`     | `EXTRACTING`
 `3`     | `COMPLETE`
 
+### ContentSync.ERROR_STATE
+
+An enumeration that describes the received error. The mapped `String`
+values can be customized for the user's app.
+
+Error Code | Description
+------------------ | -----------
+`1` | `INVALID_URL_ERR`
+`2` | `CONNECTION_ERR`
+`3` | `UNZIP_ERR`
 
 ### ContentSync.unzip || Zip.unzip - ContentSync.download
 

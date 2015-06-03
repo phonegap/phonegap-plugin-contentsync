@@ -231,4 +231,18 @@ module.exports = {
         2: 'EXTRACTING',
         3: 'COMPLETE'
     }
+
+    /**
+     * ERROR_STATE enumeration.
+     *
+     * Maps to the `error` event's `status` object.
+     * The plugin user can customize the enumeration's mapped string
+     * to a value that's appropriate for their app.
+     */
+
+    ERROR_STATE: {
+        1: 'INVALID_URL_ERR',
+        2: 'CONNECTION_ERR',
+        3: 'UNZIP_ERR'
+    }
 };

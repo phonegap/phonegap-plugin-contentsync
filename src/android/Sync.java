@@ -60,6 +60,7 @@ import android.net.Uri;
 import android.os.Environment;
 import android.os.StatFs;
 import android.util.Log;
+import android.util.Patterns;
 import android.webkit.CookieManager;
 
 public class Sync extends CordovaPlugin {
@@ -67,6 +68,11 @@ public class Sync extends CordovaPlugin {
     private static final int STATUS_DOWNLOADING = 1;
     private static final int STATUS_EXTRACTING = 2;
     private static final int STATUS_COMPLETE = 3;
+
+    public static final int INVALID_URL_ERROR = 1;
+    public static final int CONNECTION_ERROR = 2;
+    public static final int UNZIP_ERROR = 3;
+
     private static final String PROP_LOCAL_PATH = "localPath";
     private static final String PROP_STATUS = "status";
     private static final String PROP_PROGRESS = "progress";
@@ -101,14 +107,15 @@ public class Sync extends CordovaPlugin {
             final CallbackContext finalContext = callbackContext;
             cordova.getThreadPool().execute(new Runnable() {
                 public void run() {
-                    download(source, target, headers, createProgressEvent("download"), finalContext);
-                    JSONObject retval = new JSONObject();
-                    try {
-                        retval.put("archiveURL", target.getAbsolutePath());
-                    } catch (JSONException e) {
-                        // never happens
+                    if (download(source, target, headers, createProgressEvent("download"), finalContext)) {
+                        JSONObject retval = new JSONObject();
+                        try {
+                            retval.put("archiveURL", target.getAbsolutePath());
+                        } catch (JSONException e) {
+                            // never happens
+                        }
+                        finalContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, retval));
                     }
-                    finalContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, retval));
                 }
             });
             return true;
@@ -206,8 +213,13 @@ public class Sync extends CordovaPlugin {
         }
     }
 
-    private void download(final String source, final File file, final JSONObject headers, final ProgressEvent progress, final CallbackContext callbackContext) {
+    private boolean  download(final String source, final File file, final JSONObject headers, final ProgressEvent progress, final CallbackContext callbackContext) {
         Log.d(LOG_TAG, "download " + source);
+
+        if (!Patterns.WEB_URL.matcher(source).matches()) {
+            sendErrorMessage("Invalid URL", INVALID_URL_ERROR, callbackContext);
+            return false;
+        }
 
         final CordovaResourceApi resourceApi = webView.getResourceApi();
         final Uri sourceUri = resourceApi.remapUri(Uri.parse(source));
@@ -219,7 +231,7 @@ public class Sync extends CordovaPlugin {
 
         synchronized (progress) {
             if (progress.isAborted()) {
-                return;
+                return false;
             }
         }
         HttpURLConnection connection = null;
@@ -284,7 +296,8 @@ public class Sync extends CordovaPlugin {
                 if (connection.getResponseCode() == HttpURLConnection.HTTP_NOT_MODIFIED) {
                     cached = true;
                     connection.disconnect();
-                    sendErrorMessage("Resource not modified: " + source, callbackContext);
+                    sendErrorMessage("Resource not modified: " + source, CONNECTION_ERROR, callbackContext);
+                    return false;
                 } else {
                     if (connection.getContentEncoding() == null || connection.getContentEncoding().equalsIgnoreCase("gzip")) {
                         // Only trust content-length header if we understand
@@ -294,7 +307,8 @@ public class Sync extends CordovaPlugin {
                             if (connectionLength > getFreeSpace()) {
                                 cached = true;
                                 connection.disconnect();
-                                sendErrorMessage("Not enough free space to download", callbackContext);
+                                sendErrorMessage("Not enough free space to download", CONNECTION_ERROR, callbackContext);
+                                return false;
                             } else {
                                 progress.setTotal(connectionLength);
                             }
@@ -308,7 +322,7 @@ public class Sync extends CordovaPlugin {
                 try {
                     synchronized (progress) {
                         if (progress.isAborted()) {
-                            return;
+                            return false;
                         }
                         //progress.connection = connection;
                     }
@@ -320,7 +334,7 @@ public class Sync extends CordovaPlugin {
                     while ((bytesRead = inputStream.read(buffer)) > 0) {
                         synchronized (progress) {
                             if (progress.isAborted()) {
-                                return;
+                                return false;
                             }
                         }
                         Log.d(LOG_TAG, "bytes read = " + bytesRead);
@@ -340,7 +354,7 @@ public class Sync extends CordovaPlugin {
             }
 
         } catch (Throwable e) {
-            sendErrorMessage(e.getLocalizedMessage(), callbackContext);
+            sendErrorMessage(e.getLocalizedMessage(), CONNECTION_ERROR, callbackContext);
         } finally {
             if (connection != null) {
                 // Revert back to the proper verifier and socket factories
@@ -350,26 +364,14 @@ public class Sync extends CordovaPlugin {
                     https.setSSLSocketFactory(oldSocketFactory);
                 }
             }
-
-            // Remove incomplete download.
-//            if (!cached && result != null && result.getStatus() != PluginResult.Status.OK.ordinal() && file != null) {
-//              Log.d(LOG_TAG, "Delete incomplete file");
-//                file.delete();
-//            }
         }
+
+        return true;
     }
 
-    private void sendErrorMessage(String message, CallbackContext callbackContext) {
+    private void sendErrorMessage(String message, int type, CallbackContext callbackContext) {
         Log.e(LOG_TAG, message);
-
-        JSONObject error = new JSONObject();
-        try {
-            error.put("message", message);
-        } catch (JSONException e) {
-            // never happens
-        }
-
-        callbackContext.error(error);
+        callbackContext.error(type);
     }
 
     private long getFreeSpace() {
@@ -433,32 +435,34 @@ public class Sync extends CordovaPlugin {
 
                 if (!type.equals(TYPE_LOCAL)) {
                     // download file
-                    download(src, createDownloadFileLocation(id), headers, progress, callbackContext);
+                    if (download(src, createDownloadFileLocation(id), headers, progress, callbackContext)) {
+                        // update progress with zip file
+                        File targetFile = progress.getTargetFile();
+                        Log.d(LOG_TAG, "downloaded = " + targetFile.getAbsolutePath());
 
-                    // update progress with zip file
-                    File targetFile = progress.getTargetFile();
-                    Log.d(LOG_TAG, "downloaded = " + targetFile.getAbsolutePath());
+                        // Backup existing directory
+                        File backup = backupExistingDirectory(outputDirectory, type, dir);
 
-                    // Backup existing directory
-                    File backup = backupExistingDirectory(outputDirectory, type, dir);
+                        // unzip
+                        boolean win = unzipSync(targetFile, outputDirectory, progress, callbackContext);
 
-                    // unzip
-                    boolean win = unzipSync(targetFile, outputDirectory, progress, callbackContext);
+                        // delete temp file
+                        targetFile.delete();
 
-                    // delete temp file
-                    targetFile.delete();
+                        if (copyCordovaAssets) {
+                            copyAssets(outputDirectory);
+                        }
 
-                    if (copyCordovaAssets) {
-                        copyAssets(outputDirectory);
-                    }
-
-                    if (win) {
-                        // success, remove backup
-                        removeFolder(backup);
+                        if (win) {
+                            // success, remove backup
+                            removeFolder(backup);
+                        } else {
+                            // failure, revert backup
+                            removeFolder(dir);
+                            backup.renameTo(dir);
+                        }
                     } else {
-                        // failure, revert backup
-                        removeFolder(dir);
-                        backup.renameTo(dir);
+                        return;
                     }
                 }
 
@@ -698,16 +702,14 @@ public class Sync extends CordovaPlugin {
 
             File tempFile = resourceApi.mapUriToFile(zipUri);
             if (tempFile == null || !tempFile.exists()) {
-                sendErrorMessage("Zip file does not exist", callbackContext);
-                return false;
+                sendErrorMessage("Zip file does not exist", UNZIP_ERROR, callbackContext);
             }
 
             File outputDir = resourceApi.mapUriToFile(outputUri);
             outputDirectory = outputDir.getAbsolutePath();
             outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
             if (outputDir == null || (!outputDir.exists() && !outputDir.mkdirs())){
-                sendErrorMessage("Could not create output directory", callbackContext);
-                return false;
+                sendErrorMessage("Could not create output directory", UNZIP_ERROR, callbackContext);
             }
 
             OpenForReadResult zipFile = resourceApi.openForRead(zipUri);
@@ -783,7 +785,7 @@ public class Sync extends CordovaPlugin {
             }
         } catch (Exception e) {
             String errorMessage = "An error occurred while unzipping.";
-            sendErrorMessage(errorMessage, callbackContext);
+            sendErrorMessage(errorMessage, UNZIP_ERROR, callbackContext);
             Log.e(LOG_TAG, errorMessage, e);
         } finally {
             if (inputStream != null) {

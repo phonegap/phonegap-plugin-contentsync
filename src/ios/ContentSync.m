@@ -82,36 +82,43 @@
     if(src != nil) {
         NSLog(@"startDownload from %@", src);
         NSURL *downloadURL = [NSURL URLWithString:src];
-        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:downloadURL];
-        request.timeoutInterval = 15.0;
-        // Setting headers
-        NSDictionary *headers = [command argumentAtIndex:3 withDefault:nil andClass:[NSDictionary class]];
-        if(headers != nil) {
-            for (NSString* header in [headers allKeys]) {
-                NSLog(@"Setting header %@ %@", header, [headers objectForKey:header]);
-                [request addValue:[headers objectForKey:header] forHTTPHeaderField:header];
+        
+        // downloadURL is nil if malformed URL
+        if(downloadURL == nil) {
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:INVALID_URL_ERR];
+        } else {
+            NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:downloadURL];
+            request.timeoutInterval = 15.0;
+            // Setting headers
+            NSDictionary *headers = [command argumentAtIndex:3 withDefault:nil andClass:[NSDictionary class]];
+            if(headers != nil) {
+                for (NSString* header in [headers allKeys]) {
+                    NSLog(@"Setting header %@ %@", header, [headers objectForKey:header]);
+                    [request addValue:[headers objectForKey:header] forHTTPHeaderField:header];
+                }
             }
+            
+            if(!self.syncTasks) {
+                self.syncTasks = [NSMutableArray arrayWithCapacity:1];
+            }
+            NSURLSessionDownloadTask *downloadTask = [self.session downloadTaskWithRequest:request];
+            
+            ContentSyncTask* sData = [[ContentSyncTask alloc] init];
+            
+            sData.downloadTask = downloadTask;
+            sData.command = command;
+            sData.progress = 0;
+            sData.extractArchive = extractArchive;
+            
+            [self.syncTasks addObject:sData];
+            
+            [downloadTask resume];
+            
+            pluginResult = [self preparePluginResult:sData.progress status:Downloading];
         }
         
-        if(!self.syncTasks) {
-            self.syncTasks = [NSMutableArray arrayWithCapacity:1];
-        }
-        NSURLSessionDownloadTask *downloadTask = [self.session downloadTaskWithRequest:request];
-        
-        ContentSyncTask* sData = [[ContentSyncTask alloc] init];
-        
-        sData.downloadTask = downloadTask;
-        sData.command = command;
-        sData.progress = 0;
-        sData.extractArchive = extractArchive;
-        
-        [self.syncTasks addObject:sData];
-        
-        [downloadTask resume];
-        
-        pluginResult = [self preparePluginResult:sData.progress status:Downloading];
     } else {
-        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"URL can't be null"];
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:INVALID_URL_ERR];
     }
     
     [pluginResult setKeepCallbackAsBool:YES];
@@ -237,7 +244,7 @@
             }
         } else {
             NSLog(@"Task: %@ completed with error: %@", task, [error localizedDescription]);
-            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:[error localizedDescription]];
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:CONNECTION_ERR];
         }
         [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
     }
@@ -263,14 +270,14 @@
             NSError *error;
             if(![SSZipArchive unzipFileAtPath:[sourceURL path] toDestination:[destinationURL path] overwrite:overwrite password:nil error:&error delegate:weakSelf]) {
                 NSLog(@"%@ - %@", @"Error occurred during unzipping", [error localizedDescription]);
-                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Error occurred during unzipping"];
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:UNZIP_ERR];
             } else {
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
             }
         }
         @catch (NSException *exception) {
             NSLog(@"%@ - %@", @"Error occurred during unzipping", [exception debugDescription]);
-            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Error occurred during unzipping"];
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:UNZIP_ERR];
         }
         [pluginResult setKeepCallbackAsBool:YES];
         
