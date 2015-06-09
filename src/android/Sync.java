@@ -403,6 +403,16 @@ public class Sync extends CordovaPlugin {
 
         final ProgressEvent progress = createProgressEvent(id);
 
+        /**
+         * need to clear cache or Android won't pick up on the replaced
+         * content
+         */
+        cordova.getActivity().runOnUiThread(new Runnable() {
+            public void run() {
+                webView.clearCache(true);
+            }
+        });
+
         cordova.getThreadPool().execute(new Runnable() {
             public void run() {
                 synchronized (progress) {
