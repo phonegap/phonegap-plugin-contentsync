@@ -39,3 +39,12 @@ typedef NSUInteger ErrorCodes;
 - (void) unzip:(CDVInvokedUrlCommand*)command;
 
 @end
+
+/**
+ * NSURLProtocolNoCache
+ *
+ * Custom URL Protocol handler to prevent caching of local assets.
+ */
+
+@interface NSURLProtocolNoCache : NSURLProtocol
+@end

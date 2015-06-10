@@ -18,6 +18,11 @@
 
 @implementation ContentSync
 
+- (CDVPlugin*)initWithWebView:(UIWebView*)theWebView {
+    [NSURLProtocol registerClass:[NSURLProtocolNoCache class]];
+    return self;
+}
+
 - (CDVPluginResult*) preparePluginResult:(NSInteger)progress status:(NSInteger)status {
     CDVPluginResult *pluginResult = nil;
     
@@ -377,6 +382,85 @@
         session = [NSURLSession sessionWithConfiguration:configuration delegate:self delegateQueue:nil];
     });
     return session;
+}
+
+@end
+
+/**
+ * NSURLProtocolNoCache
+ *
+ * URL Protocol handler to prevent caching of local assets.
+ */
+
+@implementation NSURLProtocolNoCache
+
+
+/**
+ * Should this request be handled by this protocol handler?
+ *
+ * We disable caching on every NSURLRequest. For our purpose, we could disable caching
+ * on only file:// protocol request. Additionally, in the future, we may want to limit this
+ * or enable it based on configuration.
+ *
+ * @param theRequest is the inbound NSURLRequest.
+ * @return YES to handle this request with the this NSURLProtocol handler.
+ */
+
++ (BOOL)canInitWithRequest:(NSURLRequest*)theRequest {
+    return YES;
+}
+
+/**
+ * Canonical request definition.
+ *
+ * We keep it simple and map each request directly to itself.
+ *
+ * @param theRequest is the inbound NSURLRequest.
+ * @return the same inbound NSURLRequest object.
+ */
+
++ (NSURLRequest*)canonicalRequestForRequest:(NSURLRequest*)theRequest {
+    return theRequest;
+}
+
+/**
+ * Start loading the request.
+ *
+ * When loading a request, the HEADERs are altered to prevent browser caching.
+ */
+
+- (void)startLoading {
+    NSData *data = [NSData dataWithContentsOfFile:self.request.URL.path];
+
+    // add the no-cache HEADERs to the request while preserving the existing HEADER values.
+    NSDictionary *headers = [NSDictionary dictionaryWithObjectsAndKeys:
+                             [self.request.allHTTPHeaderFields objectForKey:@"Accept"], @"Accept",
+                             @"no-cache", @"Cache-Control",
+                             @"no-cache", @"Pragma",
+                             [NSString stringWithFormat:@"%d", (int)[data length]], @"Content-Length",
+                             nil];
+
+    // create a response using the request and our new HEADERs
+    NSHTTPURLResponse *response = [[NSHTTPURLResponse alloc] initWithURL:self.request.URL
+                                                              statusCode:200
+                                                             HTTPVersion:@"1.1"
+                                                            headerFields:headers];
+
+    // deliver the response and enable in-memory caching (we may want to completely disable this if issues arise)
+    [self.client URLProtocol:self didReceiveResponse:response cacheStoragePolicy:NSURLCacheStorageAllowedInMemoryOnly];
+    [self.client URLProtocol:self didLoadData:data];
+    [self.client URLProtocolDidFinishLoading:self];
+}
+
+/**
+ * Stop loading the request.
+ *
+ * When the request is cancelled, we have an opportunity to clean up and/or recover. However, for our purpose
+ * the ContentSync class will notify the user that the connection failed.
+ */
+
+- (void)stopLoading {
+    NSLog(@"NSURLProtocolNoCache request was cancelled.");
 }
 
 @end
