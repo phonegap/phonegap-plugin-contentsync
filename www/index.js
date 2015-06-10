@@ -230,7 +230,7 @@ module.exports = {
         1: 'DOWNLOADING',
         2: 'EXTRACTING',
         3: 'COMPLETE'
-    }
+    },
 
     /**
      * ERROR_STATE enumeration.
