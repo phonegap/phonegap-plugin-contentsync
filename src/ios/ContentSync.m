@@ -398,16 +398,15 @@
 /**
  * Should this request be handled by this protocol handler?
  *
- * We disable caching on every NSURLRequest. For our purpose, we could disable caching
- * on only file:// protocol request. Additionally, in the future, we may want to limit this
- * or enable it based on configuration.
+ * We disable caching on requests using the file:// protocol.
+ * In the future, we may want to limit this or enable it based on configuration.
  *
  * @param theRequest is the inbound NSURLRequest.
  * @return YES to handle this request with the this NSURLProtocol handler.
  */
 
 + (BOOL)canInitWithRequest:(NSURLRequest*)theRequest {
-    return YES;
+    return [theRequest.URL.scheme isEqualToString:@"file"];
 }
 
 /**
