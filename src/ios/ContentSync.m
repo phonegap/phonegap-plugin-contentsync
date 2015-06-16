@@ -279,8 +279,8 @@
             } else {
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
                 // clean up zip archive
-//                NSFileManager *fileManager = [NSFileManager defaultManager];
-//                [fileManager removeItemAtURL:sourceURL error:NULL];
+                NSFileManager *fileManager = [NSFileManager defaultManager];
+                [fileManager removeItemAtURL:sourceURL error:NULL];
 
             }
         }
