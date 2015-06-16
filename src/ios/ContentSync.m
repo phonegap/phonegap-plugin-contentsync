@@ -209,7 +209,7 @@
                 sTask.archivePath = [sourceURL path];
                 // FIXME there is probably a better way to do this
                 NSString* appId = [sTask.command.arguments objectAtIndex:1];
-                NSURL *extractURL = [libraryDirectory URLByAppendingPathComponent:appId];
+                NSURL *extractURL = [libraryDirectory URLByAppendingPathComponent:[@"files" stringByAppendingPathComponent:appId]];
                 NSString* type = [sTask.command argumentAtIndex:2 withDefault:@"replace"];
                 
                 CDVInvokedUrlCommand* command = [CDVInvokedUrlCommand commandFromJson:[NSArray arrayWithObjects:sTask.command.callbackId, @"Zip", @"unzip", [NSMutableArray arrayWithObjects:[sourceURL absoluteString], [extractURL absoluteString], type, nil], nil]];
@@ -278,6 +278,10 @@
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:UNZIP_ERR];
             } else {
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+                // clean up zip archive
+//                NSFileManager *fileManager = [NSFileManager defaultManager];
+//                [fileManager removeItemAtURL:sourceURL error:NULL];
+
             }
         }
         @catch (NSException *exception) {
