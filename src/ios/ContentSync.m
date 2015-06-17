@@ -79,10 +79,11 @@
 
 - (void)startDownload:(CDVInvokedUrlCommand*)command extractArchive:(BOOL)extractArchive {
     
-    self.session = [self backgroundSession];
-    
     CDVPluginResult* pluginResult = nil;
     NSString* src = [command.arguments objectAtIndex:0];
+    NSNumber* timeout = [command argumentAtIndex:6 withDefault:[NSNumber numberWithDouble:15]];
+    
+    self.session = [self backgroundSession:timeout];
     
     if(src != nil) {
         NSLog(@"startDownload from %@", src);
@@ -396,7 +397,7 @@
     return YES;
 }
 
-- (NSURLSession*) backgroundSession {
+- (NSURLSession*) backgroundSession:(NSNumber*)timeout {
     static NSURLSession *session = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -409,8 +410,8 @@
         {
             configuration = [NSURLSessionConfiguration backgroundSessionConfiguration:@"com.example.apple-samplecode.SimpleBackgroundTransfer.BackgroundSession"];
         }
-        configuration.timeoutIntervalForRequest = 15.0;
-        configuration.timeoutIntervalForResource = 30.0;
+        configuration.timeoutIntervalForRequest = [timeout doubleValue];
+        configuration.timeoutIntervalForResource = [timeout doubleValue]*2;
         session = [NSURLSession sessionWithConfiguration:configuration delegate:self delegateQueue:nil];
     });
     return session;

@@ -57,6 +57,7 @@ Parameter | Description
 `options.headers` | `Object` _(Optional)_ Set of headers to use when requesting the remote content from `options.src`.
 `options.copyCordovaAssets` | `Boolean` _(Optional)_ Copies `cordova.js`, `cordova_plugins.js` and `plugins/` to sync'd folder. This operation happens after the source content has been cached, so it will override any existing Cordova assets. Default is `false`.
 `options.copyRootApp` | `Boolean` _(Optional)_ Copies the `www` folder to sync'd folder. This operation happens before the source content has been cached, then the source content is cached and finally it copies `cordova.js`, `cordova_plugins.js` and `plugins/` to sync'd folder to remain consistent with the installed plugins. Default is `false`.
+`options.timeout` | `Double` Request timeout. 
 
 #### Returns
 
