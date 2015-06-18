@@ -449,35 +449,24 @@ public class Sync extends CordovaPlugin {
                         // Backup existing directory
                         File backup = backupExistingDirectory(outputDirectory, type, dir);
 
-<<<<<<< HEAD
+                        // @TODO: Do we do this even when type is local?
+                        if (copyRootApp) {
+                            try {
+                                copyAssetFileOrDir(outputDirectory, "www");
+                            } catch (IOException e) {
+                                Log.e(LOG_TAG, e.getLocalizedMessage(), e);
+                            }
+                        }
+
                         // unzip
                         boolean win = unzipSync(targetFile, outputDirectory, progress, callbackContext);
-=======
-                    // @TODO: Do we do this even when type is local?
-                    if (copyRootApp) {
-                        try {
-                            copyAssetFileOrDir(outputDirectory, "www");
-                        } catch (IOException e) {
-                            Log.e(LOG_TAG, e.getLocalizedMessage(), e);
-                        }
-                    }
-
-                    // unzip
-                    boolean win = unzipSync(targetFile, outputDirectory, progress, callbackContext);
->>>>>>> Implement copyRootApp for Android
 
                         // delete temp file
                         targetFile.delete();
 
-<<<<<<< HEAD
                         if (copyCordovaAssets) {
-                            copyAssets(outputDirectory);
+                            copyCordovaAssets(outputDirectory);
                         }
-=======
-                    if (copyCordovaAssets) {
-                        copyCordovaAssets(outputDirectory);
-                    }
->>>>>>> Implement copyRootApp for Android
 
                         if (win) {
                             // success, remove backup
