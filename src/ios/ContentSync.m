@@ -45,9 +45,9 @@
         NSFileManager *fileManager = [NSFileManager defaultManager];
         NSArray *URLs = [fileManager URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask];
         NSURL *libraryDirectoryUrl = [URLs objectAtIndex:0];
-
-        NSURL *appPath = [libraryDirectoryUrl URLByAppendingPathComponent:appId];
-
+        
+        NSURL *appPath = [libraryDirectoryUrl URLByAppendingPathComponent:[@"files" stringByAppendingPathComponent:appId]];
+        
         if([fileManager fileExistsAtPath:[appPath path]]) {
             NSLog(@"Found local copy %@", [appPath path]);
             CDVPluginResult *pluginResult = nil;
