@@ -33,8 +33,8 @@ var ContentSync = function(options) {
     }
 
     // require options.src parameter
-    if (typeof options.src === 'undefined') {
-        throw new Error('The options.src argument is required.');
+    if (typeof options.src === 'undefined' && options.type !== "local") {
+        throw new Error('The options.src argument is required for merge replace types.');
     }
 
     // require options.id parameter
@@ -48,6 +48,8 @@ var ContentSync = function(options) {
     //              completely by the imported content, i.e. is overridden or
     //              deleted accordingly.
     //     merge:   Existing content is not modified, i.e. only new content is
+    //              added and none is deleted or modified.
+    //     local:   Existing content is not modified, i.e. only new content is
     //              added and none is deleted or modified.
     //
     if (typeof options.type === 'undefined') {

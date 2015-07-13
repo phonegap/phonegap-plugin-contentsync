@@ -28,11 +28,20 @@ describe('phonegap-plugin-contentsync', function() {
             expect(execSpy).not.toHaveBeenCalled();
         });
 
-        it('should require the options.src parameter', function() {
+        it('should require the options.src parameter for merge/replace', function() {
             expect(function() {
                 options.src = undefined;
                 contentSync.sync(options);
             }).toThrow();
+            expect(execSpy).not.toHaveBeenCalled();
+        });
+        
+        it('should not require the options.src parameter for local', function() {
+            expect(function() {
+                options.src = undefined;
+                options.src = "local";
+                contentSync.sync(options);
+            }).not.toThrow();
             expect(execSpy).not.toHaveBeenCalled();
         });
 
