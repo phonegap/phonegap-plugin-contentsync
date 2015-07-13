@@ -46,7 +46,7 @@
         NSArray *URLs = [fileManager URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask];
         NSURL *libraryDirectoryUrl = [URLs objectAtIndex:0];
         
-        NSURL *appPath = [libraryDirectoryUrl URLByAppendingPathComponent:[@"files" stringByAppendingPathComponent:appId]];
+        NSURL *appPath = [libraryDirectoryUrl URLByAppendingPathComponent:appId];
         
         if([fileManager fileExistsAtPath:[appPath path]]) {
             NSLog(@"Found local copy %@", [appPath path]);
@@ -210,7 +210,7 @@
                 sTask.archivePath = [sourceURL path];
                 // FIXME there is probably a better way to do this
                 NSString* appId = [sTask.command.arguments objectAtIndex:1];
-                NSURL *extractURL = [libraryDirectory URLByAppendingPathComponent:[@"files" stringByAppendingPathComponent:appId]];
+                NSURL *extractURL = [libraryDirectory URLByAppendingPathComponent:appId];
                 NSString* type = [sTask.command argumentAtIndex:2 withDefault:@"replace"];
 
                 // copy root app right before we extract
@@ -339,6 +339,15 @@
         [pluginResult setKeepCallbackAsBool:YES];
         [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
         // END
+        
+        // Do not BACK UP folder to iCloud
+        NSURL* appURL = [NSURL fileURLWithPath: path];
+        NSError* error = nil;
+        BOOL success = [appURL setResourceValue: [NSNumber numberWithBool: YES]
+                                          forKey: NSURLIsExcludedFromBackupKey error: &error];
+        if(!success) {
+            NSLog(@"Error excluding %@ from backup %@", [appURL lastPathComponent], error);
+        }
 
         NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
         [message setObject:unzippedPath forKey:@"localPath"];
