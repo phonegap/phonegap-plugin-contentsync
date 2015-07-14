@@ -35,7 +35,7 @@ describe('phonegap-plugin-contentsync', function() {
             }).toThrow();
             expect(execSpy).not.toHaveBeenCalled();
         });
-        
+
         it('should not require the options.src parameter for local', function() {
             expect(function() {
                 options.src = undefined;
@@ -146,6 +146,24 @@ describe('phonegap-plugin-contentsync', function() {
                     options.copyCordovaAssets = true;
                     execSpy.andCallFake(function(win, fail, service, id, args) {
                         expect(args[4]).toEqual(options.copyCordovaAssets);
+                        done();
+                    });
+                    contentSync.sync(options);
+                });
+            });
+
+            describe('options.copyRootApp', function() {
+                it('should default to false', function(done) {
+                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                        expect(args[5]).toEqual(false);
+                        done();
+                    });
+                    contentSync.sync(options);
+                });
+                it('should be passed as whatever we specify', function(done) {
+                    options.copyRootApp = true;
+                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                        expect(args[5]).toEqual(options.copyRootApp);
                         done();
                     });
                     contentSync.sync(options);
