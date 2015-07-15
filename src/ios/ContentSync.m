@@ -60,6 +60,44 @@
             [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
             return;
         }
+        BOOL copyCordovaAssets = [[command argumentAtIndex:4 withDefault:@(NO)] boolValue];
+        BOOL copyRootApp = [[command argumentAtIndex:5 withDefault:@(NO)] boolValue];
+        
+        if(copyRootApp == YES || copyCordovaAssets == YES) {
+            CDVPluginResult *pluginResult = nil;
+            NSError* error = nil;
+            
+            NSLog(@"Creating app directory %@", [appPath path]);
+            [fileManager createDirectoryAtPath:[appPath path] withIntermediateDirectories:NO attributes:nil error:&error];
+            
+            NSError* errorSetting = nil;
+            BOOL success = [appPath setResourceValue: [NSNumber numberWithBool: YES]
+                                             forKey: NSURLIsExcludedFromBackupKey error: &errorSetting];
+            
+            if(success == NO) {
+                NSLog(@"WARNING: %@ might be backed up to iCloud!", [appPath path]);
+            }
+            
+            if(error != nil) {
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:LOCAL_ERR];
+                NSLog(@"%@", [error localizedDescription]);
+            } else {
+                if(copyRootApp) {
+                    NSLog(@"Copying Root App");
+                    [self copyCordovaAssets:[appPath path] copyRootApp:YES];
+                } else {
+                    NSLog(@"Copying Cordova Assets");
+                    [self copyCordovaAssets:[appPath path] copyRootApp:NO];
+                }
+                NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
+                [message setObject:[appPath path] forKey:@"localPath"];
+                [message setObject:@"true" forKey:@"cached"];
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+            }
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+            return;
+
+        }
     }
 
     __weak ContentSync* weakSelf = self;
