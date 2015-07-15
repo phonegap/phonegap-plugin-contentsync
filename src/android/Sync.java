@@ -213,7 +213,7 @@ public class Sync extends CordovaPlugin {
         }
     }
 
-    private boolean  download(final String source, final File file, final JSONObject headers, final ProgressEvent progress, final CallbackContext callbackContext) {
+    private boolean download(final String source, final File file, final JSONObject headers, final ProgressEvent progress, final CallbackContext callbackContext) {
         Log.d(LOG_TAG, "download " + source);
 
         if (!Patterns.WEB_URL.matcher(source).matches()) {
@@ -435,8 +435,23 @@ public class Sync extends CordovaPlugin {
                 String type = args.optString(2, TYPE_REPLACE);
                 Log.d(LOG_TAG, "type = " + type);
                 File dir = new File(outputDirectory);
-                if (type.equals(TYPE_LOCAL) && !dir.exists()) {
-                    type = TYPE_REPLACE;
+
+                if (type.equals(TYPE_LOCAL)) {
+                    if ("null".equals(src) && (copyRootApp || copyCordovaAssets)) {
+                        if (copyRootApp) {
+                            try {
+                                copyAssetFileOrDir(outputDirectory, "www");
+                            } catch (IOException e) {
+                                Log.e(LOG_TAG, e.getLocalizedMessage(), e);
+                            }
+                        }
+                        if (copyCordovaAssets) {
+                            copyCordovaAssets(outputDirectory);
+                        }
+
+                    } else if (!dir.exists()) {
+                        type = TYPE_REPLACE;
+                    }
                 }
 
                 if (!type.equals(TYPE_LOCAL)) {
