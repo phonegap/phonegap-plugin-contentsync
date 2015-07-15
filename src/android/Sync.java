@@ -439,11 +439,7 @@ public class Sync extends CordovaPlugin {
                 if (type.equals(TYPE_LOCAL)) {
                     if ("null".equals(src) && (copyRootApp || copyCordovaAssets)) {
                         if (copyRootApp) {
-                            try {
-                                copyAssetFileOrDir(outputDirectory, "www");
-                            } catch (IOException e) {
-                                Log.e(LOG_TAG, e.getLocalizedMessage(), e);
-                            }
+                            copyRootApp(outputDirectory);
                         }
                         if (copyCordovaAssets) {
                             copyCordovaAssets(outputDirectory);
@@ -466,11 +462,7 @@ public class Sync extends CordovaPlugin {
 
                         // @TODO: Do we do this even when type is local?
                         if (copyRootApp) {
-                            try {
-                                copyAssetFileOrDir(outputDirectory, "www");
-                            } catch (IOException e) {
-                                Log.e(LOG_TAG, e.getLocalizedMessage(), e);
-                            }
+                            copyRootApp(outputDirectory);
                         }
 
                         // unzip
@@ -559,30 +551,53 @@ public class Sync extends CordovaPlugin {
         return backup;
     }
 
+    private void moveToRootFolder(String outputDirectory) {
+        File www = new File(outputDirectory, "www");
+        File[] files = www.listFiles();
+        File dest = null;
+        for (int i = 0; i < files.length; i++) {
+            dest = new File(outputDirectory, files[i].getName());
+            files[i].renameTo(dest);
+        }
+        www.renameTo(new File(outputDirectory, ".www"));
+        www.deleteOnExit();
+    }
+
+    private void copyRootApp(String outputDirectory) {
+        try {
+            boolean wwwExists = (new File(outputDirectory, "www")).exists();
+            copyAssetFileOrDir(outputDirectory, "www", wwwExists);
+        } catch (IOException e) {
+            Log.e(LOG_TAG, e.getLocalizedMessage(), e);
+        }
+    }
+
     private void copyCordovaAssets(String outputDirectory) {
         try {
+            boolean wwwExists = (new File(outputDirectory, "www")).exists();
+
             // cordova.js
-            this.copyAssetFile(outputDirectory, "www/cordova.js");
+            this.copyAssetFile(outputDirectory, "www/cordova.js", wwwExists);
 
             // cordova_plugins.js
-            this.copyAssetFile(outputDirectory, "www/cordova_plugins.js");
+            this.copyAssetFile(outputDirectory, "www/cordova_plugins.js", wwwExists);
 
             // plugins folder
-            this.copyAssetFileOrDir(outputDirectory, "www/plugins");
+            this.copyAssetFileOrDir(outputDirectory, "www/plugins", wwwExists);
         } catch(IOException e) {
             Log.e(LOG_TAG, "Failed to copy asset file", e);
         }
     }
 
-    private void copyAssetFileOrDir(String outputDirectory, String path) throws IOException {
+    private void copyAssetFileOrDir(String outputDirectory, String path, boolean wwwExists) throws IOException {
         AssetManager assetManager = cordova.getActivity().getAssets();
         String assets[] = null;
         assets = assetManager.list(path);
         if (assets.length == 0) {
-            this.copyAssetFile(outputDirectory, path);
+            this.copyAssetFile(outputDirectory, path, wwwExists);
         } else {
             for (String file : assets) {
-                copyAssetFileOrDir(outputDirectory, path + File.separator + file);
+                copyAssetFileOrDir(outputDirectory, path + File.separator + file, wwwExists);
             }
         }
     }
@@ -941,13 +956,23 @@ public class Sync extends CordovaPlugin {
         }
     }
 
-    private void copyAssetFile(String outputDirectory, String filename) throws IOException {
-        File targetDir =  new File(outputDirectory + "/" + filename.substring(0, filename.lastIndexOf("/")));
-        if (!targetDir.exists()) {
-            targetDir.mkdirs();
+    private void copyAssetFile(String outputDirectory, String filename, boolean wwwExists) throws IOException {
+        String targetFile = filename;
+        if (!wwwExists) {
+            if (targetFile.startsWith("www/")) {
+                targetFile = targetFile.substring(4,targetFile.length());
+            }
         }
 
-        copyFile(cordova.getActivity().getAssets().open(filename), new FileOutputStream(new File(outputDirectory, filename)));
+        int lastIndex = targetFile.lastIndexOf("/");
+        if (lastIndex > 0) {
+            File targetDir = new File(outputDirectory + "/" + targetFile.substring(0, lastIndex));
+            if (!targetDir.exists()) {
+                targetDir.mkdirs();
+            }
+        }
+
+        copyFile(cordova.getActivity().getAssets().open(filename), new FileOutputStream(new File(outputDirectory, targetFile)));
     }
 
     private void copyFile(InputStream in, OutputStream out) throws IOException {
