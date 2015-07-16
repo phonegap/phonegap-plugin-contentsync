@@ -551,18 +551,6 @@ public class Sync extends CordovaPlugin {
         return backup;
     }
 
-    private void moveToRootFolder(String outputDirectory) {
-        File www = new File(outputDirectory, "www");
-        File[] files = www.listFiles();
-        File dest = null;
-        for (int i = 0; i < files.length; i++) {
-            dest = new File(outputDirectory, files[i].getName());
-            files[i].renameTo(dest);
-        }
-        www.renameTo(new File(outputDirectory, ".www"));
-        www.deleteOnExit();
-    }
-
     private void copyRootApp(String outputDirectory) {
         try {
             boolean wwwExists = (new File(outputDirectory, "www")).exists();
