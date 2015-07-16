@@ -316,11 +316,17 @@
         NSURL* sourceURL = [NSURL URLWithString:[command argumentAtIndex:0]];
         NSURL* destinationURL = [NSURL URLWithString:[command argumentAtIndex:1]];
         NSString* type = [command argumentAtIndex:2 withDefault:@"replace"];
-        BOOL overwrite = [type isEqualToString:@"replace"];
+        BOOL replace = [type isEqualToString:@"replace"];
+        
+        NSFileManager *fileManager = [NSFileManager defaultManager];
+        if([fileManager fileExistsAtPath:[destinationURL path]] && replace == YES) {
+            NSLog(@"%@ already exists. Deleting it since type is set to `replace`", [destinationURL path]);
+            [fileManager removeItemAtURL:destinationURL error:NULL];
+        }
 
         @try {
             NSError *error;
-            if(![SSZipArchive unzipFileAtPath:[sourceURL path] toDestination:[destinationURL path] overwrite:overwrite password:nil error:&error delegate:weakSelf]) {
+            if(![SSZipArchive unzipFileAtPath:[sourceURL path] toDestination:[destinationURL path] overwrite:YES password:nil error:&error delegate:weakSelf]) {
                 NSLog(@"%@ - %@", @"Error occurred during unzipping", [error localizedDescription]);
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:UNZIP_ERR];
             } else {
