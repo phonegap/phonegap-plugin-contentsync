@@ -512,11 +512,9 @@ public class Sync extends CordovaPlugin {
 
     private String getOutputDirectory(final String id) {
         // Production
-        String outputDirectory = cordova.getActivity().getFilesDir().getAbsolutePath();
+        String outputDirectory = cordova.getActivity().getFilesDir().getParent();
         // Testing
         //String outputDirectory = cordova.getActivity().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
-        outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
-        outputDirectory += "files";
         outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
         outputDirectory += id;
         Log.d(LOG_TAG, "output dir = " + outputDirectory);
@@ -920,6 +918,8 @@ public class Sync extends CordovaPlugin {
             this.percentage = Math.floor((loaded / total * 100) / 2);
             if (this.getStatus() == STATUS_EXTRACTING) {
                 this.percentage += 50;
+            } else if (this.getStatus() == STATUS_COMPLETE) {
+                this.percentage = 100;
             }
         }
     }
