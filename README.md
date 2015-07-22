@@ -207,6 +207,24 @@ The progress events described above also apply for these methods.
 ContentSync.PROGRESS_STATE[1] = 'Downloading the media content...';
 ```
 
+## Working with the Native File System
+
+One of the main benefits of the content sync plugin is that it does not depend on the File or FileTransfer plugins. As a result the end user should not care where the ContentSync plugin stores it's files as long as it fills the requirements that it is private and removed when it's associated app is uninstalled.
+
+However, if you do need to use the File plugin to navigate the data downloaded by ContentSync you can use the following code snippet to get a [DirectoryEntry](https://cordova.apache.org/docs/en/3.0.0/cordova_file_file.md.html#DirectoryEntry) for the synced content.
+
+```javascript
+var sync = ContentSync.sync({ src: 'http://myserver/assets/movie-1', id: 'movie-1' });
+
+sync.on('complete', function(data) {
+    window.resolveLocalFileSystemURLw("file://" + data.localPath, function(entry) {
+    	// entry is a DirectoryEntry object
+    }, function(error) {
+        console.log("Error: " + error.code);
+    }); 
+});
+```
+
 ## Native Requirements
 
 - There should be no dependency on the existing File or FileTransfer plugins.
