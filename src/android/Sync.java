@@ -190,10 +190,10 @@ public class Sync extends CordovaPlugin {
         }
 
         private int updateBytesRead(int newBytesRead) {
-          if (newBytesRead != -1) {
-            bytesRead += newBytesRead;
-          }
-          return newBytesRead;
+            if (newBytesRead != -1) {
+                bytesRead += newBytesRead;
+            }
+            return newBytesRead;
         }
 
         @Override
@@ -209,7 +209,7 @@ public class Sync extends CordovaPlugin {
         }
 
         public long getTotalRawBytesRead() {
-          return bytesRead;
+            return bytesRead;
         }
     }
 
@@ -520,6 +520,12 @@ public class Sync extends CordovaPlugin {
         outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
         outputDirectory += id;
         Log.d(LOG_TAG, "output dir = " + outputDirectory);
+
+        File fd = new File(outputDirectory);
+        if (!fd.exists()) {
+            fd.mkdirs();
+        }
+
         return outputDirectory;
     }
 
@@ -578,22 +584,32 @@ public class Sync extends CordovaPlugin {
     }
 
     private void copyAssetFileOrDir(String outputDirectory, String path, boolean wwwExists) throws IOException {
-        AssetManager assetManager = cordova.getActivity().getAssets();
-        String assets[] = null;
-        assets = assetManager.list(path);
-        if (assets.length == 0) {
-            this.copyAssetFile(outputDirectory, path, wwwExists);
+        if (path.contains(".")) {
+            try {
+                this.copyAssetFile(outputDirectory, path, wwwExists);
+            } catch (IOException e) {
+                copyAssetDir(outputDirectory, path, wwwExists);
+            }
         } else {
+            copyAssetDir(outputDirectory, path, wwwExists);
+        }
+    }
+
+    private void copyAssetDir(String outputDirectory, String path, boolean wwwExists) throws IOException {
+        String assets[] = cordova.getActivity().getAssets().list(path);
+        if (assets.length != 0) {
             for (String file : assets) {
                 copyAssetFileOrDir(outputDirectory, path + File.separator + file, wwwExists);
             }
+        } else {
+            this.copyAssetFile(outputDirectory, path, wwwExists);
         }
     }
 
     private static TrackingInputStream getInputStream(URLConnection conn) throws IOException {
         String encoding = conn.getContentEncoding();
         if (encoding != null && encoding.equalsIgnoreCase("gzip")) {
-          return new TrackingGZIPInputStream(new ExposedGZIPInputStream(conn.getInputStream()));
+            return new TrackingGZIPInputStream(new ExposedGZIPInputStream(conn.getInputStream()));
         }
         return new SimpleTrackingInputStream(conn.getInputStream());
     }
@@ -617,9 +633,9 @@ public class Sync extends CordovaPlugin {
             Method gcMethod  = iccmClass.getMethod("getCookie");
 
             cookie = (String)gcMethod.invoke(
-                        iccmClass.cast(
+                    iccmClass.cast(
                             gcmMethod.invoke(webView)
-                        ), target);
+                    ), target);
 
             gotCookie = true;
         } catch (NoSuchMethodException e) {
@@ -650,7 +666,7 @@ public class Sync extends CordovaPlugin {
                 }
             }
         } catch (JSONException e1) {
-          // No headers to be manipulated!
+            // No headers to be manipulated!
         }
     }
 
@@ -684,11 +700,11 @@ public class Sync extends CordovaPlugin {
         }
 
         public void checkClientTrusted(X509Certificate[] chain,
-                String authType) throws CertificateException {
+                                       String authType) throws CertificateException {
         }
 
         public void checkServerTrusted(X509Certificate[] chain,
-                String authType) throws CertificateException {
+                                       String authType) throws CertificateException {
         }
     } };
 
@@ -795,8 +811,8 @@ public class Sync extends CordovaPlugin {
                 }
 
                 if (ze.isDirectory()) {
-                   File dir = new File(outputDirectory + compressedName);
-                   dir.mkdirs();
+                    File dir = new File(outputDirectory + compressedName);
+                    dir.mkdirs();
                 } else {
                     File file = new File(outputDirectory + compressedName);
                     file.getParentFile().mkdirs();
@@ -927,15 +943,15 @@ public class Sync extends CordovaPlugin {
     private void copyFolder(File src, File dest) throws IOException{
         if(src.isDirectory()) {
             if(!dest.exists()){
-               dest.mkdir();
+                dest.mkdir();
             }
 
             //list all the directory contents
             String files[] = src.list();
 
             for (String file : files) {
-               //recursive copy
-               copyFolder(new File(src, file), new File(dest, file));
+                //recursive copy
+                copyFolder(new File(src, file), new File(dest, file));
             }
 
         } else {
@@ -969,7 +985,7 @@ public class Sync extends CordovaPlugin {
         int length;
         //copy the file content in bytes
         while ((length = in.read(buffer)) > 0){
-               out.write(buffer, 0, length);
+            out.write(buffer, 0, length);
         }
 
         in.close();
