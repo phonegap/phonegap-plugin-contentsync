@@ -38,16 +38,20 @@
 
     NSString* type = [command argumentAtIndex:2];
     BOOL local = [type isEqualToString:@"local"];
+    BOOL extractArchive = YES
 
+    // if local mode, check file existence before download
+    // we check the existence of file defined via option.id in the "Library" folder
     if(local == YES) {
         NSString* appId = [command argumentAtIndex:1];
         NSLog(@"Requesting local copy of %@", appId);
         NSFileManager *fileManager = [NSFileManager defaultManager];
         NSArray *URLs = [fileManager URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask];
         NSURL *libraryDirectoryUrl = [URLs objectAtIndex:0];
-        
+
         NSURL *appPath = [libraryDirectoryUrl URLByAppendingPathComponent:appId];
-        
+
+        // if local file found, return success directly
         if([fileManager fileExistsAtPath:[appPath path]]) {
             NSLog(@"Found local copy %@", [appPath path]);
             CDVPluginResult *pluginResult = nil;
@@ -60,24 +64,27 @@
             [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
             return;
         }
+
+        // copy some cordova assets from bundle to destination folder
+        // allow to load external apps
         BOOL copyCordovaAssets = [[command argumentAtIndex:4 withDefault:@(NO)] boolValue];
         BOOL copyRootApp = [[command argumentAtIndex:5 withDefault:@(NO)] boolValue];
-        
+
         if(copyRootApp == YES || copyCordovaAssets == YES) {
             CDVPluginResult *pluginResult = nil;
             NSError* error = nil;
-            
+
             NSLog(@"Creating app directory %@", [appPath path]);
             [fileManager createDirectoryAtPath:[appPath path] withIntermediateDirectories:NO attributes:nil error:&error];
-            
+
             NSError* errorSetting = nil;
             BOOL success = [appPath setResourceValue: [NSNumber numberWithBool: YES]
                                              forKey: NSURLIsExcludedFromBackupKey error: &errorSetting];
-            
+
             if(success == NO) {
                 NSLog(@"WARNING: %@ might be backed up to iCloud!", [appPath path]);
             }
-            
+
             if(error != nil) {
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:LOCAL_ERR];
                 NSLog(@"%@", [error localizedDescription]);
@@ -102,11 +109,13 @@
 
     __weak ContentSync* weakSelf = self;
 
+    // start download
     [self.commandDelegate runInBackground:^{
         [weakSelf startDownload:command extractArchive:YES];
     }];
 }
 
+// download a file directly, without local check and extraction
 - (void) download:(CDVInvokedUrlCommand*)command {
     __weak ContentSync* weakSelf = self;
 
@@ -115,6 +124,7 @@
     }];
 }
 
+// start a download task
 - (void)startDownload:(CDVInvokedUrlCommand*)command extractArchive:(BOOL)extractArchive {
 
     CDVPluginResult* pluginResult = nil;
@@ -232,37 +242,67 @@
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSArray *URLs = [fileManager URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask];
     NSURL *libraryDirectory = [URLs objectAtIndex:0];
-
     NSURL *originalURL = [[downloadTask originalRequest] URL];
-    NSURL *sourceURL = [libraryDirectory URLByAppendingPathComponent:[originalURL lastPathComponent]];
-    NSError *errorCopy;
 
+    ContentSyncTask* sTask = [self findSyncDataByDownloadTask:downloadTask];
+
+    NSHTTPURLResponse *response = (NSHTTPURLResponse *)downloadTask.response;
+    BOOL isZipContentType = [[[response allHeaderFields] valueForKey:@"Content-Type"] isEqual:@"application/zip"];
+    BOOL isZipExtension = [[[[downloadURL absoluteString] pathExtension] lowercaseString] isEqual:@"zip"];
+    BOOL isZip = isZipContentType || isZipExtension;
+    NSLog(@"IS ZIP %hhd", isZip);
+
+    // appId is options.id
+    NSString* appId = [sTask.command.arguments objectAtIndex:1];
+    // output dir for the ZIP
+    NSURL *extractURL = [libraryDirectory URLByAppendingPathComponent:appId];
+
+    // where the requested file is stored
+    NSURL *sourceURL = [libraryDirectory URLByAppendingPathComponent:[originalURL lastPathComponent]];
+
+    // if the url should not be extracted (not a ZIP), we download it directly to the target directory
+    // ensure the directory exists before download
+    if (isZip == NO) {
+        sourceURL = extractURL;
+        NSURL* folder = [extractURL URLByDeletingLastPathComponent];
+        [fileManager createDirectoryAtURL:folder withIntermediateDirectories:YES attributes:nil error:nil];
+    }
+
+    // delete file destination if already exists
     [fileManager removeItemAtURL:sourceURL error:NULL];
+
+    // copy tmp download file to destination
+    NSError *errorCopy;
     BOOL success = [fileManager copyItemAtURL:downloadURL toURL:sourceURL error:&errorCopy];
 
+    // once file download and saved in the expected destination
     if(success) {
-        ContentSyncTask* sTask = [self findSyncDataByDownloadTask:downloadTask];
-
         if(sTask) {
-            if(sTask.extractArchive == YES) {
+            if(isZip == YES) {
                 sTask.archivePath = [sourceURL path];
-                // FIXME there is probably a better way to do this
-                NSString* appId = [sTask.command.arguments objectAtIndex:1];
-                NSURL *extractURL = [libraryDirectory URLByAppendingPathComponent:appId];
+
                 NSString* type = [sTask.command argumentAtIndex:2 withDefault:@"replace"];
 
-                // copy root app right before we extract
+                // copy root app cordova stuff right before we extract if copyRootApp=true
                 if([[[sTask command] argumentAtIndex:5 withDefault:@(NO)] boolValue] == YES) {
                     NSLog(@"Copying Cordova Root App to %@ as requested", [extractURL path]);
                     if(![self copyCordovaAssets:[extractURL path] copyRootApp:YES]) {
                         NSLog(@"Error copying Cordova Root App");
                     };
                 }
-
+                // launch unzip process
                 CDVInvokedUrlCommand* command = [CDVInvokedUrlCommand commandFromJson:[NSArray arrayWithObjects:sTask.command.callbackId, @"Zip", @"unzip", [NSMutableArray arrayWithObjects:[sourceURL absoluteString], [extractURL absoluteString], type, nil], nil]];
                 [self unzip:command];
             } else {
                 sTask.archivePath = [sourceURL absoluteString];
+                // if no extraction needed, fire the cordova success callback
+                NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
+                [message setObject:[extractURL absoluteString] forKey:@"localPath"];
+                [message setObject:@"true" forKey:@"cached"];
+                CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+
+                [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
+                return;
             }
         }
     } else {
@@ -317,7 +357,7 @@
         NSURL* destinationURL = [NSURL URLWithString:[command argumentAtIndex:1]];
         NSString* type = [command argumentAtIndex:2 withDefault:@"replace"];
         BOOL replace = [type isEqualToString:@"replace"];
-        
+
         NSFileManager *fileManager = [NSFileManager defaultManager];
         if([fileManager fileExistsAtPath:[destinationURL path]] && replace == YES) {
             NSLog(@"%@ already exists. Deleting it since type is set to `replace`", [destinationURL path]);
@@ -326,7 +366,7 @@
 
         @try {
             NSError *error;
-            if(![SSZipArchive unzipFileAtPath:[sourceURL path] toDestination:[destinationURL path] overwrite:YES password:nil error:&error delegate:weakSelf]) {
+            if(![SSZipArchive unzipFileAtPath:[sourceURL path] toDestination:[destinationURL path]  overwrite:YES password:nil error:&error delegate:weakSelf]) {
                 NSLog(@"%@ - %@", @"Error occurred during unzipping", [error localizedDescription]);
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:UNZIP_ERR];
             } else {
@@ -383,7 +423,7 @@
         [pluginResult setKeepCallbackAsBool:YES];
         [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
         // END
-        
+
         // Do not BACK UP folder to iCloud
         NSURL* appURL = [NSURL fileURLWithPath: path];
         NSError* error = nil;
