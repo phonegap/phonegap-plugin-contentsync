@@ -487,15 +487,18 @@
 /**
  * Should this request be handled by this protocol handler?
  *
- * We disable caching on requests using the file:// protocol.
- * In the future, we may want to limit this or enable it based on configuration.
+ * We disable caching on requests using the file:// protocol and prefixed with the app's Library directory
+ * In the future, we may want to limit this or enable it based on configuration or not.
  *
  * @param theRequest is the inbound NSURLRequest.
  * @return YES to handle this request with the this NSURLProtocol handler.
  */
 
 + (BOOL)canInitWithRequest:(NSURLRequest*)theRequest {
-    return [theRequest.URL.scheme isEqualToString:@"file"];
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSArray *URLs = [fileManager URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask];
+    NSURL *libraryDirectoryUrl = [URLs objectAtIndex:0];
+    return [theRequest.URL.scheme isEqualToString:@"file"] && [theRequest.URL.path hasPrefix:[libraryDirectoryUrl path]];
 }
 
 /**
