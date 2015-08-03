@@ -14,6 +14,12 @@ function cleanPath(pathStr) {
     return pathStr.replace("/", "\\");
 }
 
+function doDownload(destPath, srcUrl) {
+    // return a promise
+}
+
+
+
 
 var Sync = {
     sync: function (cbSuccess, cbFail, options) {
@@ -30,18 +36,32 @@ var Sync = {
         var bCopyRootApp = options[5];
         var timeout = options[6];
 
-        var targetPath = appData.localFolder.path + id;
+        if (type == "local") {
+            // just check if the file exists, and return it's path if it does
+        }
+        
+        var fileName = id;
+        var subFolder = null;
+        if (id.indexOf("\\") > -1) {
+            var pathParts = id.split("\\");
+            fileName = pathParts.pop();
+            subFolder = pathParts.join("\\");
+        }
 
         var job = Windows.Storage.StorageFolder.getFolderFromPathAsync(appData.localFolder.path);
+        if (subFolder) {
+            job = job.then(function (folder) {
+                return folder.createFolderAsync(subFolder, Windows.Storage.CreationCollisionOption.openIfExists);
+            },
+            function (err) {
+                console.log(err);
+            });
+        }
+        // folder was created if need be
         job.then(function (folder) {
-            return folder.createFolderAsync(id, Windows.Storage.CreationCollisionOption.openIfExists);
-        },
-        function (err) {
-            console.log(err);
+            return folder.createFileAsync(fileName, Windows.Storage.CreationCollisionOption.replaceExisting);
         })
-        // folder is created
-        .then(function (res) {
-            console.log(res);
+        .then(function (storageFile) {
             try {
                 var uri = Windows.Foundation.Uri(src);
                 var downloader = new Windows.Networking.BackgroundTransfer.BackgroundDownloader();
@@ -51,46 +71,31 @@ var Sync = {
                 // so we handle this and call errorCallback
                 //errorCallback(new FTErr(FTErr.INVALID_URL_ERR));
                 console.log(e.message);
+                cbFail(1); // INVALID_URL_ERR
             }
         },
         function (err) {
-            console.log(err);
+            //console.log(err);
+            cbFail(1); // INVALID_URL_ERR
         })
         .then(function (complete) { // download has begun
             console.log(complete);
+            // TODO: extract it! 
+            cbSuccess({ 'progress': 50, 'status': 2 });
         },
-        function (err) {
-            console.log(err);
+        function (err) {   // download error
+            //console.log(err);
+            cbFail(1); // INVALID_URL_ERR
         },
-        function (progress) {
-            console.log("progress");
+        function (progressEvent) {
+            console.log(progressEvent);
+            var progPercent = Math.round(progressEvent.progress.bytesReceived / progressEvent.progress.totalBytesToReceive * 50);
+            cbSuccess({'progress':progPercent,'status':1});    // 0:stopped, 1:downloading, 2:extracting,  3:complete
         });
         
- 
-        //function (error) {
-        //    // Handle non-existent directory
-        //    if (error.number === -2147024894) {
-        //        var parent = path.substr(0, path.lastIndexOf('\\')),
-        //            folderNameToCreate = path.substr(path.lastIndexOf('\\') + 1);
-
-        //        Windows.Storage.StorageFolder.getFolderFromPathAsync(parent).then(function(parentFolder) {
-        //            parentFolder.createFolderAsync(folderNameToCreate).then(downloadCallback, fileNotFoundErrorCallback);
-        //        }, fileNotFoundErrorCallback);
-        //    } else {
-        //        fileNotFoundErrorCallback();
-        //    }
-        //}
-
-
-
         // to pass progress events, call onSuccess with {progress:0-100,status:state}
-
         // to complete, call onSuccess with {localPath:"...",cached:boolean}
-
         // on error, call error callback with an integer:ERROR_STATE
-
-
-
     },
     cancel: function (cbSuccess, cbFail, options) {
         var id = options.id;
@@ -126,5 +131,3 @@ var Sync = {
 
 require("cordova/exec/proxy").add("Sync", Sync);
 require("cordova/exec/proxy").add("Zip", Sync);
-
-
