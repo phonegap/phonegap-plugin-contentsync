@@ -118,12 +118,15 @@
 - (void)startDownload:(CDVInvokedUrlCommand*)command extractArchive:(BOOL)extractArchive {
 
     CDVPluginResult* pluginResult = nil;
-    NSString* src = [command.arguments objectAtIndex:0];
+    NSString* src = [command argumentAtIndex:0 withDefault:nil];
     NSNumber* timeout = [command argumentAtIndex:6 withDefault:[NSNumber numberWithDouble:15]];
 
     self.session = [self backgroundSession:timeout];
+    
+    // checking if URL is valid
+    NSURL *srcURL = [NSURL URLWithString:src];
 
-    if(src != nil) {
+    if(srcURL && srcURL.scheme && srcURL.host) {
         NSLog(@"startDownload from %@", src);
         NSURL *downloadURL = [NSURL URLWithString:src];
 
@@ -162,6 +165,7 @@
         }
 
     } else {
+        NSLog(@"Invalid src URL %@", src);
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:INVALID_URL_ERR];
     }
 
