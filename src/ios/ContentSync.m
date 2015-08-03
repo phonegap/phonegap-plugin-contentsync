@@ -38,7 +38,7 @@
 
     NSString* type = [command argumentAtIndex:2];
     BOOL local = [type isEqualToString:@"local"];
-    BOOL extractArchive = YES
+    BOOL extractArchive = YES;
 
     // if local mode, check file existence before download
     // we check the existence of file defined via option.id in the "Library" folder
