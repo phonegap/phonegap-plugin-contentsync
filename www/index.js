@@ -67,7 +67,7 @@ var ContentSync = function(options) {
     if (typeof options.copyRootApp === 'undefined') {
         options.copyRootApp = false;
     }
-    
+
     if (typeof options.timeout === 'undefined') {
         options.timeout = 15.0;
     }
