@@ -45,9 +45,9 @@
         NSFileManager *fileManager = [NSFileManager defaultManager];
         NSArray *URLs = [fileManager URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask];
         NSURL *libraryDirectoryUrl = [URLs objectAtIndex:0];
-        
+
         NSURL *appPath = [libraryDirectoryUrl URLByAppendingPathComponent:appId];
-        
+
         if([fileManager fileExistsAtPath:[appPath path]]) {
             NSLog(@"Found local copy %@", [appPath path]);
             CDVPluginResult *pluginResult = nil;
@@ -62,22 +62,22 @@
         }
         BOOL copyCordovaAssets = [[command argumentAtIndex:4 withDefault:@(NO)] boolValue];
         BOOL copyRootApp = [[command argumentAtIndex:5 withDefault:@(NO)] boolValue];
-        
+
         if(copyRootApp == YES || copyCordovaAssets == YES) {
             CDVPluginResult *pluginResult = nil;
             NSError* error = nil;
-            
+
             NSLog(@"Creating app directory %@", [appPath path]);
-            [fileManager createDirectoryAtPath:[appPath path] withIntermediateDirectories:NO attributes:nil error:&error];
-            
+            [fileManager createDirectoryAtPath:[appPath path] withIntermediateDirectories:YES attributes:nil error:&error];
+
             NSError* errorSetting = nil;
             BOOL success = [appPath setResourceValue: [NSNumber numberWithBool: YES]
                                              forKey: NSURLIsExcludedFromBackupKey error: &errorSetting];
-            
+
             if(success == NO) {
                 NSLog(@"WARNING: %@ might be backed up to iCloud!", [appPath path]);
             }
-            
+
             if(error != nil) {
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:LOCAL_ERR];
                 NSLog(@"%@", [error localizedDescription]);
@@ -122,7 +122,7 @@
     NSNumber* timeout = [command argumentAtIndex:6 withDefault:[NSNumber numberWithDouble:15]];
 
     self.session = [self backgroundSession:timeout];
-    
+
     // checking if URL is valid
     NSURL *srcURL = [NSURL URLWithString:src];
 
@@ -321,7 +321,7 @@
         NSURL* destinationURL = [NSURL URLWithString:[command argumentAtIndex:1]];
         NSString* type = [command argumentAtIndex:2 withDefault:@"replace"];
         BOOL replace = [type isEqualToString:@"replace"];
-        
+
         NSFileManager *fileManager = [NSFileManager defaultManager];
         if([fileManager fileExistsAtPath:[destinationURL path]] && replace == YES) {
             NSLog(@"%@ already exists. Deleting it since type is set to `replace`", [destinationURL path]);
@@ -387,7 +387,7 @@
         [pluginResult setKeepCallbackAsBool:YES];
         [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
         // END
-        
+
         // Do not BACK UP folder to iCloud
         NSURL* appURL = [NSURL fileURLWithPath: path];
         NSError* error = nil;
