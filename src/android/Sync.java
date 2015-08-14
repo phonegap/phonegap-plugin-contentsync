@@ -435,8 +435,9 @@ public class Sync extends CordovaPlugin {
                 String type = args.optString(2, TYPE_REPLACE);
                 Log.d(LOG_TAG, "type = " + type);
                 File dir = new File(outputDirectory);
+                Log.d(LOG_TAG, "dir = " + dir.exists());
 
-                if (type.equals(TYPE_LOCAL)) {
+                if (type.equals(TYPE_LOCAL) && !dir.exists()) {
                     if ("null".equals(src) && (copyRootApp || copyCordovaAssets)) {
                         if (copyRootApp) {
                             copyRootApp(outputDirectory);
@@ -445,9 +446,13 @@ public class Sync extends CordovaPlugin {
                             copyCordovaAssets(outputDirectory);
                         }
 
-                    } else if (!dir.exists()) {
+                    } else {
                         type = TYPE_REPLACE;
                     }
+                }
+
+                if (!dir.exists()) {
+                    dir.mkdirs();
                 }
 
                 if (!type.equals(TYPE_LOCAL)) {
@@ -520,11 +525,6 @@ public class Sync extends CordovaPlugin {
         outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
         outputDirectory += id;
         Log.d(LOG_TAG, "output dir = " + outputDirectory);
-
-        File fd = new File(outputDirectory);
-        if (!fd.exists()) {
-            fd.mkdirs();
-        }
 
         return outputDirectory;
     }
