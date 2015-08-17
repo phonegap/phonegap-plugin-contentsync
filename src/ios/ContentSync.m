@@ -127,6 +127,18 @@
     NSURL *srcURL = [NSURL URLWithString:src];
 
     if(srcURL && srcURL.scheme && srcURL.host) {
+        
+        BOOL trustHost = [command argumentAtIndex:7 withDefault:@(NO)];
+        
+        if(!self.trustedHosts) {
+            self.trustedHosts = [NSMutableArray arrayWithCapacity:1];
+        }
+        
+        if(trustHost == YES) {
+            NSLog(@"WARNING: Trusting host %@", [srcURL host]);
+            [self.trustedHosts addObject:[srcURL host]];
+        }
+        
         NSLog(@"startDownload from %@", src);
         NSURL *downloadURL = [NSURL URLWithString:src];
 
@@ -209,6 +221,19 @@
         }
     }
     return nil;
+}
+
+- (void)URLSession:(NSURLSession *)session didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition, NSURLCredential *))completionHandler{
+    if([challenge.protectionSpace.authenticationMethod isEqualToString:NSURLAuthenticationMethodServerTrust]) {
+        NSLog(@"Received challenge for host %@", challenge.protectionSpace.host);
+        if([self.trustedHosts containsObject:challenge.protectionSpace.host]) {
+            NSURLCredential *credential = [NSURLCredential credentialForTrust:challenge.protectionSpace.serverTrust];
+            completionHandler(NSURLSessionAuthChallengeUseCredential,credential);
+        } else {
+            completionHandler(NSURLSessionAuthChallengeUseCredential,nil);
+//            completionHandler(NSURLSessionAuthChallengeCancelAuthenticationChallenge, nil);
+        }
+    }
 }
 
 - (void)URLSession:(NSURLSession*)session downloadTask:(NSURLSessionDownloadTask *)downloadTask didWriteData:(int64_t)bytesWritten totalBytesWritten:(int64_t)totalBytesWritten totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite {
