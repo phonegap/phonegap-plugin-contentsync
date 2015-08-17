@@ -73,7 +73,7 @@ var ContentSync = function(options) {
     }
     
     if (typeof options.trustHost === 'undefined') {
-        options.trustHost = true;
+        options.trustHost = false;
     }
 
     // store the options to this object instance
