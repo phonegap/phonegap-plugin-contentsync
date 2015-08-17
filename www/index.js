@@ -71,6 +71,10 @@ var ContentSync = function(options) {
     if (typeof options.timeout === 'undefined') {
         options.timeout = 15.0;
     }
+    
+    if (typeof options.trustHost === 'undefined') {
+        options.trustHost = true;
+    }
 
     // store the options to this object instance
     this.options = options;
@@ -93,7 +97,7 @@ var ContentSync = function(options) {
 
     // wait at least one process tick to allow event subscriptions
     setTimeout(function() {
-        exec(success, fail, 'Sync', 'sync', [options.src, options.id, options.type, options.headers, options.copyCordovaAssets, options.copyRootApp, options.timeout]);
+        exec(success, fail, 'Sync', 'sync', [options.src, options.id, options.type, options.headers, options.copyCordovaAssets, options.copyRootApp, options.timeout, options.trustHost]);
     }, 10);
 };
 
