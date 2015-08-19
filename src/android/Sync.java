@@ -107,7 +107,7 @@ public class Sync extends CordovaPlugin {
             final CallbackContext finalContext = callbackContext;
             cordova.getThreadPool().execute(new Runnable() {
                 public void run() {
-                    if (download(source, target, headers, createProgressEvent("download"), finalContext)) {
+                    if (download(source, target, headers, createProgressEvent("download"), finalContext, false)) {
                         JSONObject retval = new JSONObject();
                         try {
                             retval.put("archiveURL", target.getAbsolutePath());
@@ -213,7 +213,7 @@ public class Sync extends CordovaPlugin {
         }
     }
 
-    private boolean download(final String source, final File file, final JSONObject headers, final ProgressEvent progress, final CallbackContext callbackContext) {
+    private boolean download(final String source, final File file, final JSONObject headers, final ProgressEvent progress, final CallbackContext callbackContext, final boolean trustEveryone) {
         Log.d(LOG_TAG, "download " + source);
 
         if (!Patterns.WEB_URL.matcher(source).matches()) {
@@ -224,7 +224,6 @@ public class Sync extends CordovaPlugin {
         final CordovaResourceApi resourceApi = webView.getResourceApi();
         final Uri sourceUri = resourceApi.remapUri(Uri.parse(source));
 
-        final boolean trustEveryone = false;
         int uriType = CordovaResourceApi.getUriType(sourceUri);
         final boolean useHttps = uriType == CordovaResourceApi.URI_TYPE_HTTPS;
         final boolean isLocalTransfer = !useHttps && uriType != CordovaResourceApi.URI_TYPE_HTTP;
@@ -402,6 +401,7 @@ public class Sync extends CordovaPlugin {
         }
         final boolean copyCordovaAssets;
         final boolean copyRootApp = args.getBoolean(5);
+        final boolean trustEveryone = args.getBoolean(7);
         if (copyRootApp) {
             copyCordovaAssets = true;
         } else {
@@ -457,7 +457,7 @@ public class Sync extends CordovaPlugin {
 
                 if (!type.equals(TYPE_LOCAL)) {
                     // download file
-                    if (download(src, createDownloadFileLocation(id), headers, progress, callbackContext)) {
+                    if (download(src, createDownloadFileLocation(id), headers, progress, callbackContext, trustEveryone)) {
                         // update progress with zip file
                         File targetFile = progress.getTargetFile();
                         Log.d(LOG_TAG, "downloaded = " + targetFile.getAbsolutePath());
