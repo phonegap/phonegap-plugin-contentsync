@@ -45,9 +45,9 @@
         NSFileManager *fileManager = [NSFileManager defaultManager];
         NSArray *URLs = [fileManager URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask];
         NSURL *libraryDirectoryUrl = [URLs objectAtIndex:0];
-        
+
         NSURL *appPath = [libraryDirectoryUrl URLByAppendingPathComponent:appId];
-        
+
         if([fileManager fileExistsAtPath:[appPath path]]) {
             NSLog(@"Found local copy %@", [appPath path]);
             CDVPluginResult *pluginResult = nil;
@@ -62,22 +62,22 @@
         }
         BOOL copyCordovaAssets = [[command argumentAtIndex:4 withDefault:@(NO)] boolValue];
         BOOL copyRootApp = [[command argumentAtIndex:5 withDefault:@(NO)] boolValue];
-        
+
         if(copyRootApp == YES || copyCordovaAssets == YES) {
             CDVPluginResult *pluginResult = nil;
             NSError* error = nil;
-            
+
             NSLog(@"Creating app directory %@", [appPath path]);
-            [fileManager createDirectoryAtPath:[appPath path] withIntermediateDirectories:NO attributes:nil error:&error];
-            
+            [fileManager createDirectoryAtPath:[appPath path] withIntermediateDirectories:YES attributes:nil error:&error];
+
             NSError* errorSetting = nil;
             BOOL success = [appPath setResourceValue: [NSNumber numberWithBool: YES]
                                              forKey: NSURLIsExcludedFromBackupKey error: &errorSetting];
-            
+
             if(success == NO) {
                 NSLog(@"WARNING: %@ might be backed up to iCloud!", [appPath path]);
             }
-            
+
             if(error != nil) {
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:LOCAL_ERR];
                 NSLog(@"%@", [error localizedDescription]);
@@ -118,12 +118,15 @@
 - (void)startDownload:(CDVInvokedUrlCommand*)command extractArchive:(BOOL)extractArchive {
 
     CDVPluginResult* pluginResult = nil;
-    NSString* src = [command.arguments objectAtIndex:0];
+    NSString* src = [command argumentAtIndex:0 withDefault:nil];
     NSNumber* timeout = [command argumentAtIndex:6 withDefault:[NSNumber numberWithDouble:15]];
 
     self.session = [self backgroundSession:timeout];
 
-    if(src != nil) {
+    // checking if URL is valid
+    NSURL *srcURL = [NSURL URLWithString:src];
+
+    if(srcURL && srcURL.scheme && srcURL.host) {
         NSLog(@"startDownload from %@", src);
         NSURL *downloadURL = [NSURL URLWithString:src];
 
@@ -162,6 +165,7 @@
         }
 
     } else {
+        NSLog(@"Invalid src URL %@", src);
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:INVALID_URL_ERR];
     }
 
@@ -317,7 +321,7 @@
         NSURL* destinationURL = [NSURL URLWithString:[command argumentAtIndex:1]];
         NSString* type = [command argumentAtIndex:2 withDefault:@"replace"];
         BOOL replace = [type isEqualToString:@"replace"];
-        
+
         NSFileManager *fileManager = [NSFileManager defaultManager];
         if([fileManager fileExistsAtPath:[destinationURL path]] && replace == YES) {
             NSLog(@"%@ already exists. Deleting it since type is set to `replace`", [destinationURL path]);
@@ -383,7 +387,7 @@
         [pluginResult setKeepCallbackAsBool:YES];
         [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
         // END
-        
+
         // Do not BACK UP folder to iCloud
         NSURL* appURL = [NSURL fileURLWithPath: path];
         NSError* error = nil;
@@ -483,15 +487,18 @@
 /**
  * Should this request be handled by this protocol handler?
  *
- * We disable caching on requests using the file:// protocol.
- * In the future, we may want to limit this or enable it based on configuration.
+ * We disable caching on requests using the file:// protocol and prefixed with the app's Library directory
+ * In the future, we may want to limit this or enable it based on configuration or not.
  *
  * @param theRequest is the inbound NSURLRequest.
  * @return YES to handle this request with the this NSURLProtocol handler.
  */
 
 + (BOOL)canInitWithRequest:(NSURLRequest*)theRequest {
-    return [theRequest.URL.scheme isEqualToString:@"file"];
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSArray *URLs = [fileManager URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask];
+    NSURL *libraryDirectoryUrl = [URLs objectAtIndex:0];
+    return [theRequest.URL.scheme isEqualToString:@"file"] && [theRequest.URL.path hasPrefix:[libraryDirectoryUrl path]];
 }
 
 /**

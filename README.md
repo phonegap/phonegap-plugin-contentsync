@@ -233,11 +233,23 @@ sync.on('complete', function(data) {
 - The locally compiled Cordova web assets should be copied to the cached content. This includes `cordova.js`, `cordova_plugins.js`, and `plugins/**/*`.
 - Multiple syncs should be supported at the same time.
 
-## Running Tests
+## Running Tests ( static tests against source code )
 
 ```
 npm test
 ```
+
+## Emulator Testing 
+
+The emulator tests use cordova-paramedic and the cordova-plugin-test-framework.
+To run them you will need cordova-paramedic installed.
+
+    npm install -g cordova-paramedic
+    // Then from the root of this repo
+    // test ios :
+    cordova-paramedic --platform ios --plugin .
+    // test android :
+    cordova-paramedic --platform android --plugin .
 
 ## Contributing
 
