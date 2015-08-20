@@ -89,14 +89,7 @@
                     NSLog(@"Copying Cordova Assets");
                     [self copyCordovaAssets:[appPath path] copyRootApp:NO];
                 }
-                NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
-                [message setObject:[appPath path] forKey:@"localPath"];
-                [message setObject:@"true" forKey:@"cached"];
-                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
             }
-            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-            return;
-
         }
     }
 
