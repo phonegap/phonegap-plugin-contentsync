@@ -1,5 +1,3 @@
-var DownloadQueue = {};
-
 // progress-state 
 // 0:stopped, 1:downloading,2:extracting,3:complete
 
@@ -36,11 +34,16 @@ var Sync = {
         var bCopyRootApp = options[5];
         var timeout = options[6];
 
+        var destFolder = null;
+
         if (type == "local") {
             // just check if the file exists, and return it's path if it does
         }
         
         var fileName = id;
+        if (fileName.indexOf(".zip") < 0) { // todo, could be some.zip/file ...
+            fileName += ".zip";
+        }
         var subFolder = null;
         if (id.indexOf("\\") > -1) {
             var pathParts = id.split("\\");
@@ -59,6 +62,7 @@ var Sync = {
         }
         // folder was created if need be
         job.then(function (folder) {
+            //destFolder = folder; // hmm, should be someDir/myDir when given someDir.myDir.zip aka fileName minus .zip
             return folder.createFileAsync(fileName, Windows.Storage.CreationCollisionOption.replaceExisting);
         })
         .then(function (storageFile) {
@@ -82,6 +86,14 @@ var Sync = {
             console.log(complete);
             // TODO: extract it! 
             cbSuccess({ 'progress': 50, 'status': 2 });
+            ZipWinProj.PGZipInflate.inflateAsync(complete.resultFile, destFolder)
+            .then(function (obj) {
+                console.log("inflate success");
+            },
+            function (e) {
+                console.log("inflate error");
+            });
+
         },
         function (err) {   // download error
             //console.log(err);

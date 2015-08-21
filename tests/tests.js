@@ -37,6 +37,26 @@ exports.defineAutoTests = function() {
         }, 60000); // wait a full 60 secs
     });
 
+	console.log("cordova.platformId = " + cordova.platformId); 
+	console.log("ZipWinProj = " + ZipWinProj);
+
+
+	if(cordova.platformId == 'windows') {
+		describe('phonegap-plugin-contentsync windows tests', function() {
+			it("Has linked C# code", function(done){
+				//
+				expect(ZipWinProj).toBeDefined("ZipWinProj should exist");
+				expect(ZipWinProj.PGZipInflate).toBeDefined("ZipWinProj.PGZipInflate should exist");
+				expect(ZipWinProj.PGZipInflate.InflateAsync).toBeDefined("ZipWinProj.PGZipInflate.InflateAsync should exist");
+	        	done();
+			});
+
+		});
+	}
+
+
+
+
 }
 
 exports.defineManualTests = function() {
