@@ -59,6 +59,7 @@ Parameter | Description
 `options.copyRootApp` | `Boolean` _(Optional)_ Copies the `www` folder to sync'd folder. This operation happens before the source content has been cached, then the source content is cached and finally it copies `cordova.js`, `cordova_plugins.js` and `plugins/` to sync'd folder to remain consistent with the installed plugins. Default is `false`.
 `options.timeout` | `Double` _(Optional)_ Request timeout. 
 `options.trustHost` | `Boolean` _(Optional)_ Trust SSL host. Host defined in `options.src` will be trusted. Ignored if `options.src` is undefined.
+`options.manifest` | `String` _(Optional)_ If specified the `copyRootApp` functionality will use the list of files contained in the manifest file during it's initial copy. {Android only}
 
 #### Returns
 
@@ -225,6 +226,29 @@ sync.on('complete', function(data) {
     }); 
 });
 ```
+
+## Copy Root App
+
+The asset file system is pretty slow on Android so in order to speed up the initial copy of your app to the content sync location you can specify a manifest file on Android. The file must be in the format:
+
+```javascript
+{
+    'files': [
+        'img/logo.png',
+        'index.html',
+        'js/index.js'
+   ]
+}
+```
+
+and if the file is placed in your apps `www` folder you would invoke it via:
+
+```javascript
+var sync = ContentSync.sync({ src: 'http://myserver/assets/movie-1', id: 'movie-1', 
+        copyRootApp: true, manifest: 'manifest.json' });
+```
+
+This results in the `copyRootApp` taking about a third of the time as when a manifest file is not specified.
 
 ## Native Requirements
 

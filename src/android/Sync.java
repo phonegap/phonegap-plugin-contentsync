@@ -407,6 +407,7 @@ public class Sync extends CordovaPlugin {
         } else {
             copyCordovaAssets = args.getBoolean(4);
         }
+        final String manifestFile = args.getString(8);
         Log.d(LOG_TAG, "sync called with id = " + id + " and src = " + src + "!");
 
         final ProgressEvent progress = createProgressEvent(id);
@@ -440,7 +441,7 @@ public class Sync extends CordovaPlugin {
                 if (type.equals(TYPE_LOCAL) && !dir.exists()) {
                     if ("null".equals(src) && (copyRootApp || copyCordovaAssets)) {
                         if (copyRootApp) {
-                            copyRootApp(outputDirectory);
+                            copyRootApp(outputDirectory, manifestFile);
                         }
                         if (copyCordovaAssets) {
                             copyCordovaAssets(outputDirectory);
@@ -467,7 +468,7 @@ public class Sync extends CordovaPlugin {
 
                         // @TODO: Do we do this even when type is local?
                         if (copyRootApp) {
-                            copyRootApp(outputDirectory);
+                            copyRootApp(outputDirectory, manifestFile);
                         }
 
                         // unzip
@@ -557,12 +558,39 @@ public class Sync extends CordovaPlugin {
         return backup;
     }
 
-    private void copyRootApp(String outputDirectory) {
-        try {
-            boolean wwwExists = (new File(outputDirectory, "www")).exists();
-            copyAssetFileOrDir(outputDirectory, "www", wwwExists);
-        } catch (IOException e) {
-            Log.e(LOG_TAG, e.getLocalizedMessage(), e);
+    private void copyRootApp(String outputDirectory, String manifestFile) {
+        boolean wwwExists = (new File(outputDirectory, "www")).exists();
+        boolean copied = false;
+        if (manifestFile != null && !"".equals(manifestFile)) {
+            Log.d(LOG_TAG, "Manifest copy");
+            try {
+                copyRootAppByManifest(outputDirectory, manifestFile, wwwExists);
+                copied = true;
+            } catch (Exception e) {
+                Log.e(LOG_TAG, e.getLocalizedMessage(), e);
+            }
+        }
+        if (!copied) {
+            Log.d(LOG_TAG, "Long copy");
+            try {
+                copyAssetFileOrDir(outputDirectory, "www", wwwExists);
+            } catch (IOException e) {
+                Log.e(LOG_TAG, e.getLocalizedMessage(), e);
+            }
+        }
+    }
+
+    private void copyRootAppByManifest(String outputDirectory, String manifestFile, boolean wwwExists) throws IOException, JSONException {
+        InputStream is = cordova.getActivity().getAssets().open("www/" + manifestFile);
+        int size = is.available();
+        byte[] buffer = new byte[size];
+        is.read(buffer);
+        is.close();
+        JSONObject obj = new JSONObject(new String(buffer, "UTF-8"));
+        JSONArray files = obj.getJSONArray("files");
+        for (int i=0; i<files.length(); i++) {
+            Log.d(LOG_TAG, "file = " + files.getString(i));
+            copyAssetFile(outputDirectory, "www/" + files.getString(i), wwwExists);
         }
     }
 
