@@ -42,7 +42,7 @@ xmlns:android="http://schemas.android.com/apk/res/android"
 
     <platform name="windows">
         <js-module src="src/windows/SyncProxy.js" name="SyncProxy">
-            <merges target="" />
+            <runs />
         </js-module>
         <framework src="src/windows/ZipWinProj/ZipWinProj.csproj" custom="true" type="projectReference"/>
     </platform>
