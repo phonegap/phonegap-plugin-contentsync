@@ -581,6 +581,10 @@ public class Sync extends CordovaPlugin {
     }
 
     private void copyRootAppByManifest(String outputDirectory, String manifestFile, boolean wwwExists) throws IOException, JSONException {
+        File fp = new File(outputDirectory);
+        if (!fp.exists()) {
+            fp.mkdirs();
+        }
         InputStream is = cordova.getActivity().getAssets().open("www/" + manifestFile);
         int size = is.available();
         byte[] buffer = new byte[size];
