@@ -99,19 +99,18 @@ var app = {
         var extract = this.extract;
         var setProgress = this.setProgress; 
         var callback = function(response) {
-            console.log(response);
             if(response.progress) {
                 app.setProgress(response);
 
             }
-            if(response.archiveURL) {
-                var archiveURL = response.archiveURL;
+            if(response.localPath) {
+                var localPath = response.localPath;
                document.getElementById("downloadExtractBtn").disabled = false;
                document.getElementById("downloadExtractBtn").innerHTML = "Extract";
                document.getElementById("downloadExtractBtn").onclick = function() {
-                    app.extract(archiveURL);   
+                    app.extract(localPath);   
                };
-               document.getElementById("status").innerHTML = archiveURL;
+               document.getElementById("status").innerHTML = localPath;
             }
         }; 
         ContentSync.download(url, callback);

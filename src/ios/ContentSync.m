@@ -108,6 +108,18 @@
     }];
 }
 
+- (BOOL) isZipArchive:(NSString*)filePath {
+    NSFileHandle *fh = [NSFileHandle fileHandleForReadingAtPath:filePath];
+    NSData *data = [fh readDataOfLength:4];
+    if ([data length] == 4) {
+        const char *bytes = [data bytes];
+        if (bytes[0] == 'P' && bytes[1] == 'K' && bytes[2] == 3 && bytes[3] == 4) {
+            return YES;
+        }
+    }
+    return NO;
+}
+
 - (void)startDownload:(CDVInvokedUrlCommand*)command extractArchive:(BOOL)extractArchive {
 
     CDVPluginResult* pluginResult = nil;
@@ -266,7 +278,7 @@
         ContentSyncTask* sTask = [self findSyncDataByDownloadTask:downloadTask];
 
         if(sTask) {
-            if(sTask.extractArchive == YES) {
+            if(sTask.extractArchive == YES && [self isZipArchive:[sourceURL path]]) {
                 sTask.archivePath = [sourceURL path];
                 // FIXME there is probably a better way to do this
                 NSString* appId = [sTask.command.arguments objectAtIndex:1];
@@ -285,6 +297,7 @@
                 [self unzip:command];
             } else {
                 sTask.archivePath = [sourceURL absoluteString];
+                sTask.extractArchive = NO;
             }
         }
     } else {
@@ -301,18 +314,16 @@
 
         if(error == nil) {
             double progress = (double)task.countOfBytesReceived / (double)task.countOfBytesExpectedToReceive;
-            NSLog(@"Task: %@ completed successfully", task);
+            NSLog(@"Task: %@ completed successfully", sTask.archivePath);
             if(sTask.extractArchive) {
                 progress = ((progress / 2) * 100);
                 pluginResult = [self preparePluginResult:progress status:Downloading];
                 [pluginResult setKeepCallbackAsBool:YES];
             }
             else {
-                progress = progress * 100;
-                NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:3];
-                [message setObject:[NSNumber numberWithInteger:progress] forKey:@"progress"];
+                NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
                 [message setObject:[NSNumber numberWithInteger:Complete] forKey:@"status"];
-                [message setObject:[sTask archivePath] forKey:@"archiveURL"];
+                [message setObject:[sTask archivePath] forKey:@"localPath"];
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
                 [[self syncTasks] removeObject:sTask];
             }
