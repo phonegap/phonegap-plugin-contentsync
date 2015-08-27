@@ -471,8 +471,17 @@ public class Sync extends CordovaPlugin {
                             copyRootApp(outputDirectory, manifestFile);
                         }
 
-                        // unzip
-                        boolean win = unzipSync(targetFile, outputDirectory, progress, callbackContext);
+                        boolean win = false;
+                        if (isZipFile(targetFile)) {
+                            win = unzipSync(targetFile, outputDirectory, progress, callbackContext);
+                        } else {
+                            // copy file to ID
+                            win = targetFile.renameTo(new File(outputDirectory));
+                            progress.setLoaded(1);
+                            progress.setTotal(1);
+                            progress.setStatus(STATUS_EXTRACTING);
+                            progress.updatePercentage();
+                        }
 
                         // delete temp file
                         targetFile.delete();
@@ -514,6 +523,18 @@ public class Sync extends CordovaPlugin {
                 }
             }
         });
+    }
+
+    private boolean isZipFile(File targetFile) {
+        boolean success = true;
+        try {
+            ZipFile zip = new ZipFile(targetFile);
+            Log.d(LOG_TAG, "seems like a zip file");
+        } catch (IOException e) {
+            Log.d(LOG_TAG, "not a zip file");
+            success = false;
+        }
+        return success;
     }
 
     private String getOutputDirectory(final String id) {
