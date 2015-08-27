@@ -35,7 +35,7 @@
 }
 
 - (void)sync:(CDVInvokedUrlCommand*)command {
-
+    NSString* src = [command argumentAtIndex:0 withDefault:nil];
     NSString* type = [command argumentAtIndex:2];
     BOOL local = [type isEqualToString:@"local"];
 
@@ -59,6 +59,8 @@
 
             [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
             return;
+        } else {
+            NSLog(@"%@ not found locally", [appPath path]);
         }
         BOOL copyCordovaAssets = [[command argumentAtIndex:4 withDefault:@(NO)] boolValue];
         BOOL copyRootApp = [[command argumentAtIndex:5 withDefault:@(NO)] boolValue];
@@ -88,6 +90,14 @@
                 } else {
                     NSLog(@"Copying Cordova Assets");
                     [self copyCordovaAssets:[appPath path] copyRootApp:NO];
+                }
+                if(src == nil) {
+                    NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
+                    [message setObject:[appPath path] forKey:@"localPath"];
+                    [message setObject:@"true" forKey:@"cached"];
+                    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+                    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+                    return;
                 }
             }
         }
