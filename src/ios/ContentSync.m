@@ -59,8 +59,6 @@
 
             [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
             return;
-        } else {
-            NSLog(@"%@ not found locally", [appPath path]);
         }
         BOOL copyCordovaAssets = [[command argumentAtIndex:4 withDefault:@(NO)] boolValue];
         BOOL copyRootApp = [[command argumentAtIndex:5 withDefault:@(NO)] boolValue];
@@ -288,8 +286,8 @@
         ContentSyncTask* sTask = [self findSyncDataByDownloadTask:downloadTask];
 
         if(sTask) {
+            sTask.archivePath = [sourceURL path];
             if(sTask.extractArchive == YES && [self isZipArchive:[sourceURL path]]) {
-                sTask.archivePath = [sourceURL path];
                 // FIXME there is probably a better way to do this
                 NSString* appId = [sTask.command.arguments objectAtIndex:1];
                 NSURL *extractURL = [libraryDirectory URLByAppendingPathComponent:appId];
@@ -306,7 +304,16 @@
                 CDVInvokedUrlCommand* command = [CDVInvokedUrlCommand commandFromJson:[NSArray arrayWithObjects:sTask.command.callbackId, @"Zip", @"unzip", [NSMutableArray arrayWithObjects:[sourceURL absoluteString], [extractURL absoluteString], type, nil], nil]];
                 [self unzip:command];
             } else {
-                sTask.archivePath = [sourceURL absoluteString];
+                NSURL *srcURL = [NSURL fileURLWithPath:[sTask archivePath]];
+                NSURL *dstURL = [libraryDirectory URLByAppendingPathComponent:[sTask.command argumentAtIndex:1]];
+                
+                NSError *errorCopy;
+                NSLog(@"Copying %@ to %@", [srcURL path], [dstURL path]);
+                
+                BOOL success = [fileManager copyItemAtURL:srcURL toURL:dstURL error:&errorCopy];
+                if(success) {
+                    sTask.archivePath = [dstURL path];
+                }
                 sTask.extractArchive = NO;
             }
         }
@@ -331,6 +338,7 @@
                 [pluginResult setKeepCallbackAsBool:YES];
             }
             else {
+                //[fileManager removeItemAtURL:srcURL error:NULL];
                 NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
                 [message setObject:[NSNumber numberWithInteger:Complete] forKey:@"status"];
                 [message setObject:[sTask archivePath] forKey:@"localPath"];
