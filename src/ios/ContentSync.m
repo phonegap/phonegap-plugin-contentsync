@@ -306,15 +306,25 @@
             } else {
                 NSURL *srcURL = [NSURL fileURLWithPath:[sTask archivePath]];
                 NSURL *dstURL = [libraryDirectory URLByAppendingPathComponent:[sTask.command argumentAtIndex:1]];
-                
+                NSError* error = nil;
                 NSError *errorCopy;
-                NSLog(@"Copying %@ to %@", [srcURL path], [dstURL path]);
+                BOOL success;
                 
-                BOOL success = [fileManager copyItemAtURL:srcURL toURL:dstURL error:&errorCopy];
+                success = [fileManager createDirectoryAtURL:[dstURL URLByDeletingLastPathComponent] withIntermediateDirectories:YES attributes:nil error:&error];
+                
                 if(success) {
-                    sTask.archivePath = [dstURL path];
+                    NSLog(@"Moving %@ to %@", [srcURL path], [dstURL path]);
+                    
+                    success = [fileManager moveItemAtURL:srcURL toURL:dstURL error:&errorCopy];
+                    if(success) {
+                        sTask.archivePath = [dstURL path];
+                    } else {
+                        NSLog(@"Error Moving :-( but this can be non FATAL %@", [errorCopy description]);
+                    }
+                    sTask.extractArchive = NO;
+                } else {
+                    NSLog(@"Unable to create ID :-[ %@", [error description]);
                 }
-                sTask.extractArchive = NO;
             }
         }
     } else {
@@ -338,7 +348,6 @@
                 [pluginResult setKeepCallbackAsBool:YES];
             }
             else {
-                //[fileManager removeItemAtURL:srcURL error:NULL];
                 NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
                 [message setObject:[NSNumber numberWithInteger:Complete] forKey:@"status"];
                 [message setObject:[sTask archivePath] forKey:@"localPath"];
