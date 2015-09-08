@@ -3,9 +3,9 @@ function notSupported() {
 }
 
 var ContentSync = function() {};
-ContentSync.prototype.on = function() {};
-ContentSync.prototype.emit = function() {};
-ContentSync.prototype.cancel = function() {};
+ContentSync.prototype.on = function() { notSupported(); };
+ContentSync.prototype.emit = function() { notSupported(); };
+ContentSync.prototype.cancel = function() { notSupported(); };
 
 function sync() {
     notSupported();
