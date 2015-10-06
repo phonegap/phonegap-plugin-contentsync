@@ -444,7 +444,7 @@
         // END
 
         // Do not BACK UP folder to iCloud
-        NSURL* appURL = [NSURL fileURLWithPath: path];
+        NSURL* appURL = [NSURL fileURLWithPath: unzippedPath];
         NSError* error = nil;
         BOOL success = [appURL setResourceValue: [NSNumber numberWithBool: YES]
                                           forKey: NSURLIsExcludedFromBackupKey error: &error];
