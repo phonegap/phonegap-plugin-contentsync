@@ -444,13 +444,8 @@
         // END
 
         // Do not BACK UP folder to iCloud
-        NSURL* appURL = [NSURL fileURLWithPath: unzippedPath];
-        NSError* error = nil;
-        BOOL success = [appURL setResourceValue: [NSNumber numberWithBool: YES]
-                                          forKey: NSURLIsExcludedFromBackupKey error: &error];
-        if(!success) {
-            NSLog(@"Error excluding %@ from backup %@", [appURL lastPathComponent], error);
-        }
+        [self addSkipBackupAttributeToItemAtPath:path];
+        [self addSkipBackupAttributeToItemAtPath:unzippedPath];
 
         NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
         [message setObject:unzippedPath forKey:@"localPath"];
@@ -460,6 +455,17 @@
         [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
         [[self syncTasks] removeObject:sTask];
     }
+}
+
+- (BOOL)addSkipBackupAttributeToItemAtPath:(NSString *)path {
+    NSURL* appURL = [NSURL fileURLWithPath: path];
+    NSError *error = nil;
+    BOOL success = [appURL setResourceValue: [NSNumber numberWithBool: YES]
+                              forKey: NSURLIsExcludedFromBackupKey error: &error];
+    if(!success){
+        NSLog(@"Error excluding %@ from backup %@", [appURL lastPathComponent], error);
+    }
+    return success;
 }
 
 - (BOOL) copyCordovaAssets:(NSString*)unzippedPath {
