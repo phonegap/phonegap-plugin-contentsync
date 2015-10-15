@@ -5,6 +5,7 @@
 - (ContentSyncTask *)init {
     self = (ContentSyncTask*)[super init];
     if(self) {
+        self.appId = nil;
         self.downloadTask = nil;
         self.command = nil;
         self.archivePath = nil;
@@ -18,8 +19,9 @@
 
 @implementation ContentSync
 
-- (void)pluginInitialize {
+- (CDVPlugin*)initWithWebView:(UIWebView*)theWebView {
     [NSURLProtocol registerClass:[NSURLProtocolNoCache class]];
+    return self;
 }
 
 - (CDVPluginResult*) preparePluginResult:(NSInteger)progress status:(NSInteger)status {
@@ -131,6 +133,7 @@
 
     CDVPluginResult* pluginResult = nil;
     NSString* src = [command argumentAtIndex:0 withDefault:nil];
+    NSString* appId = [command argumentAtIndex:1];
     NSNumber* timeout = [command argumentAtIndex:6 withDefault:[NSNumber numberWithDouble:15]];
 
     self.session = [self backgroundSession:timeout];
@@ -176,6 +179,7 @@
 
             ContentSyncTask* sData = [[ContentSyncTask alloc] init];
 
+            sData.appId = appId ? appId : [srcURL lastPathComponent];
             sData.downloadTask = downloadTask;
             sData.command = command;
             sData.progress = 0;
@@ -199,12 +203,16 @@
 }
 
 - (void)cancel:(CDVInvokedUrlCommand *)command {
-    ContentSyncTask* sTask = [self findSyncDataByCallbackID:command.callbackId];
-    if(sTask) {
-        CDVPluginResult* pluginResult = nil;
-        [[sTask downloadTask] cancel];
-        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
+    NSString* appId = [command argumentAtIndex:0 withDefault:nil];
+    NSLog(@"Cancelling download %@", appId);
+    if(appId) {
+        ContentSyncTask* sTask = [self findSyncDataByAppId:appId];
+        if(sTask) {
+            CDVPluginResult* pluginResult = nil;
+            [[sTask downloadTask] cancel];
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+        }
     }
 }
 
@@ -226,9 +234,9 @@
     return nil;
 }
 
-- (ContentSyncTask *)findSyncDataByCallbackID:(NSString*)callbackId {
+- (ContentSyncTask *)findSyncDataByAppId:(NSString*)appId {
     for(ContentSyncTask* sTask in self.syncTasks) {
-        if([sTask.command.callbackId isEqualToString:callbackId]) {
+        if([sTask.appId isEqualToString:appId]) {
             return sTask;
         }
     }
@@ -288,8 +296,7 @@
             sTask.archivePath = [sourceURL path];
             if(sTask.extractArchive == YES && [self isZipArchive:[sourceURL path]]) {
                 // FIXME there is probably a better way to do this
-                NSString* appId = [sTask.command.arguments objectAtIndex:1];
-                NSURL *extractURL = [libraryDirectory URLByAppendingPathComponent:appId];
+                NSURL *extractURL = [libraryDirectory URLByAppendingPathComponent:[sTask appId]];
                 NSString* type = [sTask.command argumentAtIndex:2 withDefault:@"replace"];
 
                 // copy root app right before we extract
@@ -304,7 +311,7 @@
                 [self unzip:command];
             } else {
                 NSURL *srcURL = [NSURL fileURLWithPath:[sTask archivePath]];
-                NSURL *dstURL = [libraryDirectory URLByAppendingPathComponent:[sTask.command argumentAtIndex:1]];
+                NSURL *dstURL = [libraryDirectory URLByAppendingPathComponent:[sTask appId]];
                 NSError* error = nil;
                 NSError *errorCopy;
                 BOOL success;
@@ -357,7 +364,9 @@
             NSLog(@"Task: %@ completed with error: %@", task, [error localizedDescription]);
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:CONNECTION_ERR];
         }
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
+        if(![[error localizedDescription]  isEqual: @"cancelled"]) {
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
+        }
     }
 }
 

@@ -75,8 +75,8 @@ var app = {
 
     sync: function() {
         var url = "https://github.com/timkim/zipTest/archive/master.zip"; 
-        var sync = ContentSync.sync({ src: url, id: 'myapps/myapp', type: 'replace', copyCordovaAssets: false, headers: false });
-        
+        var sync = ContentSync.sync({ src: url, id: 'myapp', type: 'merge', copyRootApp: true });
+
         var setProgress = this.setProgress; 
 
         sync.on('progress', function(progress) {
@@ -85,7 +85,6 @@ var app = {
         });
         sync.on('complete', function(data) {
             console.log("Complete", data);
-            //document.location = data.localPath + "/zipTest-master/index.html";
         });
 
         sync.on('error', function(e) {
@@ -99,18 +98,19 @@ var app = {
         var extract = this.extract;
         var setProgress = this.setProgress; 
         var callback = function(response) {
+            console.log(response);
             if(response.progress) {
                 app.setProgress(response);
 
             }
             if(response.localPath) {
-                var localPath = response.localPath;
+                var archiveURL = response.localPath;
                document.getElementById("downloadExtractBtn").disabled = false;
                document.getElementById("downloadExtractBtn").innerHTML = "Extract";
                document.getElementById("downloadExtractBtn").onclick = function() {
-                    app.extract(localPath);   
+                    app.extract(archiveURL);   
                };
-               document.getElementById("status").innerHTML = localPath;
+               document.getElementById("status").innerHTML = archiveURL;
             }
         }; 
         ContentSync.download(url, callback);
