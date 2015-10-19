@@ -438,12 +438,12 @@
     NSLog(@"unzipped path %@", unzippedPath);
     ContentSyncTask* sTask = [self findSyncDataByPath];
     if(sTask) {
-        // FIXME: Copying cordova assets only if copyRootApp is false because why do it twice
-        if([[[sTask command] argumentAtIndex:5 withDefault:@(NO)] boolValue] == NO &&
-           [[[sTask command] argumentAtIndex:4 withDefault:@(NO)] boolValue] == YES) {
-            NSLog(@"Copying Cordova Assets to %@ as requested", unzippedPath);
-            if(![self copyCordovaAssets:unzippedPath]) {
-                NSLog(@"Error copying Cordova Assets");
+        BOOL copyCordovaAssets = [[[sTask command] argumentAtIndex:4 withDefault:@(NO)] boolValue];
+        BOOL copyRootApp = [[[sTask command] argumentAtIndex:5 withDefault:@(NO)] boolValue];
+        if(copyRootApp || copyCordovaAssets) {
+            NSLog(@"Copying %@ to %@ as requested", copyCordovaAssets ? @"Cordova Assets" : @"Root App", unzippedPath);
+            if(![self copyCordovaAssets:unzippedPath copyRootApp:copyRootApp]) {
+                NSLog(@"Error copying assets");
             };
         }
         // XXX this is to match the Android implementation
