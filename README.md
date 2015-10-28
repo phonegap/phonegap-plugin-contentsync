@@ -219,7 +219,7 @@ However, if you do need to use the File plugin to navigate the data downloaded b
 var sync = ContentSync.sync({ src: 'http://myserver/assets/movie-1', id: 'movie-1' });
 
 sync.on('complete', function(data) {
-    window.resolveLocalFileSystemURLw("file://" + data.localPath, function(entry) {
+    window.resolveLocalFileSystemURL("file://" + data.localPath, function(entry) {
     	// entry is a DirectoryEntry object
     }, function(error) {
         console.log("Error: " + error.code);
