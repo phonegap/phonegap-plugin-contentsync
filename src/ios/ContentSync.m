@@ -356,19 +356,29 @@
         CDVPluginResult* pluginResult = nil;
 
         if(error == nil) {
-            double progress = (double)task.countOfBytesReceived / (double)task.countOfBytesExpectedToReceive;
-            NSLog(@"Task: %@ completed successfully", sTask.archivePath);
-            if(sTask.extractArchive) {
-                progress = ((progress / 2) * 100);
-                pluginResult = [self preparePluginResult:progress status:Downloading];
-                [pluginResult setKeepCallbackAsBool:YES];
-            }
-            else {
-                NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
-                [message setObject:[NSNumber numberWithInteger:Complete] forKey:@"status"];
-                [message setObject:[sTask archivePath] forKey:@"localPath"];
-                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
-                [[self syncTasks] removeObject:sTask];
+            if([(NSHTTPURLResponse*)[task response] statusCode] != 200) {
+                NSLog(@"Task: %@ completed with HTTP Error Code: %ld", task, [(NSHTTPURLResponse*)[task response] statusCode]);
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:CONNECTION_ERR];
+                NSFileManager *fileManager = [NSFileManager defaultManager];
+                if([fileManager fileExistsAtPath:[sTask archivePath]]) {
+                    NSLog(@"Deleting archive. It's probably an HTTP Error Page anyways");
+                    [fileManager removeItemAtPath:[sTask archivePath] error:NULL];
+                }
+            } else {
+                double progress = (double)task.countOfBytesReceived / (double)task.countOfBytesExpectedToReceive;
+                NSLog(@"Task: %@ completed successfully", sTask.archivePath);
+                if(sTask.extractArchive) {
+                    progress = ((progress / 2) * 100);
+                    pluginResult = [self preparePluginResult:progress status:Downloading];
+                    [pluginResult setKeepCallbackAsBool:YES];
+                }
+                else {
+                    NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
+                    [message setObject:[NSNumber numberWithInteger:Complete] forKey:@"status"];
+                    [message setObject:[sTask archivePath] forKey:@"localPath"];
+                    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+                    [[self syncTasks] removeObject:sTask];
+                }
             }
         } else {
             NSLog(@"Task: %@ completed with error: %@", task, [error localizedDescription]);
