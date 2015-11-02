@@ -1,7 +1,7 @@
 
 
 exports.defineAutoTests = function() {
-	
+
 	describe('phonegap-plugin-contentsync', function() {
         it("should exist", function() {
             expect(window.ContentSync).toBeDefined();
@@ -13,9 +13,9 @@ exports.defineAutoTests = function() {
         it("can sync", function(done){
 
         	var progressEvent = null;
-        	var url = "https://github.com/timkim/zipTest/archive/master.zip"; 
+        	var url = "https://github.com/timkim/zipTest/archive/master.zip";
         	var sync = ContentSync.sync({ src: url, id: 'myapps/myapp', type: 'replace', copyCordovaAssets: false, headers: false });
-        
+
 	        sync.on('progress', function(progress) {
 	            if(!progressEvent) {
 	            	progressEvent = progress;
@@ -35,10 +35,28 @@ exports.defineAutoTests = function() {
 	        });
 
         }, 60000); // wait a full 60 secs
+
+        it('reports error on 404', function(done){
+            var sync = ContentSync.sync({
+                src: 'https://www.google.com/error/not/found.zip',
+                id: 'test' + (new Date().getTime()), // ensure that repeated tests work
+                type: 'replace',
+                copyCordovaAssets: false
+            });
+            sync.on('complete', function() {
+                fail('404 page should not complete');
+            });
+
+            sync.on('error', function(e) {
+                expect(e).toBeDefined('error should be reported');
+                done();
+            });
+        });
     });
 
-}
+
+};
 
 exports.defineManualTests = function() {
 
-}
+};
