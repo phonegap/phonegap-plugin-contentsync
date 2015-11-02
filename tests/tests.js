@@ -11,7 +11,6 @@ exports.defineAutoTests = function() {
         });
 
         it("can sync", function(done){
-
         	var progressEvent = null;
         	var url = "https://github.com/timkim/zipTest/archive/master.zip";
         	var sync = ContentSync.sync({ src: url, id: 'myapps/myapp', type: 'replace', copyCordovaAssets: false, headers: false });
@@ -31,7 +30,7 @@ exports.defineAutoTests = function() {
 	        });
 
 	        sync.on('error', function(e) {
-	        	done();
+                fail(e);
 	        });
 
         }, 60000); // wait a full 60 secs
@@ -52,8 +51,37 @@ exports.defineAutoTests = function() {
                 done();
             });
         });
-    });
 
+        it('creates local copy', function(done) {
+            var sync = ContentSync.sync({
+                id: 'local/test' + (new Date()).getTime(), // create new id every time
+                type: 'local',
+                copyRootApp: true
+            });
+            sync.on('complete', function(localDataPath) {
+                expect(localDataPath).toBeDefined('Complete should report a data path');
+                expect(localDataPath).not.toBe('');
+                done();
+            });
+            sync.on('error', function(e) {
+                fail(e);
+            });
+        });
+
+        it('local w/o copy and source to fail', function(done) {
+            var sync = ContentSync.sync({
+                id: 'local/test' + (new Date()).getTime(), // create new id every time
+                type: 'local'
+            });
+            sync.on('complete', function() {
+                fail('because there is nothing to copy.');
+            });
+            sync.on('error', function(e) {
+                expect(e).toBeDefined('error should report a reason.');
+                done();
+            });
+        });
+    });
 
 };
 
