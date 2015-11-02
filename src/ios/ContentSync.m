@@ -40,15 +40,15 @@
     NSString* type = [command argumentAtIndex:2];
     BOOL local = [type isEqualToString:@"local"];
 
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSString* appId = [command argumentAtIndex:1];
+    NSArray *URLs = [fileManager URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask];
+    NSURL *libraryDirectoryUrl = [URLs objectAtIndex:0];
+    
+    NSURL *appPath = [libraryDirectoryUrl URLByAppendingPathComponent:appId];
+
     if(local == YES) {
-        NSString* appId = [command argumentAtIndex:1];
         NSLog(@"Requesting local copy of %@", appId);
-        NSFileManager *fileManager = [NSFileManager defaultManager];
-        NSArray *URLs = [fileManager URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask];
-        NSURL *libraryDirectoryUrl = [URLs objectAtIndex:0];
-
-        NSURL *appPath = [libraryDirectoryUrl URLByAppendingPathComponent:appId];
-
         if([fileManager fileExistsAtPath:[appPath path]]) {
             NSLog(@"Found local copy %@", [appPath path]);
             CDVPluginResult *pluginResult = nil;
@@ -61,46 +61,48 @@
             [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
             return;
         }
-        BOOL copyCordovaAssets = [[command argumentAtIndex:4 withDefault:@(NO)] boolValue];
-        BOOL copyRootApp = [[command argumentAtIndex:5 withDefault:@(NO)] boolValue];
-
-        if(copyRootApp == YES || copyCordovaAssets == YES) {
-            CDVPluginResult *pluginResult = nil;
-            NSError* error = nil;
-
-            NSLog(@"Creating app directory %@", [appPath path]);
-            [fileManager createDirectoryAtPath:[appPath path] withIntermediateDirectories:YES attributes:nil error:&error];
-
-            NSError* errorSetting = nil;
-            BOOL success = [appPath setResourceValue: [NSNumber numberWithBool: YES]
-                                             forKey: NSURLIsExcludedFromBackupKey error: &errorSetting];
-
-            if(success == NO) {
-                NSLog(@"WARNING: %@ might be backed up to iCloud!", [appPath path]);
-            }
-
-            if(error != nil) {
-                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:LOCAL_ERR];
-                NSLog(@"%@", [error localizedDescription]);
+    }
+    
+    BOOL copyCordovaAssets = [[command argumentAtIndex:4 withDefault:@(NO)] boolValue];
+    BOOL copyRootApp = [[command argumentAtIndex:5 withDefault:@(NO)] boolValue];
+    
+    if(copyRootApp == YES || copyCordovaAssets == YES) {
+        CDVPluginResult *pluginResult = nil;
+        NSError* error = nil;
+        
+        NSLog(@"Creating app directory %@", [appPath path]);
+        [fileManager createDirectoryAtPath:[appPath path] withIntermediateDirectories:YES attributes:nil error:&error];
+        
+        NSError* errorSetting = nil;
+        BOOL success = [appPath setResourceValue: [NSNumber numberWithBool: YES]
+                                          forKey: NSURLIsExcludedFromBackupKey error: &errorSetting];
+        
+        if(success == NO) {
+            NSLog(@"WARNING: %@ might be backed up to iCloud!", [appPath path]);
+        }
+        
+        if(error != nil) {
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:LOCAL_ERR];
+            NSLog(@"%@", [error localizedDescription]);
+        } else {
+            if(copyRootApp) {
+                NSLog(@"Copying Root App");
+                [self copyCordovaAssets:[appPath path] copyRootApp:YES];
             } else {
-                if(copyRootApp) {
-                    NSLog(@"Copying Root App");
-                    [self copyCordovaAssets:[appPath path] copyRootApp:YES];
-                } else {
-                    NSLog(@"Copying Cordova Assets");
-                    [self copyCordovaAssets:[appPath path] copyRootApp:NO];
-                }
-                if(src == nil) {
-                    NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
-                    [message setObject:[appPath path] forKey:@"localPath"];
-                    [message setObject:@"true" forKey:@"cached"];
-                    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
-                    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-                    return;
-                }
+                NSLog(@"Copying Cordova Assets");
+                [self copyCordovaAssets:[appPath path] copyRootApp:NO];
+            }
+            if(src == nil) {
+                NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
+                [message setObject:[appPath path] forKey:@"localPath"];
+                [message setObject:@"true" forKey:@"cached"];
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+                [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+                return;
             }
         }
     }
+
 
     __weak ContentSync* weakSelf = self;
 
@@ -346,29 +348,19 @@
         CDVPluginResult* pluginResult = nil;
 
         if(error == nil) {
-            if([(NSHTTPURLResponse*)[task response] statusCode] != 200) {
-                NSLog(@"Task: %@ completed with HTTP Error Code: %ld", task, [(NSHTTPURLResponse*)[task response] statusCode]);
-                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:CONNECTION_ERR];
-                NSFileManager *fileManager = [NSFileManager defaultManager];
-                if([fileManager fileExistsAtPath:[sTask archivePath]]) {
-                    NSLog(@"Deleting archive. It's probably an HTTP Error Page anyways");
-                    [fileManager removeItemAtPath:[sTask archivePath] error:NULL];
-                }
-            } else {
-                double progress = (double)task.countOfBytesReceived / (double)task.countOfBytesExpectedToReceive;
-                NSLog(@"Task: %@ completed successfully", sTask.archivePath);
-                if(sTask.extractArchive) {
-                    progress = ((progress / 2) * 100);
-                    pluginResult = [self preparePluginResult:progress status:Downloading];
-                    [pluginResult setKeepCallbackAsBool:YES];
-                }
-                else {
-                    NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
-                    [message setObject:[NSNumber numberWithInteger:Complete] forKey:@"status"];
-                    [message setObject:[sTask archivePath] forKey:@"localPath"];
-                    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
-                    [[self syncTasks] removeObject:sTask];
-                }
+            double progress = (double)task.countOfBytesReceived / (double)task.countOfBytesExpectedToReceive;
+            NSLog(@"Task: %@ completed successfully", sTask.archivePath);
+            if(sTask.extractArchive) {
+                progress = ((progress / 2) * 100);
+                pluginResult = [self preparePluginResult:progress status:Downloading];
+                [pluginResult setKeepCallbackAsBool:YES];
+            }
+            else {
+                NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
+                [message setObject:[NSNumber numberWithInteger:Complete] forKey:@"status"];
+                [message setObject:[sTask archivePath] forKey:@"localPath"];
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+                [[self syncTasks] removeObject:sTask];
             }
         } else {
             NSLog(@"Task: %@ completed with error: %@", task, [error localizedDescription]);
@@ -448,14 +440,6 @@
     NSLog(@"unzipped path %@", unzippedPath);
     ContentSyncTask* sTask = [self findSyncDataByPath];
     if(sTask) {
-        BOOL copyCordovaAssets = [[[sTask command] argumentAtIndex:4 withDefault:@(NO)] boolValue];
-        BOOL copyRootApp = [[[sTask command] argumentAtIndex:5 withDefault:@(NO)] boolValue];
-        if(copyRootApp || copyCordovaAssets) {
-            NSLog(@"Copying %@ to %@ as requested", copyCordovaAssets ? @"Cordova Assets" : @"Root App", unzippedPath);
-            if(![self copyCordovaAssets:unzippedPath copyRootApp:copyRootApp]) {
-                NSLog(@"Error copying assets");
-            };
-        }
         // XXX this is to match the Android implementation
         CDVPluginResult* pluginResult = [self preparePluginResult:100 status:Complete];
         [pluginResult setKeepCallbackAsBool:YES];
