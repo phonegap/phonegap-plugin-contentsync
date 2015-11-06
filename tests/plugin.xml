@@ -18,5 +18,5 @@
     </js-module>
 
     <!-- add test file that is enumerated before the directories (see issue #84) -->
-    <asset src="_test_file.txt" target="_test_file.txt" />
+    <asset src="anyfile.txt" target="anyfile.txt" />
 </plugin>
