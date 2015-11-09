@@ -2,7 +2,7 @@
 
 exports.defineAutoTests = function() {
 
-	describe('phonegap-plugin-contentsync', function() {
+    describe('phonegap-plugin-contentsync', function() {
         it("should exist", function() {
             expect(window.ContentSync).toBeDefined();
             expect(typeof window.ContentSync.sync == 'function').toBe(true);
@@ -45,6 +45,7 @@ exports.defineAutoTests = function() {
             });
             sync.on('complete', function() {
                 fail('404 page should not complete');
+                done();
             });
 
             sync.on('error', function(e) {
@@ -52,6 +53,92 @@ exports.defineAutoTests = function() {
                 done();
             });
         });
+
+        /**
+         * Helper function that tests if the file at the given path exists
+         */
+        function testFileExists(path, success, fail) {
+            if (path.indexOf('file://') === 0) {
+                // test via system url
+                window.resolveLocalFileSystemURL(path, function(fileEntry) {
+                    expect(fileEntry).toBeDefined();
+                    success();
+                }, function(e){
+                    fail(path + ' should exist in local copy. Error code ' + e.code);
+                });
+
+            } else {
+                // test via PERSISTENT location
+                window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, function(fs) {
+                    fs.root.getFile(path, {create: false}, function(fileEntry) {
+                        expect(fileEntry).toBeDefined();
+                        success();
+                    }, function(e){
+                        fail(path + ' should exist in local copy. Error code ' + e.code);
+                    });
+                }, fail);
+            }
+        }
+
+        /**
+         * Helper function that syncs and test if the local copy has the `/index.html`
+         */
+        function syncAndTest(appId, useLocalPath, success, fail) {
+            var sync = ContentSync.sync({
+                id: appId,
+                type: 'local',
+                copyRootApp: true
+            });
+            sync.on('complete', function(data) {
+                if (useLocalPath) {
+                    testFileExists('file://' + data.localPath + '/index.html', success, fail);
+                } else {
+                    testFileExists(appId + '/index.html', success, fail);
+                }
+            });
+            sync.on('error', fail);
+        }
+
+        /**
+         * Tests if the local copy is at the correct place and can be accessed via file plugin.
+         * on android this works, as the files are copied to the PERSISTENT location:
+         *
+         * `/data/data/<app-id>/files`
+         *
+         * on iOS the files are copied to
+         *
+         * `/var/mobile/Applications/<UUID>/Library`  (or .../Documents in compatibility mode)
+         *
+         * but the persistent directory is .../Library/files.
+         *
+         *
+         * currently fails on iOS due to issue #83
+         */
+        xit('local copy is accessible via file plugin', function(done) {
+            var appId = 'local/test' + (new Date()).getTime(); // create new id every time
+            syncAndTest(appId, false, done, function(e){
+                fail(e);
+                done();
+            })
+        });
+
+        it('create local copy with www prefix', function(done) {
+            var appId = 'www/local/test' + (new Date()).getTime(); // create new id every time
+            syncAndTest(appId, true, done, function(e){
+                fail(e);
+                done();
+            })
+        });
+
+        it('create local copy with www suffix', function(done) {
+            var appId = 'local/test' + (new Date()).getTime() + '/www'; // create new id every time
+            syncAndTest(appId, true, done, function(e){
+                fail(e);
+                done();
+            })
+        });
+
+
     });
 
 

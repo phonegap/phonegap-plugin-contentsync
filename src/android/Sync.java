@@ -1027,6 +1027,11 @@ public class Sync extends CordovaPlugin {
             if (!targetDir.exists()) {
                 targetDir.mkdirs();
             }
+        } else {
+            File targetDir = new File(outputDirectory);
+            if (!targetDir.exists()) {
+                targetDir.mkdirs();
+            }
         }
 
         copyFile(cordova.getActivity().getAssets().open(filename), new FileOutputStream(new File(outputDirectory, targetFile)));
