@@ -58,26 +58,20 @@ exports.defineAutoTests = function() {
          * Helper function that tests if the file at the given path exists
          */
         function testFileExists(path, success, fail) {
+            var filePath;
             if (path.indexOf('file://') === 0) {
                 // test via system url
-                window.resolveLocalFileSystemURL(path, function(fileEntry) {
-                    expect(fileEntry).toBeDefined();
-                    success();
-                }, function(e){
-                    fail(path + ' should exist in local copy. Error code ' + e.code);
-                });
-
+                filePath = path;
             } else {
-                // test via PERSISTENT location
-                window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, function(fs) {
-                    fs.root.getFile(path, {create: false}, function(fileEntry) {
-                        expect(fileEntry).toBeDefined();
-                        success();
-                    }, function(e){
-                        fail(path + ' should exist in local copy. Error code ' + e.code);
-                    });
-                }, fail);
+                // test via cordova.file.dataDirectory location
+                filePath = cordova.file.dataDirectory + '/' + path;
             }
+            window.resolveLocalFileSystemURL(filePath, function(fileEntry) {
+                expect(fileEntry).toBeDefined();
+                success();
+            }, function(e){
+                fail(path + ' should exist in local copy. Error code ' + e.code);
+            });
         }
 
         /**
@@ -114,13 +108,13 @@ exports.defineAutoTests = function() {
          *
          * currently fails on iOS due to issue #83
          */
-        xit('local copy is accessible via file plugin', function(done) {
+        it('local copy is accessible via file plugin', function(done) {
             var appId = 'local/test' + (new Date()).getTime(); // create new id every time
             syncAndTest(appId, false, done, function(e){
                 fail(e);
                 done();
             })
-        });
+        }, 60000); // wait a full 60 secs for slow Android emulator
 
         it('create local copy with www prefix', function(done) {
             var appId = 'www/local/test' + (new Date()).getTime(); // create new id every time
@@ -128,7 +122,7 @@ exports.defineAutoTests = function() {
                 fail(e);
                 done();
             })
-        });
+        }, 60000); // wait a full 60 secs for slow Android emulator
 
         it('create local copy with www suffix', function(done) {
             var appId = 'local/test' + (new Date()).getTime() + '/www'; // create new id every time
@@ -136,7 +130,7 @@ exports.defineAutoTests = function() {
                 fail(e);
                 done();
             })
-        });
+        }, 60000); // wait a full 60 secs for slow Android emulator
 
 
     });

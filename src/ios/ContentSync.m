@@ -45,7 +45,8 @@
     NSArray *URLs = [fileManager URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask];
     NSURL *libraryDirectoryUrl = [URLs objectAtIndex:0];
 
-    NSURL *appPath = [libraryDirectoryUrl URLByAppendingPathComponent:appId];
+    NSURL *appPath = [libraryDirectoryUrl URLByAppendingPathComponent:[@"NoCloud" stringByAppendingPathComponent:appId]];
+    NSLog(@"appPath %@", appPath);
 
     if(local == YES) {
         NSLog(@"Requesting local copy of %@", appId);
@@ -260,7 +261,7 @@
             completionHandler(NSURLSessionAuthChallengeUseCredential,credential);
         } else {
             completionHandler(NSURLSessionAuthChallengeUseCredential,nil);
-//            completionHandler(NSURLSessionAuthChallengeCancelAuthenticationChallenge, nil);
+            //            completionHandler(NSURLSessionAuthChallengeCancelAuthenticationChallenge, nil);
         }
     }
 }
@@ -305,7 +306,7 @@
             sTask.archivePath = [sourceURL path];
             if(sTask.extractArchive == YES && [self isZipArchive:[sourceURL path]]) {
                 // FIXME there is probably a better way to do this
-                NSURL *extractURL = [libraryDirectory URLByAppendingPathComponent:[sTask appId]];
+                NSURL *extractURL = [libraryDirectory URLByAppendingPathComponent:[@"NoCloud" stringByAppendingPathComponent:[sTask appId]]];
                 NSString* type = [sTask.command argumentAtIndex:2 withDefault:@"replace"];
 
                 // copy root app right before we extract
@@ -471,7 +472,7 @@
     NSURL* appURL = [NSURL fileURLWithPath: path];
     NSError *error = nil;
     BOOL success = [appURL setResourceValue: [NSNumber numberWithBool: YES]
-                              forKey: NSURLIsExcludedFromBackupKey error: &error];
+                                     forKey: NSURLIsExcludedFromBackupKey error: &error];
     if(!success){
         NSLog(@"Error excluding %@ from backup %@", [appURL lastPathComponent], error);
     }
