@@ -44,7 +44,7 @@
     NSString* appId = [command argumentAtIndex:1];
     NSArray *URLs = [fileManager URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask];
     NSURL *libraryDirectoryUrl = [URLs objectAtIndex:0];
-    
+
     NSURL *appPath = [libraryDirectoryUrl URLByAppendingPathComponent:appId];
 
     if(local == YES) {
@@ -62,25 +62,25 @@
             return;
         }
     }
-    
+
     BOOL copyCordovaAssets = [[command argumentAtIndex:4 withDefault:@(NO)] boolValue];
     BOOL copyRootApp = [[command argumentAtIndex:5 withDefault:@(NO)] boolValue];
-    
+
     if(copyRootApp == YES || copyCordovaAssets == YES) {
         CDVPluginResult *pluginResult = nil;
         NSError* error = nil;
-        
+
         NSLog(@"Creating app directory %@", [appPath path]);
         [fileManager createDirectoryAtPath:[appPath path] withIntermediateDirectories:YES attributes:nil error:&error];
-        
+
         NSError* errorSetting = nil;
         BOOL success = [appPath setResourceValue: [NSNumber numberWithBool: YES]
                                           forKey: NSURLIsExcludedFromBackupKey error: &errorSetting];
-        
+
         if(success == NO) {
             NSLog(@"WARNING: %@ might be backed up to iCloud!", [appPath path]);
         }
-        
+
         if(error != nil) {
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:LOCAL_ERR];
             NSLog(@"%@", [error localizedDescription]);
@@ -142,20 +142,27 @@
 
     // checking if URL is valid
     NSURL *srcURL = [NSURL URLWithString:src];
+    NSMutableURLRequest *urlRequest = [NSMutableURLRequest requestWithURL:srcURL];
+    [urlRequest setHTTPMethod:@"HEAD"];
+    NSURLResponse *response = nil;
+    NSError *error = nil;
+    NSData *data = [NSURLConnection sendSynchronousRequest:urlRequest
+                                         returningResponse:&response
+                                                     error:&error];
 
-    if(srcURL && srcURL.scheme && srcURL.host) {
-        
+    if(srcURL && srcURL.scheme && srcURL.host && error == nil) {
+
         BOOL trustHost = [command argumentAtIndex:7 withDefault:@(NO)];
-        
+
         if(!self.trustedHosts) {
             self.trustedHosts = [NSMutableArray arrayWithCapacity:1];
         }
-        
+
         if(trustHost == YES) {
             NSLog(@"WARNING: Trusting host %@", [srcURL host]);
             [self.trustedHosts addObject:[srcURL host]];
         }
-        
+
         NSLog(@"startDownload from %@", src);
         NSURL *downloadURL = [NSURL URLWithString:src];
 
@@ -317,12 +324,12 @@
                 NSError* error = nil;
                 NSError *errorCopy;
                 BOOL success;
-                
+
                 success = [fileManager createDirectoryAtURL:[dstURL URLByDeletingLastPathComponent] withIntermediateDirectories:YES attributes:nil error:&error];
-                
+
                 if(success) {
                     NSLog(@"Moving %@ to %@", [srcURL path], [dstURL path]);
-                    
+
                     success = [fileManager moveItemAtURL:srcURL toURL:dstURL error:&errorCopy];
                     if(success) {
                         sTask.archivePath = [dstURL path];
