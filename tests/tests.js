@@ -52,7 +52,7 @@ exports.defineAutoTests = function() {
                 expect(e).toBeDefined('error should be reported');
                 done();
             });
-        });
+        }, 60000); // wait a full 60 secs for slow Android emulator
 
         /**
          * Helper function that tests if the file at the given path exists
@@ -95,18 +95,6 @@ exports.defineAutoTests = function() {
 
         /**
          * Tests if the local copy is at the correct place and can be accessed via file plugin.
-         * on android this works, as the files are copied to the PERSISTENT location:
-         *
-         * `/data/data/<app-id>/files`
-         *
-         * on iOS the files are copied to
-         *
-         * `/var/mobile/Applications/<UUID>/Library`  (or .../Documents in compatibility mode)
-         *
-         * but the persistent directory is .../Library/files.
-         *
-         *
-         * currently fails on iOS due to issue #83
          */
         it('local copy is accessible via file plugin', function(done) {
             var appId = 'local/test' + (new Date()).getTime(); // create new id every time
@@ -132,6 +120,26 @@ exports.defineAutoTests = function() {
             })
         }, 60000); // wait a full 60 secs for slow Android emulator
 
+        /**
+         * Test for invalid server name
+         */
+        it('error on invalid server name', function(done) {
+            var sync = ContentSync.sync({
+                src: 'http://servername',
+                id: 'test' + (new Date().getTime()), // ensure that repeated tests work
+                type: 'replace',
+                copyCordovaAssets: false
+            });
+            sync.on('complete', function() {
+                fail('invalid server name should not complete');
+                done();
+            });
+
+            sync.on('error', function(e) {
+                expect(e).toBeDefined('error should be reported');
+                done();
+            });
+        });
 
     });
 
