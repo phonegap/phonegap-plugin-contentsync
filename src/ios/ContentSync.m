@@ -299,9 +299,9 @@
     [fileManager removeItemAtURL:sourceURL error:NULL];
     BOOL success = [fileManager copyItemAtURL:downloadURL toURL:sourceURL error:&errorCopy];
 
-    if(success) {
-        ContentSyncTask* sTask = [self findSyncDataByDownloadTask:downloadTask];
+    ContentSyncTask* sTask = [self findSyncDataByDownloadTask:downloadTask];
 
+    if(success) {
         if(sTask) {
             sTask.archivePath = [sourceURL path];
             if(sTask.extractArchive == YES && [self isZipArchive:[sourceURL path]]) {
@@ -345,6 +345,10 @@
         }
     } else {
         NSLog(@"Sync Failed - Copy Failed - %@", [errorCopy localizedDescription]);
+
+        CDVPluginResult* pluginResult = nil;
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:CONNECTION_ERR];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
     }
 }
 
