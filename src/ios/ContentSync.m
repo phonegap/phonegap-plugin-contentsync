@@ -63,11 +63,10 @@
             return;
         }
     }
-
-    BOOL copyCordovaAssets = [[command argumentAtIndex:4 withDefault:@(NO)] boolValue];
+    
     BOOL copyRootApp = [[command argumentAtIndex:5 withDefault:@(NO)] boolValue];
 
-    if(copyRootApp == YES || copyCordovaAssets == YES) {
+    if(copyRootApp == YES) {
         CDVPluginResult *pluginResult = nil;
         NSError* error = nil;
 
@@ -86,13 +85,7 @@
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:LOCAL_ERR];
             NSLog(@"%@", [error localizedDescription]);
         } else {
-            if(copyRootApp) {
-                NSLog(@"Copying Root App");
-                [self copyCordovaAssets:[appPath path] copyRootApp:YES];
-            } else {
-                NSLog(@"Copying Cordova Assets");
-                [self copyCordovaAssets:[appPath path] copyRootApp:NO];
-            }
+            [self copyCordovaAssets:[appPath path] copyRootApp:YES];
             if(src == nil) {
                 NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
                 [message setObject:[appPath path] forKey:@"localPath"];
@@ -462,6 +455,12 @@
     NSLog(@"unzipped path %@", unzippedPath);
     ContentSyncTask* sTask = [self findSyncDataByPath];
     if(sTask) {
+        
+        BOOL copyCordovaAssets = [[sTask.command argumentAtIndex:4 withDefault:@(NO)] boolValue];
+        
+        if(copyCordovaAssets == YES) {
+            [self copyCordovaAssets:unzippedPath];
+        }
         // XXX this is to match the Android implementation
         CDVPluginResult* pluginResult = [self preparePluginResult:100 status:Complete];
         [pluginResult setKeepCallbackAsBool:YES];
@@ -504,6 +503,7 @@
     NSURL* destinationURL = [NSURL fileURLWithPath:unzippedPath];
 
     if(copyRootApp == YES) {
+        NSLog(@"Copying Root App");
         // we use cordova.js as a way to find the root www/
         NSString* root = [[[self commandDelegate] pathForResource:@"cordova.js"] stringByDeletingLastPathComponent];
 
@@ -517,7 +517,7 @@
 
         return YES;
     }
-
+    NSLog(@"Copying Cordova Assets");
     NSArray* cordovaAssets = [NSArray arrayWithObjects:@"cordova.js",@"cordova_plugins.js",@"plugins", nil];
     NSString* suffix = @"/www";
 
