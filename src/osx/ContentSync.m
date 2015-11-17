@@ -67,7 +67,7 @@
     }
 
     NSString* bundleID = [[NSBundle mainBundle] bundleIdentifier];
-    NSURL *dirPath = [supportDir URLByAppendingPathComponent:bundleID];
+    NSURL *dirPath = [[supportDir URLByAppendingPathComponent:bundleID] URLByAppendingPathComponent:@"files"];
 
     if (![fm fileExistsAtPath:dirPath.path]) {
         if (![fm createDirectoryAtURL:dirPath withIntermediateDirectories:YES attributes:nil error:&error]) {
