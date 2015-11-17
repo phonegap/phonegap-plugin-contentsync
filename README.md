@@ -4,7 +4,7 @@
 
 ## Installation
 
-This requires phonegap 5.0+ ( current stable v1.0.0 )
+This requires phonegap 5.0+ ( current stable v1.2.0 )
 
 ```
 phonegap plugin add phonegap-plugin-contentsync
@@ -226,6 +226,13 @@ sync.on('complete', function(data) {
     }); 
 });
 ```
+
+As of version 1.2.0 of the plugin the location in which the plugin stores the synched content is equivaltent to the `cordova.file.dataDirectory` path from the `cordova-plugin-file` package. This is a change from previous versions so please be aware you may need to do a full sync after upgrading to version 1.2.0.
+
+Platform | Path
+------------------ | -----------
+Android | `/data/data/<app-id>/files/<options.id>`
+iOS | `/var/mobile/Applications/<UUID>/Library/NoCloud/<options.id>`
 
 ## Copy Root App
 

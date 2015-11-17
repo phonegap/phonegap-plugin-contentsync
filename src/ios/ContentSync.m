@@ -44,8 +44,9 @@
     NSString* appId = [command argumentAtIndex:1];
     NSArray *URLs = [fileManager URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask];
     NSURL *libraryDirectoryUrl = [URLs objectAtIndex:0];
-    
-    NSURL *appPath = [libraryDirectoryUrl URLByAppendingPathComponent:appId];
+
+    NSURL *appPath = [libraryDirectoryUrl URLByAppendingPathComponent:[@"NoCloud" stringByAppendingPathComponent:appId]];
+    NSLog(@"appPath %@", appPath);
 
     if(local == YES) {
         NSLog(@"Requesting local copy of %@", appId);
@@ -62,25 +63,25 @@
             return;
         }
     }
-    
+
     BOOL copyCordovaAssets = [[command argumentAtIndex:4 withDefault:@(NO)] boolValue];
     BOOL copyRootApp = [[command argumentAtIndex:5 withDefault:@(NO)] boolValue];
-    
+
     if(copyRootApp == YES || copyCordovaAssets == YES) {
         CDVPluginResult *pluginResult = nil;
         NSError* error = nil;
-        
+
         NSLog(@"Creating app directory %@", [appPath path]);
         [fileManager createDirectoryAtPath:[appPath path] withIntermediateDirectories:YES attributes:nil error:&error];
-        
+
         NSError* errorSetting = nil;
         BOOL success = [appPath setResourceValue: [NSNumber numberWithBool: YES]
                                           forKey: NSURLIsExcludedFromBackupKey error: &errorSetting];
-        
+
         if(success == NO) {
             NSLog(@"WARNING: %@ might be backed up to iCloud!", [appPath path]);
         }
-        
+
         if(error != nil) {
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:LOCAL_ERR];
             NSLog(@"%@", [error localizedDescription]);
@@ -142,20 +143,27 @@
 
     // checking if URL is valid
     NSURL *srcURL = [NSURL URLWithString:src];
+    NSMutableURLRequest *urlRequest = [NSMutableURLRequest requestWithURL:srcURL];
+    [urlRequest setHTTPMethod:@"HEAD"];
+    NSURLResponse *response = nil;
+    NSError *error = nil;
+    NSData *data = [NSURLConnection sendSynchronousRequest:urlRequest
+                                         returningResponse:&response
+                                                     error:&error];
 
-    if(srcURL && srcURL.scheme && srcURL.host) {
-        
+    if(srcURL && srcURL.scheme && srcURL.host && error == nil) {
+
         BOOL trustHost = [command argumentAtIndex:7 withDefault:@(NO)];
-        
+
         if(!self.trustedHosts) {
             self.trustedHosts = [NSMutableArray arrayWithCapacity:1];
         }
-        
+
         if(trustHost == YES) {
             NSLog(@"WARNING: Trusting host %@", [srcURL host]);
             [self.trustedHosts addObject:[srcURL host]];
         }
-        
+
         NSLog(@"startDownload from %@", src);
         NSURL *downloadURL = [NSURL URLWithString:src];
 
@@ -253,7 +261,7 @@
             completionHandler(NSURLSessionAuthChallengeUseCredential,credential);
         } else {
             completionHandler(NSURLSessionAuthChallengeUseCredential,nil);
-//            completionHandler(NSURLSessionAuthChallengeCancelAuthenticationChallenge, nil);
+            //            completionHandler(NSURLSessionAuthChallengeCancelAuthenticationChallenge, nil);
         }
     }
 }
@@ -291,14 +299,14 @@
     [fileManager removeItemAtURL:sourceURL error:NULL];
     BOOL success = [fileManager copyItemAtURL:downloadURL toURL:sourceURL error:&errorCopy];
 
-    if(success) {
-        ContentSyncTask* sTask = [self findSyncDataByDownloadTask:downloadTask];
+    ContentSyncTask* sTask = [self findSyncDataByDownloadTask:downloadTask];
 
+    if(success) {
         if(sTask) {
             sTask.archivePath = [sourceURL path];
             if(sTask.extractArchive == YES && [self isZipArchive:[sourceURL path]]) {
                 // FIXME there is probably a better way to do this
-                NSURL *extractURL = [libraryDirectory URLByAppendingPathComponent:[sTask appId]];
+                NSURL *extractURL = [libraryDirectory URLByAppendingPathComponent:[@"NoCloud" stringByAppendingPathComponent:[sTask appId]]];
                 NSString* type = [sTask.command argumentAtIndex:2 withDefault:@"replace"];
 
                 // copy root app right before we extract
@@ -317,12 +325,12 @@
                 NSError* error = nil;
                 NSError *errorCopy;
                 BOOL success;
-                
+
                 success = [fileManager createDirectoryAtURL:[dstURL URLByDeletingLastPathComponent] withIntermediateDirectories:YES attributes:nil error:&error];
-                
+
                 if(success) {
                     NSLog(@"Moving %@ to %@", [srcURL path], [dstURL path]);
-                    
+
                     success = [fileManager moveItemAtURL:srcURL toURL:dstURL error:&errorCopy];
                     if(success) {
                         sTask.archivePath = [dstURL path];
@@ -337,6 +345,10 @@
         }
     } else {
         NSLog(@"Sync Failed - Copy Failed - %@", [errorCopy localizedDescription]);
+
+        CDVPluginResult* pluginResult = nil;
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:CONNECTION_ERR];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
     }
 }
 
@@ -348,19 +360,29 @@
         CDVPluginResult* pluginResult = nil;
 
         if(error == nil) {
-            double progress = (double)task.countOfBytesReceived / (double)task.countOfBytesExpectedToReceive;
-            NSLog(@"Task: %@ completed successfully", sTask.archivePath);
-            if(sTask.extractArchive) {
-                progress = ((progress / 2) * 100);
-                pluginResult = [self preparePluginResult:progress status:Downloading];
-                [pluginResult setKeepCallbackAsBool:YES];
-            }
-            else {
-                NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
-                [message setObject:[NSNumber numberWithInteger:Complete] forKey:@"status"];
-                [message setObject:[sTask archivePath] forKey:@"localPath"];
-                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
-                [[self syncTasks] removeObject:sTask];
+            if([(NSHTTPURLResponse*)[task response] statusCode] != 200) {
+                NSLog(@"Task: %@ completed with HTTP Error Code: %ld", task, [(NSHTTPURLResponse*)[task response] statusCode]);
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:CONNECTION_ERR];
+                NSFileManager *fileManager = [NSFileManager defaultManager];
+                if([fileManager fileExistsAtPath:[sTask archivePath]]) {
+                    NSLog(@"Deleting archive. It's probably an HTTP Error Page anyways");
+                    [fileManager removeItemAtPath:[sTask archivePath] error:NULL];
+                }
+            } else {
+                double progress = (double)task.countOfBytesReceived / (double)task.countOfBytesExpectedToReceive;
+                NSLog(@"Task: %@ completed successfully", sTask.archivePath);
+                if(sTask.extractArchive) {
+                    progress = ((progress / 2) * 100);
+                    pluginResult = [self preparePluginResult:progress status:Downloading];
+                    [pluginResult setKeepCallbackAsBool:YES];
+                }
+                else {
+                    NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
+                    [message setObject:[NSNumber numberWithInteger:Complete] forKey:@"status"];
+                    [message setObject:[sTask archivePath] forKey:@"localPath"];
+                    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+                    [[self syncTasks] removeObject:sTask];
+                }
             }
         } else {
             NSLog(@"Task: %@ completed with error: %@", task, [error localizedDescription]);
@@ -447,13 +469,8 @@
         // END
 
         // Do not BACK UP folder to iCloud
-        NSURL* appURL = [NSURL fileURLWithPath: path];
-        NSError* error = nil;
-        BOOL success = [appURL setResourceValue: [NSNumber numberWithBool: YES]
-                                          forKey: NSURLIsExcludedFromBackupKey error: &error];
-        if(!success) {
-            NSLog(@"Error excluding %@ from backup %@", [appURL lastPathComponent], error);
-        }
+        [self addSkipBackupAttributeToItemAtPath:path];
+        [self addSkipBackupAttributeToItemAtPath:unzippedPath];
 
         NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
         [message setObject:unzippedPath forKey:@"localPath"];
@@ -463,6 +480,17 @@
         [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
         [[self syncTasks] removeObject:sTask];
     }
+}
+
+- (BOOL)addSkipBackupAttributeToItemAtPath:(NSString *)path {
+    NSURL* appURL = [NSURL fileURLWithPath: path];
+    NSError *error = nil;
+    BOOL success = [appURL setResourceValue: [NSNumber numberWithBool: YES]
+                                     forKey: NSURLIsExcludedFromBackupKey error: &error];
+    if(!success){
+        NSLog(@"Error excluding %@ from backup %@", [appURL lastPathComponent], error);
+    }
+    return success;
 }
 
 - (BOOL) copyCordovaAssets:(NSString*)unzippedPath {

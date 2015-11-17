@@ -543,8 +543,6 @@ public class Sync extends CordovaPlugin {
         // Testing
         //String outputDirectory = cordova.getActivity().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
         outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
-        outputDirectory += "files";
-        outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;
         outputDirectory += id;
         Log.d(LOG_TAG, "output dir = " + outputDirectory);
 
@@ -683,7 +681,7 @@ public class Sync extends CordovaPlugin {
         try {
             Method gcmMethod = webViewClass.getMethod("getCookieManager");
             Class iccmClass  = gcmMethod.getReturnType();
-            Method gcMethod  = iccmClass.getMethod("getCookie");
+            Method gcMethod  = iccmClass.getMethod("getCookie", String.class);
 
             cookie = (String)gcMethod.invoke(
                     iccmClass.cast(
@@ -1024,6 +1022,11 @@ public class Sync extends CordovaPlugin {
         int lastIndex = targetFile.lastIndexOf("/");
         if (lastIndex > 0) {
             File targetDir = new File(outputDirectory + "/" + targetFile.substring(0, lastIndex));
+            if (!targetDir.exists()) {
+                targetDir.mkdirs();
+            }
+        } else {
+            File targetDir = new File(outputDirectory);
             if (!targetDir.exists()) {
                 targetDir.mkdirs();
             }
