@@ -286,6 +286,9 @@ public class Sync extends CordovaPlugin {
                 // This must be explicitly set for gzip progress tracking to work.
                 connection.setRequestProperty("Accept-Encoding", "gzip");
 
+                // This must be explicitly set to allow the connection to follow redirection
+                connection.setInstanceFollowRedirects(true);
+
                 // Handle the other headers
                 if (headers != null) {
                     addHeadersToRequest(connection, headers);
