@@ -223,7 +223,7 @@ public class Sync extends CordovaPlugin {
         }
 
         final CordovaResourceApi resourceApi = webView.getResourceApi();
-        final Uri sourceUri = resourceApi.remapUri(Uri.parse(source));
+        Uri sourceUri = resourceApi.remapUri(Uri.parse(source));
 
         int uriType = CordovaResourceApi.getUriType(sourceUri);
         boolean useHttps = uriType == CordovaResourceApi.URI_TYPE_HTTPS;
@@ -241,7 +241,7 @@ public class Sync extends CordovaPlugin {
         TrackingInputStream inputStream = null;
         boolean cached = false;
         URL resourceUrl, base, next;
-        String location, url;
+        String location;
 
         OutputStream outputStream = null;
         try {
@@ -263,14 +263,13 @@ public class Sync extends CordovaPlugin {
                 }
                 inputStream = new SimpleTrackingInputStream(readResult.inputStream);
             } else {
-                url = sourceUri;
                 // connect to server
                 // Open a HTTP connection to the URL based on protocol following redirections
 
                 while (true) {
-                    connection = resourceApi.createHttpConnection(url);
+                    connection = resourceApi.createHttpConnection(sourceUri);
 
-                    uriType = CordovaResourceApi.getUriType(url);
+                    uriType = CordovaResourceApi.getUriType(sourceUri);
                     useHttps = uriType == CordovaResourceApi.URI_TYPE_HTTPS;
 
                     if (useHttps && trustEveryone) {
@@ -307,9 +306,9 @@ public class Sync extends CordovaPlugin {
                     if (connection.getResponseCode() == HttpURLConnection.HTTP_MOVED_PERM ||
                         connection.getResponseCode() == HttpURLConnection.HTTP_MOVED_TEMP) {
                         location = connection.getHeaderField("Location");
-                        base     = new URL(url);
+                        base     = sourceUri.toURL();
                         next     = new URL(base, location);  // Deal with relative URLs
-                        url      = next.toExternalForm();
+                        sourceUri = next.toURI();
                         continue;
                     }
 
