@@ -306,9 +306,9 @@ public class Sync extends CordovaPlugin {
                     if (connection.getResponseCode() == HttpURLConnection.HTTP_MOVED_PERM ||
                         connection.getResponseCode() == HttpURLConnection.HTTP_MOVED_TEMP) {
                         location = connection.getHeaderField("Location");
-                        base     = sourceUri.toURL();
+                        base     = new URL(sourceUri.toString());
                         next     = new URL(base, location);  // Deal with relative URLs
-                        sourceUri = next.toURI();
+                        sourceUri = Uri.parse(next.toString());
                         continue;
                     }
 
