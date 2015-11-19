@@ -26,7 +26,7 @@ import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
-import java.net.URL
+import java.net.URL;
 import java.net.URLConnection;
 import java.util.HashMap;
 import java.util.Iterator;
