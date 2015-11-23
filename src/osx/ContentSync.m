@@ -36,11 +36,20 @@
 }
 @end
 
-@implementation ContentSync
+@implementation ContentSync {
 
-- (CDVPlugin*) initWithWebView:(WebView*) theWebView {
+    NSMutableArray *syncTasks;
+
+}
+
+- (void) pluginInitialize {
+    [super pluginInitialize];
+
+    // disable for now as it causes problems with download
     [NSURLProtocol registerClass:[NSURLProtocolNoCache class]];
-    return self;
+
+    NSLog(@"Content sync plugin initialized.");
+    return;
 }
 
 - (CDVPluginResult*) preparePluginResult:(NSInteger) progress status:(NSInteger) status {
@@ -205,10 +214,20 @@
         NSLog(@"startDownload from %@", src);
         NSURL* downloadURL = [NSURL URLWithString:src];
 
+        if (appId == nil) {
+            appId = [srcURL lastPathComponent];
+        }
+
         // downloadURL is nil if malformed URL
         if (downloadURL == nil) {
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:INVALID_URL_ERR];
+
+        } else if ([self findSyncDataByAppId:appId]) {
+            NSLog(@"Download task already started for %@", appId);
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:IN_PROGRESS_ERR];
+
         } else {
+
             NSMutableURLRequest* request = [NSMutableURLRequest requestWithURL:downloadURL];
             request.timeoutInterval = 15.0;
             // Setting headers
@@ -220,24 +239,22 @@
                 }
             }
 
-            if (!self.syncTasks) {
-                self.syncTasks = [NSMutableArray arrayWithCapacity:1];
-            }
             NSURLSessionDownloadTask* downloadTask = [self.session downloadTaskWithRequest:request];
 
             ContentSyncTask* sData = [[ContentSyncTask alloc] init];
 
-            sData.appId = appId ? appId : [srcURL lastPathComponent];
+            sData.appId = appId;
             sData.downloadTask = downloadTask;
             sData.command = command;
             sData.progress = 0;
             sData.extractArchive = extractArchive;
 
-            [self.syncTasks addObject:sData];
+            [self addSyncTask:sData];
 
             [downloadTask resume];
 
             pluginResult = [self preparePluginResult:sData.progress status:Downloading];
+            [pluginResult setKeepCallbackAsBool:YES];
         }
 
     } else {
@@ -245,7 +262,6 @@
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:INVALID_URL_ERR];
     }
 
-    [pluginResult setKeepCallbackAsBool:YES];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 
 }
@@ -264,31 +280,52 @@
     }
 }
 
-- (ContentSyncTask*) findSyncDataByDownloadTask:(NSURLSessionDownloadTask*) downloadTask {
-    for (ContentSyncTask* sTask in self.syncTasks) {
-        if (sTask.downloadTask == downloadTask) {
-            return sTask;
+- (void) addSyncTask:(ContentSyncTask*) task {
+    @synchronized (self) {
+        if (!syncTasks) {
+            syncTasks = [NSMutableArray array];
         }
+        [syncTasks addObject:task];
     }
-    return nil;
+};
+
+- (void) removeSyncTask:(ContentSyncTask*) task {
+    @synchronized (self) {
+        [syncTasks removeObject:task];
+    }
+}
+
+- (ContentSyncTask*) findSyncDataByDownloadTask:(NSURLSessionDownloadTask*) downloadTask {
+    @synchronized (self) {
+        for (ContentSyncTask* sTask in syncTasks) {
+            if (sTask.downloadTask == downloadTask) {
+                return sTask;
+            }
+        }
+        return nil;
+    }
 }
 
 - (ContentSyncTask*) findSyncDataByPath {
-    for (ContentSyncTask* sTask in self.syncTasks) {
-        if ([sTask.archivePath isEqualToString:[self currentPath]]) {
-            return sTask;
+    @synchronized (self) {
+        for (ContentSyncTask* sTask in syncTasks) {
+            if ([sTask.archivePath isEqualToString:[self currentPath]]) {
+                return sTask;
+            }
         }
+        return nil;
     }
-    return nil;
 }
 
 - (ContentSyncTask*) findSyncDataByAppId:(NSString*) appId {
-    for (ContentSyncTask* sTask in self.syncTasks) {
-        if ([sTask.appId isEqualToString:appId]) {
-            return sTask;
+    @synchronized (self) {
+        for (ContentSyncTask* sTask in syncTasks) {
+            if ([sTask.appId isEqualToString:appId]) {
+                return sTask;
+            }
         }
+        return nil;
     }
-    return nil;
 }
 
 /**
@@ -420,33 +457,35 @@ didCompleteWithError:(NSError*) error {
         CDVPluginResult* pluginResult = nil;
 
         if (error == nil) {
-            if([(NSHTTPURLResponse*)[task response] statusCode] != 200) {
-                NSLog(@"Task: %@ completed with HTTP Error Code: %ld", task, [(NSHTTPURLResponse*)[task response] statusCode]);
+            if ([(NSHTTPURLResponse*) [task response] statusCode] != 200) {
+                NSLog(@"Task: %@ completed with HTTP Error Code: %ld", task, [(NSHTTPURLResponse*) [task response] statusCode]);
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:CONNECTION_ERR];
-                NSFileManager *fileManager = [NSFileManager defaultManager];
-                if([fileManager fileExistsAtPath:[sTask archivePath]]) {
+                NSFileManager* fileManager = [NSFileManager defaultManager];
+                if ([fileManager fileExistsAtPath:[sTask archivePath]]) {
                     NSLog(@"Deleting archive. It's probably an HTTP Error Page anyways");
                     [fileManager removeItemAtPath:[sTask archivePath] error:NULL];
                 }
+                [self removeSyncTask:sTask];
             } else {
-                double progress = (double)task.countOfBytesReceived / (double)task.countOfBytesExpectedToReceive;
+                double progress = (double) task.countOfBytesReceived / (double) task.countOfBytesExpectedToReceive;
                 NSLog(@"Task: %@ completed successfully", sTask.archivePath);
-                if(sTask.extractArchive) {
+                if (sTask.extractArchive) {
                     progress = ((progress / 2) * 100);
                     pluginResult = [self preparePluginResult:(NSInteger) progress status:Downloading];
                     [pluginResult setKeepCallbackAsBool:YES];
-                }
-                else {
+
+                } else {
                     NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
                     message[@"status"] = @(Complete);
                     message[@"localPath"] = [sTask archivePath];
                     pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
-                    [[self syncTasks] removeObject:sTask];
+                    [self removeSyncTask:sTask];
                 }
             }
         } else {
             NSLog(@"Task: %@ completed with error: %@", task, [error localizedDescription]);
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:CONNECTION_ERR];
+            [self removeSyncTask:sTask];
         }
         if (![[error localizedDescription] isEqual:@"cancelled"]) {
             [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
@@ -558,7 +597,7 @@ didCompleteWithError:(NSError*) error {
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
         [pluginResult setKeepCallbackAsBool:NO];
         [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
-        [[self syncTasks] removeObject:sTask];
+        [self removeSyncTask: sTask];
     }
 }
 
@@ -608,10 +647,10 @@ didCompleteWithError:(NSError*) error {
     dispatch_once(&onceToken, ^{
         NSURLSessionConfiguration* configuration;
 #ifdef __MAC_10_10
-        #pragma clang diagnostic push
-        #pragma ide diagnostic ignored "UnavailableInDeploymentTarget"
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "UnavailableInDeploymentTarget"
         configuration = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:sessionId];
-        #pragma clang diagnostic pop
+#pragma clang diagnostic pop
 #else
         configuration = [NSURLSessionConfiguration backgroundSessionConfiguration:sessionId];
 #endif
