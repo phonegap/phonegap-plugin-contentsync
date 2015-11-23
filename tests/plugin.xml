@@ -6,6 +6,17 @@
     version="1.0.0">
     <name>PhoneGap Content Sync Plugin Tests</name>
     <license>Apache 2.0</license>
+
+    <dependency id="cordova-plugin-file" version=">=3.0.0" />
+
+    <!-- ensure proper file plugin setting -->
+    <config-file target="config.xml" parent="/*">
+        <preference name="iosPersistentFileLocation" value="Library" />
+    </config-file>
+
     <js-module src="tests.js" name="tests">
     </js-module>
+
+    <!-- add test file that is enumerated before the directories (see issue #84) -->
+    <asset src="anyfile.txt" target="anyfile.txt" />
 </plugin>

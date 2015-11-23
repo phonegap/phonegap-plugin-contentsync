@@ -22,6 +22,7 @@ typedef NSUInteger ErrorCodes;
 
 @property (nonatomic) CDVInvokedUrlCommand* command;
 @property (nonatomic) NSURLSessionDownloadTask* downloadTask;
+@property (nonatomic) NSString* appId;
 @property (nonatomic) NSString* archivePath;
 @property (nonatomic) NSInteger progress;
 @property (nonatomic) BOOL extractArchive;
@@ -33,6 +34,7 @@ typedef NSUInteger ErrorCodes;
 @property (nonatomic) NSString* currentPath;
 @property (nonatomic) NSMutableArray *syncTasks;
 @property (nonatomic) NSURLSession* session;
+@property (nonatomic) NSMutableArray* trustedHosts;
 
 - (void) sync:(CDVInvokedUrlCommand*)command;
 - (void) cancel:(CDVInvokedUrlCommand*)command;

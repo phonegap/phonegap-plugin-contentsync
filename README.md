@@ -4,7 +4,7 @@
 
 ## Installation
 
-This requires phonegap 5.0+ ( current stable v1.0.0 )
+This requires phonegap 5.0+ ( current stable v1.2.0 )
 
 ```
 phonegap plugin add phonegap-plugin-contentsync
@@ -57,7 +57,9 @@ Parameter | Description
 `options.headers` | `Object` _(Optional)_ Set of headers to use when requesting the remote content from `options.src`.
 `options.copyCordovaAssets` | `Boolean` _(Optional)_ Copies `cordova.js`, `cordova_plugins.js` and `plugins/` to sync'd folder. This operation happens after the source content has been cached, so it will override any existing Cordova assets. Default is `false`.
 `options.copyRootApp` | `Boolean` _(Optional)_ Copies the `www` folder to sync'd folder. This operation happens before the source content has been cached, then the source content is cached and finally it copies `cordova.js`, `cordova_plugins.js` and `plugins/` to sync'd folder to remain consistent with the installed plugins. Default is `false`.
-`options.timeout` | `Double` Request timeout. 
+`options.timeout` | `Double` _(Optional)_ Request timeout. 
+`options.trustHost` | `Boolean` _(Optional)_ Trust SSL host. Host defined in `options.src` will be trusted. Ignored if `options.src` is undefined.
+`options.manifest` | `String` _(Optional)_ If specified the `copyRootApp` functionality will use the list of files contained in the manifest file during it's initial copy. {Android only}
 
 #### Returns
 
@@ -217,13 +219,43 @@ However, if you do need to use the File plugin to navigate the data downloaded b
 var sync = ContentSync.sync({ src: 'http://myserver/assets/movie-1', id: 'movie-1' });
 
 sync.on('complete', function(data) {
-    window.resolveLocalFileSystemURLw("file://" + data.localPath, function(entry) {
+    window.resolveLocalFileSystemURL("file://" + data.localPath, function(entry) {
     	// entry is a DirectoryEntry object
     }, function(error) {
         console.log("Error: " + error.code);
     }); 
 });
 ```
+
+As of version 1.2.0 of the plugin the location in which the plugin stores the synched content is equivaltent to the `cordova.file.dataDirectory` path from the `cordova-plugin-file` package. This is a change from previous versions so please be aware you may need to do a full sync after upgrading to version 1.2.0.
+
+Platform | Path
+------------------ | -----------
+Android | `/data/data/<app-id>/files/<options.id>`
+iOS | `/var/mobile/Applications/<UUID>/Library/NoCloud/<options.id>`
+
+## Copy Root App
+
+The asset file system is pretty slow on Android so in order to speed up the initial copy of your app to the content sync location you can specify a manifest file on Android. The file must be in the format:
+
+```javascript
+{
+    'files': [
+        'img/logo.png',
+        'index.html',
+        'js/index.js'
+   ]
+}
+```
+
+and if the file is placed in your apps `www` folder you would invoke it via:
+
+```javascript
+var sync = ContentSync.sync({ src: 'http://myserver/assets/movie-1', id: 'movie-1', 
+        copyRootApp: true, manifest: 'manifest.json' });
+```
+
+This results in the `copyRootApp` taking about a third of the time as when a manifest file is not specified.
 
 ## Native Requirements
 
