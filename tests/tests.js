@@ -31,7 +31,7 @@ exports.defineAutoTests = function() {
 	        });
 
 	        sync.on('error', function(e) {
-	        	done();
+                done();
 	        });
 
         }, 60000); // wait a full 60 secs
@@ -140,7 +140,6 @@ exports.defineAutoTests = function() {
                 done();
             });
         });
-
     });
 
 

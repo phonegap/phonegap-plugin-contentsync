@@ -18,7 +18,8 @@
         "windows8",
         "windows",
         "wp8",
-        "browser"
+        "browser",
+        "osx"
       ]
     },
     "keywords": [
@@ -29,7 +30,8 @@
       "cordova-windows8",
       "cordova-windows",
       "cordova-wp8",
-      "cordova-browser"
+      "cordova-browser",
+      "cordova-osx"
     ],
     "engines": [
       {
