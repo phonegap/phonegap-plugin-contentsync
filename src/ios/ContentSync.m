@@ -17,7 +17,14 @@
 }
 @end
 
-@implementation ContentSync
+@implementation ContentSync {
+
+    /**
+     * Array of all running tasks
+     */
+    NSMutableArray* _syncTasks;
+
+}
 
 - (CDVPlugin*)initWithWebView:(UIWebView*)theWebView {
     [NSURLProtocol registerClass:[NSURLProtocolNoCache class]];
@@ -63,7 +70,7 @@
             return;
         }
     }
-    
+
     BOOL copyRootApp = [[command argumentAtIndex:5 withDefault:@(NO)] boolValue];
 
     if(copyRootApp == YES) {
@@ -132,7 +139,7 @@
     NSString* appId = [command argumentAtIndex:1];
     NSNumber* timeout = [command argumentAtIndex:6 withDefault:[NSNumber numberWithDouble:15]];
 
-    self.session = [self backgroundSession:timeout];
+    NSURLSession* session = [self backgroundSession:timeout];
 
     // checking if URL is valid
     NSURL *srcURL = [NSURL URLWithString:src];
@@ -163,36 +170,38 @@
         // downloadURL is nil if malformed URL
         if(downloadURL == nil) {
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:INVALID_URL_ERR];
+
         } else {
-            NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:downloadURL];
-            request.timeoutInterval = 15.0;
-            // Setting headers
-            NSDictionary *headers = [command argumentAtIndex:3 withDefault:nil andClass:[NSDictionary class]];
-            if(headers != nil) {
-                for (NSString* header in [headers allKeys]) {
-                    NSLog(@"Setting header %@ %@", header, [headers objectForKey:header]);
-                    [request addValue:[headers objectForKey:header] forHTTPHeaderField:header];
-                }
-            }
-
-            if(!self.syncTasks) {
-                self.syncTasks = [NSMutableArray arrayWithCapacity:1];
-            }
-            NSURLSessionDownloadTask *downloadTask = [self.session downloadTaskWithRequest:request];
-
             ContentSyncTask* sData = [[ContentSyncTask alloc] init];
-
             sData.appId = appId ? appId : [srcURL lastPathComponent];
-            sData.downloadTask = downloadTask;
             sData.command = command;
             sData.progress = 0;
             sData.extractArchive = extractArchive;
 
-            [self.syncTasks addObject:sData];
+            if (![self addSyncTask:sData]) {
+                NSLog(@"Download task already started for %@", appId);
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:IN_PROGRESS_ERR];
 
-            [downloadTask resume];
+            } else {
+                NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:downloadURL];
+                request.timeoutInterval = 15.0;
 
-            pluginResult = [self preparePluginResult:sData.progress status:Downloading];
+                // Setting headers
+                NSDictionary *headers = [command argumentAtIndex:3 withDefault:nil andClass:[NSDictionary class]];
+                if(headers != nil) {
+                    for (NSString* header in [headers allKeys]) {
+                        NSLog(@"Setting header %@ %@", header, [headers objectForKey:header]);
+                        [request addValue:[headers objectForKey:header] forHTTPHeaderField:header];
+                    }
+                }
+
+                // create download task and start downloading
+                sData.downloadTask = [session downloadTaskWithRequest:request];
+                [sData.downloadTask resume];
+
+                pluginResult = [self preparePluginResult:sData.progress status:Downloading];
+            }
+
         }
 
     } else {
@@ -219,31 +228,60 @@
     }
 }
 
-- (ContentSyncTask *)findSyncDataByDownloadTask:(NSURLSessionDownloadTask*)downloadTask {
-    for(ContentSyncTask* sTask in self.syncTasks) {
-        if(sTask.downloadTask == downloadTask) {
-            return sTask;
+- (bool) addSyncTask:(ContentSyncTask*) task {
+    @synchronized (self) {
+        if (!_syncTasks) {
+            _syncTasks = [NSMutableArray array];
+        } else {
+            // check if task with the same id already exists
+            for (ContentSyncTask* sTask in _syncTasks) {
+                if ([sTask.appId isEqualToString:task.appId]) {
+                    return false;
+                }
+            }
         }
+        [_syncTasks addObject:task];
+        return true;
     }
-    return nil;
+};
+
+- (void) removeSyncTask:(ContentSyncTask*) task {
+    @synchronized (self) {
+        [_syncTasks removeObject:task];
+    }
 }
 
-- (ContentSyncTask *)findSyncDataByPath {
-    for(ContentSyncTask* sTask in self.syncTasks) {
-        if([sTask.archivePath isEqualToString:[self currentPath]]) {
-            return sTask;
+- (ContentSyncTask*) findSyncDataByDownloadTask:(NSURLSessionDownloadTask*) downloadTask {
+    @synchronized (self) {
+        for (ContentSyncTask* sTask in _syncTasks) {
+            if (sTask.downloadTask == downloadTask) {
+                return sTask;
+            }
         }
+        return nil;
     }
-    return nil;
 }
 
-- (ContentSyncTask *)findSyncDataByAppId:(NSString*)appId {
-    for(ContentSyncTask* sTask in self.syncTasks) {
-        if([sTask.appId isEqualToString:appId]) {
-            return sTask;
+- (ContentSyncTask*) findSyncDataByPath: (NSString*) path {
+    @synchronized (self) {
+        for (ContentSyncTask* sTask in _syncTasks) {
+            if ([sTask.archivePath isEqualToString:path]) {
+                return sTask;
+            }
         }
+        return nil;
     }
-    return nil;
+}
+
+- (ContentSyncTask*) findSyncDataByAppId:(NSString*) appId {
+    @synchronized (self) {
+        for (ContentSyncTask* sTask in _syncTasks) {
+            if ([sTask.appId isEqualToString:appId]) {
+                return sTask;
+            }
+        }
+        return nil;
+    }
 }
 
 - (void)URLSession:(NSURLSession *)session didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition, NSURLCredential *))completionHandler{
@@ -361,6 +399,7 @@
                     NSLog(@"Deleting archive. It's probably an HTTP Error Page anyways");
                     [fileManager removeItemAtPath:[sTask archivePath] error:NULL];
                 }
+                [self removeSyncTask:sTask];
             } else {
                 double progress = (double)task.countOfBytesReceived / (double)task.countOfBytesExpectedToReceive;
                 NSLog(@"Task: %@ completed successfully", sTask.archivePath);
@@ -374,12 +413,13 @@
                     [message setObject:[NSNumber numberWithInteger:Complete] forKey:@"status"];
                     [message setObject:[sTask archivePath] forKey:@"localPath"];
                     pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
-                    [[self syncTasks] removeObject:sTask];
+                    [self removeSyncTask:sTask];
                 }
             }
         } else {
             NSLog(@"Task: %@ completed with error: %@", task, [error localizedDescription]);
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:CONNECTION_ERR];
+            [self removeSyncTask:sTask];
         }
         if(![[error localizedDescription]  isEqual: @"cancelled"]) {
             [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
@@ -434,13 +474,12 @@
     }];
 }
 
-
 - (void)zipArchiveWillUnzipArchiveAtPath:(NSString *)path zipInfo:(unz_global_info)zipInfo {
-    self.currentPath = path;
+
 }
 
-- (void) zipArchiveProgressEvent:(NSInteger)loaded total:(NSInteger)total {
-    ContentSyncTask* sTask = [self findSyncDataByPath];
+- (void) zipArchiveProgressEvent:(NSInteger)loaded total:(NSInteger)total archivePath:(NSString*) path {
+    ContentSyncTask* sTask = [self findSyncDataByPath:path];
     if(sTask) {
         //NSLog(@"Extracting %ld / %ld", (long)loaded, (long)total);
         double progress = ((double)loaded / (double)total);
@@ -453,11 +492,11 @@
 
 - (void) zipArchiveDidUnzipArchiveAtPath:(NSString *)path zipInfo:(unz_global_info)zipInfo unzippedPath:(NSString *)unzippedPath {
     NSLog(@"unzipped path %@", unzippedPath);
-    ContentSyncTask* sTask = [self findSyncDataByPath];
+    ContentSyncTask* sTask = [self findSyncDataByPath: path];
     if(sTask) {
-        
+
         BOOL copyCordovaAssets = [[sTask.command argumentAtIndex:4 withDefault:@(NO)] boolValue];
-        
+
         if(copyCordovaAssets == YES) {
             [self copyCordovaAssets:unzippedPath];
         }
@@ -477,7 +516,7 @@
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
         [pluginResult setKeepCallbackAsBool:NO];
         [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
-        [[self syncTasks] removeObject:sTask];
+        [self removeSyncTask:sTask];
     }
 }
 
@@ -560,6 +599,15 @@
 }
 
 @end
+
+
+@implementation ContentSyncZipDelegate {
+    ContentSync* parent;
+    ContentSyncTask* task;
+}
+@end
+
+
 
 /**
  * NSURLProtocolNoCache

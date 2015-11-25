@@ -141,6 +141,39 @@ exports.defineAutoTests = function() {
             });
         });
 
+        it("syncing the same id concurrently should fail", function(done){
+
+            var url = "https://github.com/timkim/zipTest/archive/master.zip";
+            var sync1 = ContentSync.sync({ src: url, id: 'myapps/myapp', type: 'replace', copyCordovaAssets: false, headers: false });
+            var sync2 = ContentSync.sync({ src: url, id: 'myapps/myapp', type: 'replace', copyCordovaAssets: false, headers: false });
+
+            var numFinished = 0;
+
+            sync1.on('complete', function(data) {
+                expect(data).toBeDefined("On complete, data is not null");
+                if (++numFinished == 2) {
+                    done();
+                }
+            });
+            sync1.on('error', function(e) {
+                fail(e);
+                done();
+            });
+
+            sync2.on('complete', function(data) {
+                fail('syncing concurrently the same id should fail.');
+                done();
+            });
+            sync2.on('error', function(e) {
+                expect(e).toEqual(5);
+                if (++numFinished == 2) {
+                    done();
+                }
+            });
+
+        }, 60000); // wait a full 60 secs
+
+
     });
 
 

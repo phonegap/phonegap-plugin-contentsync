@@ -15,6 +15,7 @@ enum ErrorCodes {
     CONNECTION_ERR,
     UNZIP_ERR,
     LOCAL_ERR,
+    IN_PROGRESS_ERR,
 };
 typedef NSUInteger ErrorCodes;
 
@@ -31,9 +32,6 @@ typedef NSUInteger ErrorCodes;
 
 @interface ContentSync : CDVPlugin <NSURLSessionDelegate, NSURLSessionTaskDelegate, NSURLSessionDownloadDelegate, SSZipArchiveDelegate>
 
-@property (nonatomic) NSString* currentPath;
-@property (nonatomic) NSMutableArray *syncTasks;
-@property (nonatomic) NSURLSession* session;
 @property (nonatomic) NSMutableArray* trustedHosts;
 
 - (void) sync:(CDVInvokedUrlCommand*)command;

@@ -57,7 +57,7 @@ Parameter | Description
 `options.headers` | `Object` _(Optional)_ Set of headers to use when requesting the remote content from `options.src`.
 `options.copyCordovaAssets` | `Boolean` _(Optional)_ Copies `cordova.js`, `cordova_plugins.js` and `plugins/` to sync'd folder. This operation happens after the source content has been cached, so it will override any existing Cordova assets. Default is `false`.
 `options.copyRootApp` | `Boolean` _(Optional)_ Copies the `www` folder to sync'd folder. This operation happens before the source content has been cached, then the source content is cached and finally it copies `cordova.js`, `cordova_plugins.js` and `plugins/` to sync'd folder to remain consistent with the installed plugins. Default is `false`.
-`options.timeout` | `Double` _(Optional)_ Request timeout. 
+`options.timeout` | `Double` _(Optional)_ Request timeout.
 `options.trustHost` | `Boolean` _(Optional)_ Trust SSL host. Host defined in `options.src` will be trusted. Ignored if `options.src` is undefined.
 `options.manifest` | `String` _(Optional)_ If specified the `copyRootApp` functionality will use the list of files contained in the manifest file during it's initial copy. {Android only}
 
@@ -120,7 +120,7 @@ The event `error` will trigger when an internal error occurs and the cache is ab
 
 Callback Parameter | Description
 ------------------ | -----------
-`e` | `Integer` Enumeration of `ERROR_STATE` to describe the current error 
+`e` | `Integer` Enumeration of `ERROR_STATE` to describe the current error
 
 #### Example
 
@@ -182,6 +182,8 @@ Error Code | Description
 `1` | `INVALID_URL_ERR`
 `2` | `CONNECTION_ERR`
 `3` | `UNZIP_ERR`
+`4` | `LOCAL_ERR`
+`5` | `IN_PROGRESS_ERR`
 
 ### ContentSync.unzip || Zip.unzip - ContentSync.download
 
@@ -223,7 +225,7 @@ sync.on('complete', function(data) {
     	// entry is a DirectoryEntry object
     }, function(error) {
         console.log("Error: " + error.code);
-    }); 
+    });
 });
 ```
 
@@ -251,7 +253,7 @@ The asset file system is pretty slow on Android so in order to speed up the init
 and if the file is placed in your apps `www` folder you would invoke it via:
 
 ```javascript
-var sync = ContentSync.sync({ src: 'http://myserver/assets/movie-1', id: 'movie-1', 
+var sync = ContentSync.sync({ src: 'http://myserver/assets/movie-1', id: 'movie-1',
         copyRootApp: true, manifest: 'manifest.json' });
 ```
 
@@ -271,7 +273,7 @@ This results in the `copyRootApp` taking about a third of the time as when a man
 npm test
 ```
 
-## Emulator Testing 
+## Emulator Testing
 
 The emulator tests use cordova-paramedic and the cordova-plugin-test-framework.
 To run them you will need cordova-paramedic installed.
