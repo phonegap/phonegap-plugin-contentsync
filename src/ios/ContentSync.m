@@ -140,9 +140,7 @@
     [urlRequest setHTTPMethod:@"HEAD"];
     NSURLResponse *response = nil;
     NSError *error = nil;
-    NSData *data = [NSURLConnection sendSynchronousRequest:urlRequest
-                                         returningResponse:&response
-                                                     error:&error];
+    [NSURLConnection sendSynchronousRequest:urlRequest returningResponse:&response error:&error];
 
     if(srcURL && srcURL.scheme && srcURL.host && error == nil) {
 
@@ -325,11 +323,10 @@
                     NSLog(@"Moving %@ to %@", [srcURL path], [dstURL path]);
 
                     success = [fileManager moveItemAtURL:srcURL toURL:dstURL error:&errorCopy];
-                    if(success) {
-                        sTask.archivePath = [dstURL path];
-                    } else {
-                        NSLog(@"Error Moving :-( but this can be non FATAL %@", [errorCopy description]);
+                    if(!success) {
+                        NSLog(@"Error copying. File might already exist %@", [errorCopy description]);
                     }
+                    sTask.archivePath = [dstURL path];
                     sTask.extractArchive = NO;
                 } else {
                     NSLog(@"Unable to create ID :-[ %@", [error description]);
