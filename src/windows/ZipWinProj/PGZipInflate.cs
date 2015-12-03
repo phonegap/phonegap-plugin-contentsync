@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Storage;
@@ -52,8 +50,8 @@ namespace ZipWinProj
                     StorageFile uncompressedFile = await destFolder.CreateFileAsync(entry.Name, CreationCollisionOption.ReplaceExisting);
 
                     // Store the contents 
-                    using (IRandomAccessStream uncompressedFileStream =
-                    await uncompressedFile.OpenAsync(FileAccessMode.ReadWrite))
+                    using (IRandomAccessStream uncompressedFileStream = 
+                        await uncompressedFile.OpenAsync(FileAccessMode.ReadWrite))
                     {
                         using (Stream outstream = uncompressedFileStream.AsStreamForWrite())
                         {
@@ -64,19 +62,36 @@ namespace ZipWinProj
                 }
             }
         }
-        
 
         private static async Task Inflate(StorageFile zipFile, StorageFolder destFolder)
         {
+            if (zipFile == null)
+            {
+                throw new Exception("StorageFile (zipFile) passed to Inflate is null");
+            }
+            else if (destFolder == null)
+            {
+                throw new Exception("StorageFolder (destFolder) passed to Inflate is null");
+            }
+
             Stream zipStream = await zipFile.OpenStreamForReadAsync();
 
             using (ZipArchive zipArchive = new ZipArchive(zipStream, ZipArchiveMode.Read))
             {
+                //Debug.WriteLine("Count = " + zipArchive.Entries.Count);
                 foreach (ZipArchiveEntry entry in zipArchive.Entries)
                 {
-                    await InflateEntryAsync(entry, destFolder);
+                    //Debug.WriteLine("Extracting {0} to {1}", entry.FullName, destFolder.Path);
+                    try
+                    {
+                        await InflateEntryAsync(entry, destFolder);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine("Exception: " + ex.Message);
+                    }
                 }
-            }     
+            }
         }
     }
 }
