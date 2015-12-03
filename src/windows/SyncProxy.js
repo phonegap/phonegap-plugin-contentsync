@@ -1,3 +1,4 @@
+
 // progress-state 
 // 0:stopped, 1:downloading,2:extracting,3:complete
 
@@ -11,13 +12,6 @@ var appData = Windows.Storage.ApplicationData.current;
 function cleanPath(pathStr) {
     return pathStr.replace("/", "\\");
 }
-
-function doDownload(destPath, srcUrl) {
-    // return a promise
-}
-
-
-
 
 var Sync = {
     sync: function (cbSuccess, cbFail, options) {
@@ -62,7 +56,7 @@ var Sync = {
         }
         // folder was created if need be
         job.then(function (folder) {
-            //destFolder = folder; // hmm, should be someDir/myDir when given someDir.myDir.zip aka fileName minus .zip
+            destFolder = folder; // hmm, should be someDir/myDir when given someDir.myDir.zip aka fileName minus .zip
             return folder.createFileAsync(fileName, Windows.Storage.CreationCollisionOption.replaceExisting);
         })
         .then(function (storageFile) {
@@ -82,16 +76,17 @@ var Sync = {
             //console.log(err);
             cbFail(1); // INVALID_URL_ERR
         })
-        .then(function (complete) { // download has begun
-            console.log(complete);
+        .then(function downloadComplete(complete) { // download has begun
+            // console.log(complete);
             // TODO: extract it! 
-            cbSuccess({ 'progress': 50, 'status': 2 });
+            cbSuccess({ 'progress': 50, 'status': 2 }); // EXTRACTING
+
             ZipWinProj.PGZipInflate.inflateAsync(complete.resultFile, destFolder)
             .then(function (obj) {
-                console.log("inflate success");
+                cbSuccess({ 'progress': 100, 'status': 3 }); // COMPLETE
             },
             function (e) {
-                console.log("inflate error");
+                cbFail(3); // UNZIP_ERR
             });
 
         },
