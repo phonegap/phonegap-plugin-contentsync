@@ -300,14 +300,6 @@
                 NSURL *extractURL = [libraryDirectory URLByAppendingPathComponent:[@"NoCloud" stringByAppendingPathComponent:[sTask appId]]];
                 NSString* type = [sTask.command argumentAtIndex:2 withDefault:@"replace"];
 
-                // copy root app right before we extract
-                if([[[sTask command] argumentAtIndex:5 withDefault:@(NO)] boolValue] == YES) {
-                    NSLog(@"Copying Cordova Root App to %@ as requested", [extractURL path]);
-                    if(![self copyCordovaAssets:[extractURL path] copyRootApp:YES]) {
-                        NSLog(@"Error copying Cordova Root App");
-                    };
-                }
-
                 CDVInvokedUrlCommand* command = [CDVInvokedUrlCommand commandFromJson:[NSArray arrayWithObjects:sTask.command.callbackId, @"Zip", @"unzip", [NSMutableArray arrayWithObjects:[sourceURL absoluteString], [extractURL absoluteString], type, nil], nil]];
                 [self unzip:command];
             } else {
