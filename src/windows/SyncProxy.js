@@ -83,7 +83,8 @@ var Sync = {
 
             ZipWinProj.PGZipInflate.inflateAsync(complete.resultFile, destFolder)
             .then(function (obj) {
-                cbSuccess({ 'progress': 100, 'status': 3 }); // COMPLETE
+                cbSuccess({'localPath':destFolder});
+                //cbSuccess({ 'progress': 100, 'status': 3 }); // COMPLETE
             },
             function (e) {
                 cbFail(3); // UNZIP_ERR
