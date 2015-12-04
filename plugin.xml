@@ -29,6 +29,12 @@ xmlns:android="http://schemas.android.com/apk/res/android"
         <source-file src="src/android/Sync.java" target-dir="src/com/adobe/phonegap/contentsync" />
 	</platform>
 
+    <platform name="browser">
+        <js-module src="src/browser/Sync.js" name="Sync">
+            <merges target="ContentSync" />
+        </js-module>
+    </platform>
+
     <platform name="wp8">
         <config-file target="config.xml" parent="/*">
             <feature name = "Sync">
