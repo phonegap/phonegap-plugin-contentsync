@@ -3,6 +3,7 @@
 exports.defineAutoTests = function() {
 
     describe('phonegap-plugin-contentsync', function() {
+
         it("should exist", function() {
             expect(window.ContentSync).toBeDefined();
             expect(typeof window.ContentSync.sync == 'function').toBe(true);
@@ -149,8 +150,10 @@ exports.defineAutoTests = function() {
 			it("Has linked C# code", function(done){
 				//
 				expect(ZipWinProj).toBeDefined("ZipWinProj should exist");
-				expect(ZipWinProj.PGZipInflate).toBeDefined("ZipWinProj.PGZipInflate should exist");
-				expect(ZipWinProj.PGZipInflate.InflateAsync).toBeDefined("ZipWinProj.PGZipInflate.InflateAsync should exist");
+				expect(ZipWinProj.PGZipInflate)
+                    .toBeDefined("ZipWinProj.PGZipInflate should exist");
+				expect(ZipWinProj.PGZipInflate.inflateAsync)
+                    .toBeDefined("ZipWinProj.PGZipInflate.inflateAsync should exist");
 	        	done();
 			});
 
