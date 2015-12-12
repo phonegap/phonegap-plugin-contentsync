@@ -2,6 +2,18 @@
 
 exports.defineAutoTests = function() {
 
+    var _it = it;
+it = function (text,funk) {
+    if (text.indexOf("can sync") == 0) {
+        return _it(text, funk);
+    }
+    else {
+        console.log("Skipping Test : " + text);
+    }
+} 
+
+jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
+
     describe('phonegap-plugin-contentsync', function() {
 
         it("should exist", function() {
@@ -11,27 +23,41 @@ exports.defineAutoTests = function() {
             expect(typeof window.ContentSync.unzip == 'function').toBe(true);
         });
 
+
+
         it("can sync", function(done){
+
+            
 
         	var progressEvent = null;
         	var url = "https://github.com/timkim/zipTest/archive/master.zip";
         	var sync = ContentSync.sync({ src: url, id: 'myapps/myapp', type: 'replace', copyCordovaAssets: false, headers: false });
 
 	        sync.on('progress', function(progress) {
+                //console.log("in progress callback " + Object.getOwnPropertyNames(progress));
+                console.log("onProgress :: " + progress.progress + " status = " + progress.status);
 	            if(!progressEvent) {
 	            	progressEvent = progress;
 	            }
 	        });
 
 	        sync.on('complete', function(data) {
+                console.log("progress = " + progressEvent);
 	        	expect(progressEvent).toBeDefined("Progress should have been received");
+
+                console.log("progressEvent.status = " + progressEvent.status);
 	        	expect(progressEvent.status).toBeDefined("Progress event should have a status prop");
+
 	        	expect(progressEvent.progress).toBeDefined("Progress event should have a progress prop");
+                console.log("progressEvent.progress = " + progressEvent.progress);
+
+                console.log("data = " + data);
 	        	expect(data).toBeDefined("On complete, data is not null");
 	        	done();
 	        });
 
 	        sync.on('error', function(e) {
+                console.log("got error back :: " + e);
 	        	done();
 	        });
 

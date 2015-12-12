@@ -7,7 +7,7 @@
     <name>PhoneGap Content Sync Plugin Tests</name>
     <license>Apache 2.0</license>
 
-    <dependency id="cordova-plugin-file" version=">=3.0.0" />
+    <dependency id="cordova-plugin-file" version=">=4.0.0" />
 
     <!-- ensure proper file plugin setting -->
     <config-file target="config.xml" parent="/*">
