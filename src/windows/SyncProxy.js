@@ -11,7 +11,7 @@ var FileOpts = Windows.Storage.CreationCollisionOption;
 var getFolderFromPathAsync = Windows.Storage.StorageFolder.getFolderFromPathAsync;
 
 function cleanPath(pathStr) {
-    return pathStr.replace("/", "\\");
+    return pathStr.replace(/\//g, "\\");
 }
 
 function copyRootApp(destPath) {
@@ -97,19 +97,22 @@ var Sync = {
 
         var destFolder = null;
 
-        //if (type == "local") {
-        //    // just check if the file exists, and return it's path if it does
-        //}
+        if (type == "local") {
+            // just check if the file exists, and return it's path if it does
+            id = options[1];
+        }
         
         var fileName = id;
-        if (fileName.indexOf(".zip") < 0) { // todo, could be some.zip/file ...
-            fileName += ".zip";
-        }
+
         var subFolder = null;
         if (id.indexOf("\\") > -1) {
             var pathParts = id.split("\\");
-            //fileName = pathParts.pop();
+            fileName = pathParts.pop();
             subFolder = pathParts.join("\\");
+        }
+
+        if (fileName.indexOf(".zip") < 0) { // todo, could be some.zip/file ...
+            fileName += ".zip";
         }
 
         var job = getFolderFromPathAsync(appData.localFolder.path);
