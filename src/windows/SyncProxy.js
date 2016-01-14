@@ -1,4 +1,3 @@
-// progress-state 
 // 0:stopped, 1:downloading,2:extracting,3:complete
 
 // error-state
@@ -9,6 +8,9 @@
 var appData = Windows.Storage.ApplicationData.current;
 var FileOpts = Windows.Storage.CreationCollisionOption;
 var getFolderFromPathAsync = Windows.Storage.StorageFolder.getFolderFromPathAsync;
+var getFileFromPathAsync = Windows.Storage.StorageFile.getFileFromPathAsync;
+var replaceExisting = Windows.Storage.NameCollisionOption.replaceExisting;
+var AppPath = Windows.ApplicationModel.Package.current.installedLocation.path;
 
 function cleanPath(pathStr) {
     return pathStr.replace(/\//g, "\\");
@@ -30,8 +32,8 @@ function startDownload(src, storageFile) {
     return download.startAsync();
 }
 
-function copyFolderAsync(src, dst, name) {
-    console.log("copyFolderAsync :: " + src.name + " => " + dst.name);
+function recursiveCopyFolderAsync(src, dst, name) {
+    //console.log("recursiveCopyFolderAsync :: " + src.name + " => " + dst.name);
     name = name ? name : src.name;
     return new WinJS.Promise(function (complete, failed) {
         WinJS.Promise.join({
@@ -43,15 +45,15 @@ function copyFolderAsync(src, dst, name) {
             if (!(resultObj.files.length || resultObj.folders.length)) {
                 // nothing to copy
                 complete();
-                return;
+                return 1;
             }
             var fileCount = resultObj.files.length;
             var copyfolders = function () {
                 if (!fileCount--) {
                     complete();
-                    return;
+                    return 2;
                 }
-                copyFolderAsync(resultObj.folders[fileCount], dst)
+                recursiveCopyFolderAsync(resultObj.folders[fileCount], dst)
                 .done(function () {
                     copyfolders();
                 }, failed);
@@ -61,11 +63,11 @@ function copyFolderAsync(src, dst, name) {
                     // done with files, move on to folders
                     fileCount = resultObj.folders.length;
                     copyfolders();
-                    return;
+                    return 3;
                 }
                 var file = resultObj.files[fileCount];
-                console.log("copying " + file.name + " => " + resultObj.destFolder.name);
-                file.copyAsync(resultObj.destFolder)
+                //console.log("copying " + file.name + " => " + resultObj.destFolder.name);
+                file.copyAsync(resultObj.destFolder, file.name, replaceExisting)
                 .done(function () {
                     copyfiles();
                 }, failed);
@@ -95,71 +97,155 @@ var Sync = {
         var trustHost = options[7];
         var manifest = options[8];
 
-        var destFolder = null;
+        var destFolderPath = cleanPath(id);
+        var rootTempFolder = null;
 
-        if (type == "local") {
-            // just check if the file exists, and return it's path if it does
-            id = options[1];
-        }
-        
+        var destFolder = null;
+        var destZipFile = null;
         var fileName = id;
 
-        var subFolder = null;
         if (id.indexOf("\\") > -1) {
             var pathParts = id.split("\\");
             fileName = pathParts.pop();
-            subFolder = pathParts.join("\\");
         }
 
         if (fileName.indexOf(".zip") < 0) { // todo, could be some.zip/file ...
             fileName += ".zip";
         }
 
-        var job = getFolderFromPathAsync(appData.localFolder.path);
-        if (subFolder) {
-            job = job.then(function (folder) {
-                return folder.createFolderAsync(subFolder, FileOpts.openIfExists);
+        var folderExisted = false;
+        function getOrCreateLocalFolder(folderPath) {
+            console.log("folderPath = " + folderPath);
+            return appData.localFolder.getFolderAsync(folderPath)
+            .then(function (folder) {
+                folderExisted = true;
+                return folder;
             },
             function (err) {
-                console.log(err);
+                // folder does not exist, let's create it
+                console.log("error: " + err.description);
+                return appData.localFolder.createFolderAsync(folderPath)
+                .then(function (folder) {
+                    return folder;
+                },
+                function (err) {
+
+                });
             });
         }
-        // folder was created if need be
-        job.then(function (folder) {
-            destFolder = folder; // hmm, should be someDir/myDir when given someDir.myDir.zip aka fileName minus .zip
-            return folder.createFileAsync(fileName, FileOpts.replaceExisting);
-        })
-        // get www/ folder
-        .then(function (storageFile) {
-            console.log('doCopyCordovaAssets ' + storageFile.name);
-            var root = Windows.ApplicationModel.Package.current.installedLocation.path;
-            var path = root + "\\www";
-            return getFolderFromPathAsync(path);
-        })
-        .then(function (wwwFolder) {
-            return copyFolderAsync(wwwFolder, destFolder);
-        })
-        // download
-        .then(function () {
-            try {
-                if (src) {
-                    return startDownload(src, storageFile);
+
+        WinJS.Promise.join({
+            wwwFolder: getFolderFromPathAsync(AppPath + "\\www"),
+            destFolder: getOrCreateLocalFolder(destFolderPath)
+        }).done(function (res) {
+            if (folderExisted && type == 'local') {
+                // get out of the promise chain
+                cbSuccess({ 'localPath': destFolderPath, 'status': 3 }, { keepCallback: false });
+            }
+            else {
+                destFolder = res.destFolder;
+                wwwFolder = res.wwwFolder;
+                var job = WinJS.Promise.wrap(null);
+                if (bCopyRootApp) {
+                    job = recursiveCopyFolderAsync(wwwFolder, destFolder);
                 }
                 else {
-                    return false;
+
                 }
-            } catch (e) {
-                // so we handle this and call errorCallback
-                //errorCallback(new FTErr(FTErr.INVALID_URL_ERR));
-                console.log(e.message);
-                cbFail(1); // INVALID_URL_ERR
+                //var dlJob = new WinJS.Promise
+                job = job.then(function () {
+                    return destFolder.createFileAsync(fileName, FileOpts.replaceExisting).then(function (storageFile) {
+                        destZipFile = storageFile;
+                    },
+                    function (err) {
+                        console.log(err);
+                    });
+                });
+                job = job.then(function (res) {
+                    try {
+                        if (src) {
+                            return startDownload(src, destZipFile);
+                        }
+                        else {
+                            return false;
+                        }
+                    } catch (e) {
+                        console.log(e.message);
+                        cbFail(1); // INVALID_URL_ERR
+                    }
+                }).then(function downloadComplete(dlResult) { // download is done
+                    if (dlResult) {
+                        console.log("download is complete " + dlResult);
+                        cbSuccess({ 'progress': 50, 'status': 2 }, { keepCallback: true }); // EXTRACTING
+
+                        return ZipWinProj.PGZipInflate.inflateAsync(dlResult.resultFile, destFolder)
+                        .then(function (obj) {
+                            console.log("got a result from inflateAsync :: " + obj);
+                            return true;
+                        },
+                        function (e) {
+                            console.log("got err from inflateAsync :: " + e);
+                            cbFail(3); // UNZIP_ERR
+                            return false;
+                        });
+                    }
+                    else {
+                        return false;
+                    }
+
+                },
+                function (err) {   // download error
+                    console.log(err);
+                    cbFail(1); // INVALID_URL_ERR
+                    return false;
+                },
+                function (progressEvent) {
+                    var total = progressEvent.progress.totalBytesToReceive;
+                    var bytes = progressEvent.progress.bytesReceived;
+                    var progPercent = total ? Math.round(bytes / total * 50) : 0;
+                    console.log("progPercent =  " + progPercent);
+                    cbSuccess({ 'progress': progPercent, 'status': 1 }, { keepCallback: true });    // 0:stopped, 1:downloading, 2:extracting,  3:complete
+                })
+                .then(function (boom) {
+                    cbSuccess({ 'localPath': destFolder, 'status': 3 }, { keepCallback: false });
+                })
+
             }
         },
         function (err) {
-            //console.log(err);
-            cbFail(1); // INVALID_URL_ERR
-        })
-        .then(function downloadComplete(dlResult) { // download is done
+            cbFail(2);
+        });
+
+        return;
+
+        //destFolder.createFileAsync(fileName, FileOpts.replaceExisting).then(function (storageFile) {
+        // destZipFile = storageFile;
+        //});
+
+
+
+        // download
+        //a.then(function (boo) {
+        //    console.log("boo = " + boo);
+        //    try {
+        //        if (src) {
+        //            return startDownload(src, destZipFile);
+        //        }
+        //        else {
+        //            return false;
+        //        }
+        //    } catch (e) {
+        //        // so we handle this and call errorCallback
+        //        //errorCallback(new FTErr(FTErr.INVALID_URL_ERR));
+        //        console.log(e.message);
+        //        cbFail(1); // INVALID_URL_ERR
+        //    }
+        //},
+        //function (err) {
+        //    //console.log(err);
+        //    cbFail(1); // INVALID_URL_ERR
+        //})
+        b.then(function downloadComplete(dlResult) { // download is done
             if (dlResult) {
                 console.log("download is complete " + dlResult);
                 cbSuccess({ 'progress': 50, 'status': 2 }, { keepCallback: true }); // EXTRACTING
@@ -193,7 +279,7 @@ var Sync = {
             console.log("progPercent =  " + progPercent);
             cbSuccess({ 'progress': progPercent, 'status': 1 }, { keepCallback: true });    // 0:stopped, 1:downloading, 2:extracting,  3:complete
         })
-        .then(function () {
+        .then(function (boom) {
             cbSuccess({ 'localPath': destFolder, 'status': 3 }, { keepCallback: false });
         })
         //.then(function doCopyCordovaAssets(res) {
@@ -250,3 +336,5 @@ var Sync = {
 
 require("cordova/exec/proxy").add("Sync", Sync);
 require("cordova/exec/proxy").add("Zip", Sync);
+
+
