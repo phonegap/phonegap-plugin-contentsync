@@ -2,16 +2,6 @@
 
 exports.defineAutoTests = function() {
 
-    var _it = it;
-it = function (text,funk) {
-    if (text.indexOf("can sync") == 0) {
-        return _it(text, funk);
-    }
-    else {
-        console.log("Skipping Test : " + text);
-    }
-} 
-
 jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
 
     describe('phonegap-plugin-contentsync', function() {
