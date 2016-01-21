@@ -19,9 +19,8 @@
 
 @implementation ContentSync
 
-- (CDVPlugin*)initWithWebView:(UIWebView*)theWebView {
+- (void)pluginInitialize {
     [NSURLProtocol registerClass:[NSURLProtocolNoCache class]];
-    return self;
 }
 
 - (CDVPluginResult*) preparePluginResult:(NSInteger)progress status:(NSInteger)status {
