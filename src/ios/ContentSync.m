@@ -137,11 +137,11 @@
     NSURL *srcURL = [NSURL URLWithString:src];
     NSMutableURLRequest *urlRequest = [NSMutableURLRequest requestWithURL:srcURL];
     [urlRequest setHTTPMethod:@"HEAD"];
-    NSURLResponse *response = nil;
+    NSHTTPURLResponse *response = nil;
     NSError *error = nil;
     [NSURLConnection sendSynchronousRequest:urlRequest returningResponse:&response error:&error];
-
-    if(srcURL && srcURL.scheme && srcURL.host && error == nil) {
+    
+    if(srcURL && srcURL.scheme && srcURL.host && error == nil && response.statusCode < 400) {
 
         BOOL trustHost = [command argumentAtIndex:7 withDefault:@(NO)];
 
