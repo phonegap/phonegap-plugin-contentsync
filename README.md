@@ -26,7 +26,7 @@ phonegap plugin add https://github.com/phonegap/phonegap-plugin-contentsync
 ## Quick Example
 
 ```javascript
-var sync = ContentSync.sync({ src: 'http://myserver/assets/movie-1', id: 'movie-1' });
+var sync = ContentSync.sync({ src: 'https://myserver/assets/movie-1', id: 'movie-1' });
 
 sync.on('progress', function(data) {
     // data.progress
@@ -45,19 +45,23 @@ sync.on('cancel', function() {
 });
 ```
 
+#### Security note:
+
+For updating a production app using `ContentSync.sync`, **always** use HTTPS. [Other Updaters](https://sparkle-project.github.io/documentation/security/#http-mitm-vulnerability) have had vulnerabilities exposed when updating over insecure HTTP.
+
 ## API
 
 ### ContentSync.sync(options)
 
 Parameter | Description
 --------- | ------------
-`options.src` | `String` URL to the remotely hosted content.
+`options.src` | `String` URL to the remotely hosted content. For updates in production, this URL should *always* use HTTPS
 `options.id` | `String` Unique identifer to reference the cached content.
 `options.type` | `String` _(Optional)_ Defines the copy strategy for the cached content.<br/>The type `replace` is the default behaviour that deletes the old content and caches the new content.<br/> The type `merge` will add the new content to the existing content. This will replace existing files, add new files, but never delete files.<br/>The type `local` returns the full path to the cached content if it exists or downloads it from `options.src` if it doesn't. `options.src` is not required if cached content actually exists.
 `options.headers` | `Object` _(Optional)_ Set of headers to use when requesting the remote content from `options.src`.
 `options.copyCordovaAssets` | `Boolean` _(Optional)_ Copies `cordova.js`, `cordova_plugins.js` and `plugins/` to sync'd folder. This operation happens after the source content has been cached, so it will override any existing Cordova assets. Default is `false`.
 `options.copyRootApp` | `Boolean` _(Optional)_ Copies the `www` folder to sync'd folder. This operation happens before the source content has been cached, then the source content is cached and finally it copies `cordova.js`, `cordova_plugins.js` and `plugins/` to sync'd folder to remain consistent with the installed plugins. Default is `false`.
-`options.timeout` | `Double` _(Optional)_ Request timeout. 
+`options.timeout` | `Double` _(Optional)_ Request timeout.
 `options.trustHost` | `Boolean` _(Optional)_ Trust SSL host. Host defined in `options.src` will be trusted. Ignored if `options.src` is undefined.
 `options.manifest` | `String` _(Optional)_ If specified the `copyRootApp` functionality will use the list of files contained in the manifest file during it's initial copy. {Android only}
 
@@ -68,7 +72,7 @@ Parameter | Description
 #### Example
 
 ```javascript
-var sync = ContentSync.sync({ src: 'http://myserver/app/1', id: 'app-1' });
+var sync = ContentSync.sync({ src: 'https://myserver/app/1', id: 'app-1' });
 ```
 
 ### sync.on(event, callback)
@@ -120,7 +124,7 @@ The event `error` will trigger when an internal error occurs and the cache is ab
 
 Callback Parameter | Description
 ------------------ | -----------
-`e` | `Integer` Enumeration of `ERROR_STATE` to describe the current error 
+`e` | `Integer` Enumeration of `ERROR_STATE` to describe the current error
 
 #### Example
 
@@ -151,7 +155,7 @@ sync.on('cancel', function() {
 Cancels the content sync operation and triggers the cancel callback.
 
 ```javascript
-var sync = ContentSync.sync({ src: 'http://myserver/app/1', id: 'app-1' });
+var sync = ContentSync.sync({ src: 'https://myserver/app/1', id: 'app-1' });
 
 sync.on('cancel', function() {
     console.log('content sync was cancelled');
@@ -216,14 +220,14 @@ One of the main benefits of the content sync plugin is that it does not depend o
 However, if you do need to use the File plugin to navigate the data downloaded by ContentSync you can use the following code snippet to get a [DirectoryEntry](https://cordova.apache.org/docs/en/3.0.0/cordova_file_file.md.html#DirectoryEntry) for the synced content.
 
 ```javascript
-var sync = ContentSync.sync({ src: 'http://myserver/assets/movie-1', id: 'movie-1' });
+var sync = ContentSync.sync({ src: 'https://myserver/assets/movie-1', id: 'movie-1' });
 
 sync.on('complete', function(data) {
     window.resolveLocalFileSystemURL("file://" + data.localPath, function(entry) {
-    	// entry is a DirectoryEntry object
+        // entry is a DirectoryEntry object
     }, function(error) {
         console.log("Error: " + error.code);
-    }); 
+    });
 });
 ```
 
@@ -251,7 +255,7 @@ The asset file system is pretty slow on Android so in order to speed up the init
 and if the file is placed in your apps `www` folder you would invoke it via:
 
 ```javascript
-var sync = ContentSync.sync({ src: 'http://myserver/assets/movie-1', id: 'movie-1', 
+var sync = ContentSync.sync({ src: 'https://myserver/assets/movie-1', id: 'movie-1',
         copyRootApp: true, manifest: 'manifest.json' });
 ```
 
@@ -271,7 +275,7 @@ This results in the `copyRootApp` taking about a third of the time as when a man
 npm test
 ```
 
-## Emulator Testing 
+## Emulator Testing
 
 The emulator tests use cordova-paramedic and the cordova-plugin-test-framework.
 To run them you will need cordova-paramedic installed.
