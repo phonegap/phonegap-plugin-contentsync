@@ -1,9 +1,11 @@
+// progress-state 
 // 0:stopped, 1:downloading,2:extracting,3:complete
 
 // error-state
 // 1:invalid url
 // 2:connection err
 // 3:unzip err
+
 
 var appData = Windows.Storage.ApplicationData.current;
 var FileOpts = Windows.Storage.CreationCollisionOption;
@@ -32,16 +34,24 @@ function startDownload(src, storageFile) {
     return download.startAsync();
 }
 
-function recursiveCopyFolderAsync(src, dst, name) {
-    //console.log("recursiveCopyFolderAsync :: " + src.name + " => " + dst.name);
+function recursiveCopyFolderAsync(src, dst, name, skipRoot) {
     name = name ? name : src.name;
+
+    var getDestFolder = function () { return WinJS.Promise.wrap(dst); };
+    if (!skipRoot) {
+        getDestFolder = function () {
+            return dst.createFolderAsync(name, FileOpts.openIfExists)
+        }
+    }
+
     return new WinJS.Promise(function (complete, failed) {
         WinJS.Promise.join({
-            destFolder: dst.createFolderAsync(name, FileOpts.openIfExists),
+            destFolder: getDestFolder(),
             files: src.getFilesAsync(),
             folders: src.getFoldersAsync()
         })
         .done(function (resultObj) {
+            //console.log("destFolder = " + resultObj.destFolder.path);
             if (!(resultObj.files.length || resultObj.folders.length)) {
                 // nothing to copy
                 complete();
@@ -53,7 +63,7 @@ function recursiveCopyFolderAsync(src, dst, name) {
                     complete();
                     return 2;
                 }
-                recursiveCopyFolderAsync(resultObj.folders[fileCount], dst)
+                recursiveCopyFolderAsync(resultObj.folders[fileCount], resultObj.destFolder)
                 .done(function () {
                     copyfolders();
                 }, failed);
@@ -67,12 +77,11 @@ function recursiveCopyFolderAsync(src, dst, name) {
                 }
                 var file = resultObj.files[fileCount];
                 //console.log("copying " + file.name + " => " + resultObj.destFolder.name);
-                file.copyAsync(resultObj.destFolder, file.name, replaceExisting)
+                file.copyAsync(resultObj.destFolder || dst, file.name, replaceExisting)
                 .done(function () {
                     copyfiles();
                 }, failed);
             };
-
             copyfiles();
         },
         failed);
@@ -147,12 +156,12 @@ var Sync = {
                 wwwFolder = res.wwwFolder;
                 var job = WinJS.Promise.wrap(null);
                 if (bCopyRootApp) {
-                    job = recursiveCopyFolderAsync(wwwFolder, destFolder);
+                    job = recursiveCopyFolderAsync(wwwFolder, destFolder, "www", true);
                 }
                 else {
 
                 }
-                //var dlJob = new WinJS.Promise
+
                 job = job.then(function () {
                     return destFolder.createFileAsync(fileName, FileOpts.replaceExisting).then(function (storageFile) {
                         destZipFile = storageFile;
@@ -175,16 +184,16 @@ var Sync = {
                     }
                 }).then(function downloadComplete(dlResult) { // download is done
                     if (dlResult) {
-                        console.log("download is complete " + dlResult);
+                        //console.log("download is complete " + dlResult);
                         cbSuccess({ 'progress': 50, 'status': 2 }, { keepCallback: true }); // EXTRACTING
 
                         return ZipWinProj.PGZipInflate.inflateAsync(dlResult.resultFile, destFolder)
                         .then(function (obj) {
-                            console.log("got a result from inflateAsync :: " + obj);
+                            //console.log("got a result from inflateAsync :: " + obj);
                             return true;
                         },
                         function (e) {
-                            console.log("got err from inflateAsync :: " + e);
+                            //console.log("got err from inflateAsync :: " + e);
                             cbFail(3); // UNZIP_ERR
                             return false;
                         });
@@ -203,8 +212,21 @@ var Sync = {
                     var total = progressEvent.progress.totalBytesToReceive;
                     var bytes = progressEvent.progress.bytesReceived;
                     var progPercent = total ? Math.round(bytes / total * 50) : 0;
-                    console.log("progPercent =  " + progPercent);
                     cbSuccess({ 'progress': progPercent, 'status': 1 }, { keepCallback: true });    // 0:stopped, 1:downloading, 2:extracting,  3:complete
+                })
+                .then(function doCopyCordovaAssets(res) {
+                    return true;
+                    //.then(function (wwwFolder) {
+                    //    console.log('wwwFolder = ' + wwwFolder);
+                    //    Windows.Storage.StorageFile.getFileFromPathAsync(path + "\\index.html")
+                    //    .then(function (file) {
+                    //        return file.copyAsync(wwwFolder, file.name, Windows.Storage.NameCollisionOption.replaceExisting);
+
+                    //    });
+                    //});
+                },
+                function (err) { 
+                    console.log("got err  : " + err);
                 })
                 .then(function (boom) {
                     cbSuccess({ 'localPath': destFolder, 'status': 3 }, { keepCallback: false });
@@ -213,94 +235,9 @@ var Sync = {
             }
         },
         function (err) {
+            console.log("Error: " + err.description);
             cbFail(2);
         });
-
-        return;
-
-        //destFolder.createFileAsync(fileName, FileOpts.replaceExisting).then(function (storageFile) {
-        // destZipFile = storageFile;
-        //});
-
-
-
-        // download
-        //a.then(function (boo) {
-        //    console.log("boo = " + boo);
-        //    try {
-        //        if (src) {
-        //            return startDownload(src, destZipFile);
-        //        }
-        //        else {
-        //            return false;
-        //        }
-        //    } catch (e) {
-        //        // so we handle this and call errorCallback
-        //        //errorCallback(new FTErr(FTErr.INVALID_URL_ERR));
-        //        console.log(e.message);
-        //        cbFail(1); // INVALID_URL_ERR
-        //    }
-        //},
-        //function (err) {
-        //    //console.log(err);
-        //    cbFail(1); // INVALID_URL_ERR
-        //})
-        b.then(function downloadComplete(dlResult) { // download is done
-            if (dlResult) {
-                console.log("download is complete " + dlResult);
-                cbSuccess({ 'progress': 50, 'status': 2 }, { keepCallback: true }); // EXTRACTING
-
-                return ZipWinProj.PGZipInflate.inflateAsync(dlResult.resultFile, destFolder)
-                .then(function (obj) {
-                    console.log("got a result from inflateAsync :: " + obj);
-                    
-                    return true;
-                },
-                function (e) {
-                    console.log("got err from inflateAsync :: " + e);
-                    cbFail(3); // UNZIP_ERR
-                    return false;
-                });
-            }
-            else {
-                return false;
-            }
-
-        },
-        function (err) {   // download error
-            //console.log(err);
-            cbFail(1); // INVALID_URL_ERR
-            return false;
-        },
-        function (progressEvent) {
-            var total = progressEvent.progress.totalBytesToReceive;
-            var bytes = progressEvent.progress.bytesReceived;
-            var progPercent = Math.round(bytes / total * 50);
-            console.log("progPercent =  " + progPercent);
-            cbSuccess({ 'progress': progPercent, 'status': 1 }, { keepCallback: true });    // 0:stopped, 1:downloading, 2:extracting,  3:complete
-        })
-        .then(function (boom) {
-            cbSuccess({ 'localPath': destFolder, 'status': 3 }, { keepCallback: false });
-        })
-        //.then(function doCopyCordovaAssets(res) {
-        //    //.then(function (wwwFolder) {
-        //    //    console.log('wwwFolder = ' + wwwFolder);
-        //    //    Windows.Storage.StorageFile.getFileFromPathAsync(path + "\\index.html")
-        //    //    .then(function (file) {
-        //    //        return file.copyAsync(wwwFolder, file.name, Windows.Storage.NameCollisionOption.replaceExisting);
-
-        //    //    });
-        //    //});
-
-        //    //cbSuccess({ 'localPath': destFolder, 'status': 3 }, { keepCallback: false });
-        //},
-        //function (err) { 
-        //    console.log("got err  : " + err);
-        //});
-        
-        // to pass progress events, call onSuccess with {progress:0-100,status:state}
-        // to complete, call onSuccess with {localPath:"...",cached:boolean}
-        // on error, call error callback with an integer:ERROR_STATE
     },
     cancel: function (cbSuccess, cbFail, options) {
         var id = options.id;
@@ -336,5 +273,3 @@ var Sync = {
 
 require("cordova/exec/proxy").add("Sync", Sync);
 require("cordova/exec/proxy").add("Zip", Sync);
-
-
