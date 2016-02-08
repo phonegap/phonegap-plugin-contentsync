@@ -1,5 +1,3 @@
-
-
 exports.defineAutoTests = function() {
 
 jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
@@ -17,39 +15,39 @@ jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
 
         it("can sync", function(done){
 
-            
+            var progressEvent = null;
+            var url = "https://github.com/timkim/zipTest/archive/master.zip";
+            var sync = ContentSync.sync({ src: url, id: 'myapps/myapp', type: 'replace', copyCordovaAssets: false, headers: false });
 
-        	var progressEvent = null;
-        	var url = "https://github.com/timkim/zipTest/archive/master.zip";
-        	var sync = ContentSync.sync({ src: url, id: 'myapps/myapp', type: 'replace', copyCordovaAssets: false, headers: false });
-
-	        sync.on('progress', function(progress) {
+            sync.on('progress', function(progress) {
                 //console.log("in progress callback " + Object.getOwnPropertyNames(progress));
                 console.log("onProgress :: " + progress.progress + " status = " + progress.status);
-	            if(!progressEvent) {
-	            	progressEvent = progress;
-	            }
-	        });
+                if(!progressEvent) {
+                    progressEvent = progress;
+                }
+            });
 
-	        sync.on('complete', function(data) {
+            sync.on('complete', function(data) {
                 console.log("progress = " + progressEvent);
-	        	expect(progressEvent).toBeDefined("Progress should have been received");
+                expect(progressEvent).toBeDefined("Progress should have been received");
 
                 console.log("progressEvent.status = " + progressEvent.status);
-	        	expect(progressEvent.status).toBeDefined("Progress event should have a status prop");
+                expect(progressEvent.status).toBeDefined("Progress event should have a status prop");
 
-	        	expect(progressEvent.progress).toBeDefined("Progress event should have a progress prop");
+                expect(progressEvent.progress).toBeDefined("Progress event should have a progress prop");
                 console.log("progressEvent.progress = " + progressEvent.progress);
 
                 console.log("data = " + data);
-	        	expect(data).toBeDefined("On complete, data is not null");
-	        	done();
-	        });
+                expect(data).toBeDefined("On complete, data is not null");
+                done();
+            });
 
-	        sync.on('error', function(e) {
+            sync.on('error', function (e) {
+                expect(progressEvent).toBeDefined("Progress should have been received");
+                expect(e).toBe(null, "Error callback was called :: " + e);
                 console.log("got error back :: " + e);
-	        	done();
-	        });
+                done();
+            });
 
         }, 60000); // wait a full 60 secs
 
@@ -100,21 +98,23 @@ jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
                 type: 'local',
                 copyRootApp: true
             });
-            sync.on('complete', function(data) {
-                if (useLocalPath) {
+            sync.on('complete', function (data) {
+                if (useLocalPath && cordova.platformId !== 'windows') {
                     testFileExists('file://' + data.localPath + '/index.html', success, fail);
                 } else {
                     testFileExists(appId + '/index.html', success, fail);
                 }
             });
-            sync.on('error', fail);
+            sync.on('error', function (e) {
+                fail();
+            });
         }
 
         /**
          * Tests if the local copy is at the correct place and can be accessed via file plugin.
          */
         it('local copy is accessible via file plugin', function(done) {
-            var appId = 'local/test' + (new Date()).getTime(); // create new id every time
+            var appId = 'test' + (new Date()).getTime(); // create new id every time
             syncAndTest(appId, false, done, function(e){
                 fail(e);
                 done();
@@ -161,20 +161,20 @@ jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
     });
 
 
-	if(cordova.platformId == 'windows') {
-		describe('phonegap-plugin-contentsync windows tests', function() {
-			it("Has linked C# code", function(done){
-				//
-				expect(ZipWinProj).toBeDefined("ZipWinProj should exist");
-				expect(ZipWinProj.PGZipInflate)
+    if(cordova.platformId == 'windows') {
+        describe('phonegap-plugin-contentsync windows tests', function() {
+            it("Has linked C# code", function(done){
+                //
+                expect(ZipWinProj).toBeDefined("ZipWinProj should exist");
+                expect(ZipWinProj.PGZipInflate)
                     .toBeDefined("ZipWinProj.PGZipInflate should exist");
-				expect(ZipWinProj.PGZipInflate.inflateAsync)
+                expect(ZipWinProj.PGZipInflate.inflateAsync)
                     .toBeDefined("ZipWinProj.PGZipInflate.inflateAsync should exist");
-	        	done();
-			});
+                done();
+            });
 
-		});
-	}
+        });
+    }
 };
 
 exports.defineManualTests = function() {
