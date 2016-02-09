@@ -46,6 +46,13 @@ xmlns:android="http://schemas.android.com/apk/res/android"
         <source-file src="src/wp8/Unzip.cs" />
     </platform>
 
+    <platform name="windows">
+        <js-module src="src/windows/SyncProxy.js" name="SyncProxy">
+            <runs />
+        </js-module>
+        <framework src="src/windows/ZipWinProj/ZipWinProj.csproj" custom="true" type="projectReference"/>
+    </platform>
+
     <platform name="ios">
         <source-file src="src/ios/ContentSync.m" />
         <header-file src="src/ios/ContentSync.h" />
