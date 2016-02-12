@@ -223,6 +223,20 @@ module.exports = {
         var callback = (typeof headers == "function" ? headers : cb);
         exec(callback, callback, 'Sync', 'download', [url, null, headers]);
     },
+    
+    /**
+     * loadUrl
+     *
+     * This method allows loading file:// urls when using WKWebViews on iOS. 
+     *
+     */
+
+    loadUrl: function(url, cb) {
+        if(url) {
+            throw new Error('URL is required.');
+        }
+        exec(cb, cb, 'Sync', 'loadUrl', [url]);
+    },
 
 
     /**
