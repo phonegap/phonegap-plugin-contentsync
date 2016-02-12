@@ -528,6 +528,14 @@
     return YES;
 }
 
+- (void)loadUrl:(CDVInvokedUrlCommand*) command {
+    NSString* url = [command argumentAtIndex:0 withDefault:nil];
+    if(url != nil) {
+        NSURLRequest* request = [NSURLRequest requestWithURL:[NSURL URLWithString:url]];
+        [self.webViewEngine loadRequest:request];
+    }
+}
+
 - (NSURLSession*) backgroundSession:(NSNumber*)timeout {
     static NSURLSession *session = nil;
     static dispatch_once_t onceToken;
