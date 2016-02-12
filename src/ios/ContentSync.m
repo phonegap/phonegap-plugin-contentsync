@@ -528,6 +528,7 @@
     return YES;
 }
 
+#ifdef __CORDOVA_4_0_0
 - (void)loadUrl:(CDVInvokedUrlCommand*) command {
     NSString* url = [command argumentAtIndex:0 withDefault:nil];
     if(url != nil) {
@@ -535,6 +536,7 @@
         [self.webViewEngine loadRequest:request];
     }
 }
+#endif
 
 - (NSURLSession*) backgroundSession:(NSNumber*)timeout {
     static NSURLSession *session = nil;

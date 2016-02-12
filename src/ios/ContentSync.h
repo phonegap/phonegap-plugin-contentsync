@@ -41,9 +41,6 @@ typedef NSUInteger ErrorCodes;
 - (void) cancel:(CDVInvokedUrlCommand*)command;
 - (void) download:(CDVInvokedUrlCommand*)command;
 - (void) unzip:(CDVInvokedUrlCommand*)command;
-#ifndef __CORDOVA_4_0_0
-- (void) loadUrl:(CDVInvokedUrlCommand*)command;
-#endif
 
 @end
 
