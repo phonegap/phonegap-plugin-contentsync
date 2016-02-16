@@ -232,7 +232,7 @@ module.exports = {
      */
 
     loadUrl: function(url, cb) {
-        if(url) {
+        if(!url) {
             throw new Error('URL is required.');
         }
         exec(cb, cb, 'Sync', 'loadUrl', [url]);

@@ -59,6 +59,15 @@ describe('phonegap-plugin-contentsync', function() {
         });
     });
 
+    describe('.loadUrl', function() {
+      it('should raise an error if url is not provided', function() {
+        expect(function() {
+          contentSync.loadUrl(null);
+        }).toThrow();
+      });
+
+    });
+
     describe('ContentSync instance', function() {
         describe('cordova.exec', function() {
             it('should call cordova.exec on next process tick', function(done) {
