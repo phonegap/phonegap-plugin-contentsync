@@ -40,7 +40,8 @@
     "author": "Adobe PhoneGap Team",
     "license": "APL",
     "scripts": {
-        "test": "jasmine-node --color spec"
+        "test": "jasmine-node --color spec",
+        "paramedic": "./tests/scripts/start-server.sh && cordova-paramedic --platform ios && ./tests/scripts/stop-server.sh"
     },
     "devDependencies": {
         "jasmine-node": "1.14.5"

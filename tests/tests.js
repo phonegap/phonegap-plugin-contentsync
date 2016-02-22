@@ -17,27 +17,28 @@ jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
 
             var progressEvent = null;
             var url = "https://github.com/timkim/zipTest/archive/master.zip";
+            //var url = "http://localhost:4321/www1.zip";
             var sync = ContentSync.sync({ src: url, id: 'myapps/myapp', type: 'replace', copyCordovaAssets: false, headers: false });
 
             sync.on('progress', function(progress) {
                 //console.log("in progress callback " + Object.getOwnPropertyNames(progress));
-                console.log("onProgress :: " + progress.progress + " status = " + progress.status);
+                //console.log("onProgress :: " + progress.progress + " status = " + progress.status);
                 if(!progressEvent) {
                     progressEvent = progress;
                 }
             });
 
             sync.on('complete', function(data) {
-                console.log("progress = " + progressEvent);
+                //console.log("progress = " + progressEvent);
                 expect(progressEvent).toBeDefined("Progress should have been received");
 
-                console.log("progressEvent.status = " + progressEvent.status);
+                //console.log("progressEvent.status = " + progressEvent.status);
                 expect(progressEvent.status).toBeDefined("Progress event should have a status prop");
 
                 expect(progressEvent.progress).toBeDefined("Progress event should have a progress prop");
-                console.log("progressEvent.progress = " + progressEvent.progress);
+                //console.log("progressEvent.progress = " + progressEvent.progress);
 
-                console.log("data = " + data);
+                //console.log("data = " + data);
                 expect(data).toBeDefined("On complete, data is not null");
                 done();
             });
@@ -45,7 +46,7 @@ jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
             sync.on('error', function (e) {
                 expect(progressEvent).toBeDefined("Progress should have been received");
                 expect(e).toBe(null, "Error callback was called :: " + e);
-                console.log("got error back :: " + e);
+                //console.log("got error back :: " + e);
                 done();
             });
 
