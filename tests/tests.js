@@ -11,14 +11,12 @@ jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
             expect(typeof window.ContentSync.unzip == 'function').toBe(true);
         });
 
-
-
-        it("can sync", function(done){
-
+        function syncArchive(url, done) {
+            
             var progressEvent = null;
-            var url = "https://github.com/timkim/zipTest/archive/master.zip";
-            //var url = "http://localhost:4321/www1.zip";
+            //var url = "https://github.com/timkim/zipTest/archive/master.zip";
             var sync = ContentSync.sync({ src: url, id: 'myapps/myapp', type: 'replace', copyCordovaAssets: false, headers: false });
+
 
             sync.on('progress', function(progress) {
                 //console.log("in progress callback " + Object.getOwnPropertyNames(progress));
@@ -50,6 +48,16 @@ jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
                 done();
             });
 
+        }
+
+        it("can sync archive without www folder at root", function(done){
+            var url = "http://localhost:4321/www1.zip";
+            syncArchive(url, done);
+        }, 60000); // wait a full 60 secs
+        
+        it("can sync archive with www folder at root", function(done){
+            var url = "http://localhost:4321/www2.zip";
+            syncArchive(url, done);
         }, 60000); // wait a full 60 secs
 
         it('reports error on 404', function(done){
