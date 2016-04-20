@@ -16,11 +16,12 @@ namespace ZipWinProj
             return Inflate(zipSourceFile, destFolder).AsAsyncAction();
         }
 
-        private static async Task InflateEntryAsync(ZipArchiveEntry entry, StorageFolder destFolder)
+        private static async Task InflateEntryAsync(ZipArchiveEntry entry, StorageFolder destFolder, bool createSub = false)
         {
-            string filePath = entry.Name;
+           
+            string filePath = entry.FullName;
 
-            if (!string.IsNullOrEmpty(filePath) && filePath.Contains("/"))
+            if (!string.IsNullOrEmpty(filePath) && filePath.Contains("/") && !createSub)
             {
                 // Create sub folder 
                 string subFolderName = Path.GetDirectoryName(filePath);
@@ -35,7 +36,7 @@ namespace ZipWinProj
                 if (!string.IsNullOrEmpty(newFilePath))
                 {
                     // Unzip file iteratively. 
-                    await InflateEntryAsync(entry, subFolder);
+                    await InflateEntryAsync(entry, subFolder, true);
                 }
             }
             else
@@ -78,10 +79,10 @@ namespace ZipWinProj
 
             using (ZipArchive zipArchive = new ZipArchive(zipStream, ZipArchiveMode.Read))
             {
-                //Debug.WriteLine("Count = " + zipArchive.Entries.Count);
+                Debug.WriteLine("Count = " + zipArchive.Entries.Count);
                 foreach (ZipArchiveEntry entry in zipArchive.Entries)
                 {
-                    //Debug.WriteLine("Extracting {0} to {1}", entry.FullName, destFolder.Path);
+                    Debug.WriteLine("Extracting {0} to {1}", entry.FullName, destFolder.Path);
                     try
                     {
                         await InflateEntryAsync(entry, destFolder);
