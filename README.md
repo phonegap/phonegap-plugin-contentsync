@@ -26,7 +26,10 @@ phonegap plugin add https://github.com/phonegap/phonegap-plugin-contentsync
 ## Quick Example
 
 ```javascript
-var sync = ContentSync.sync({ src: 'https://myserver/assets/movie-1', id: 'movie-1' });
+var sync = ContentSync.sync({
+        src: 'https://myserver/assets/movie-1',
+        id: 'movie-1'
+});
 
 sync.on('progress', function(data) {
     // data.progress
@@ -72,7 +75,10 @@ Parameter | Description
 #### Example
 
 ```javascript
-var sync = ContentSync.sync({ src: 'https://myserver/app/1', id: 'app-1' });
+var sync = ContentSync.sync({
+        src: 'https://myserver/app/1',
+        id: 'app-1'
+});
 ```
 
 ### sync.on(event, callback)
@@ -155,7 +161,10 @@ sync.on('cancel', function() {
 Cancels the content sync operation and triggers the cancel callback.
 
 ```javascript
-var sync = ContentSync.sync({ src: 'https://myserver/app/1', id: 'app-1' });
+var sync = ContentSync.sync({
+        src: 'https://myserver/app/1',
+        id: 'app-1'
+});
 
 sync.on('cancel', function() {
     console.log('content sync was cancelled');
@@ -224,7 +233,10 @@ One of the main benefits of the content sync plugin is that it does not depend o
 However, if you do need to use the File plugin to navigate the data downloaded by ContentSync you can use the following code snippet to get a [DirectoryEntry](https://cordova.apache.org/docs/en/3.0.0/cordova_file_file.md.html#DirectoryEntry) for the synced content.
 
 ```javascript
-var sync = ContentSync.sync({ src: 'https://myserver/assets/movie-1', id: 'movie-1' });
+var sync = ContentSync.sync({
+        src: 'https://myserver/app/1',
+        id: 'app-1'
+});
 
 sync.on('complete', function(data) {
     window.resolveLocalFileSystemURL("file://" + data.localPath, function(entry) {
@@ -259,8 +271,12 @@ The asset file system is pretty slow on Android so in order to speed up the init
 and if the file is placed in your apps `www` folder you would invoke it via:
 
 ```javascript
-var sync = ContentSync.sync({ src: 'https://myserver/assets/movie-1', id: 'movie-1',
-        copyRootApp: true, manifest: 'manifest.json' });
+var sync = ContentSync.sync({
+        src: 'https://myserver/app/1',
+        id: 'app-1'
+        copyRootApp: true,
+        manifest: 'manifest.json'
+});
 ```
 
 This results in the `copyRootApp` taking about a third of the time as when a manifest file is not specified.
