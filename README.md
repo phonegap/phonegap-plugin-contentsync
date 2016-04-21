@@ -26,7 +26,10 @@ phonegap plugin add https://github.com/phonegap/phonegap-plugin-contentsync
 ## Quick Example
 
 ```javascript
-var sync = ContentSync.sync({ src: 'https://myserver/assets/movie-1', id: 'movie-1' });
+// Create a new instance of ContentSync pointing to zipped resource 'movie-1.zip' - note
+// that the url need not end in zip - it just needs to point to something producing 
+// a application/octet-stream mime type
+var sync = ContentSync.sync({ src: 'https://myserver/assets/movie-1.zip', id: 'movie-1' });
 
 sync.on('progress', function(data) {
     // data.progress
