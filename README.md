@@ -1,6 +1,6 @@
 #phonegap-plugin-contentsync [![Build Status](https://travis-ci.org/phonegap/phonegap-plugin-contentsync.svg?branch=master)](https://travis-ci.org/phonegap/phonegap-plugin-contentsync) [![bitHound Score][bithound-img]][bithound-url]
 
-> Download and cache remotely hosted content.
+> Download and cache remotely hosted zipped content bundles, unzipping automatically.
 
 ## Installation
 
