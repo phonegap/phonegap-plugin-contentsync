@@ -342,7 +342,7 @@
 
         if(error == nil) {
             if([(NSHTTPURLResponse*)[task response] statusCode] != 200) {
-                NSLog(@"Task: %@ completed with HTTP Error Code: %ld", task, [(NSHTTPURLResponse*)[task response] (long)statusCode]);
+                NSLog(@"Task: %@ completed with HTTP Error Code: %ld", task, (long)[(NSHTTPURLResponse*)[task response] statusCode]);
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:CONNECTION_ERR];
                 NSFileManager *fileManager = [NSFileManager defaultManager];
                 if([fileManager fileExistsAtPath:[sTask archivePath]]) {
