@@ -284,6 +284,10 @@ var sync = ContentSync.sync({
 
 This results in the `copyRootApp` taking about a third of the time as when a manifest file is not specified.
 
+## Persistence of Synced Content
+
+Content downloaded via this plugin persists between runs of the application or reboots of the phone. The content will only be removed if the application is uninstalled or you use the File API to remove the location of the synched content.
+
 ## Native Requirements
 
 - There should be no dependency on the existing File or FileTransfer plugins.
@@ -343,4 +347,3 @@ or on-edit linting.
 [travis-ci-url]: http://travis-ci.org/phonegap/phonegap-plugin-contentsync
 [bithound-img]: https://www.bithound.io/github/phonegap/phonegap-plugin-contentsync/badges/score.svg
 [bithound-url]: https://www.bithound.io/github/phonegap/phonegap-plugin-contentsync
-
