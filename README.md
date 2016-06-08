@@ -229,6 +229,19 @@ ContentSync.PROGRESS_STATE[1] = 'Downloading the media content...';
 
 Use this API to load assets after extraction on **cordova-ios > 4.x** and **cordova-plugin-wkwebview-engine**. Do not use `document.location` as it probably won't work. Make sure to prefix your url with `file://`
 
+```javascript
+var sync = ContentSync.sync({
+        src: 'https://myserver/app/1',
+        id: 'app-1'
+});
+
+sync.on('complete', function(data) {
+    ContentSync.loadUrl('file://' + data.localPath, function() {
+        console.log('success');
+    });
+});
+```
+
 ## Working with the Native File System
 
 One of the main benefits of the content sync plugin is that it does not depend on the File or FileTransfer plugins. As a result the end user should not care where the ContentSync plugin stores it's files as long as it fills the requirements that it is private and removed when it's associated app is uninstalled.
