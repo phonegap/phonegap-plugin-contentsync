@@ -48,6 +48,19 @@ var app = {
 
         document.getElementById("syncBtn").onclick = this.sync;
         document.getElementById("downloadExtractBtn").onclick = this.download;
+        
+        var sync = ContentSync.sync({id: 'myapp', type: 'local'});
+        sync.on('complete', function(data) {
+            if(data.localPath) {
+              var url = "file://"+data.localPath + "/www/index.html";
+              alert('Sync complete ' + data + ' changing document.location ' + url );
+              //document.location = url;
+              ContentSync.loadUrl(url);
+            }
+        });
+        sync.on('error', function(e) {
+          alert('no synced app. Loading main app');
+        });
     },
 
     setProgress: function(progress) {
@@ -74,8 +87,11 @@ var app = {
 
 
     sync: function() {
-        var url = "https://github.com/timkim/zipTest/archive/master.zip"; 
-        var sync = ContentSync.sync({ src: url, id: 'myapp', type: 'merge', copyRootApp: true });
+        //var url = "https://github.com/timkim/zipTest/archive/master.zip";
+        var url = "http://localhost:8000/www.zip";
+        //var sync = ContentSync.sync({ src: url, id: 'myapp', type: 'merge', copyCordovaAssets: true, copyRootApp: false, headers: false, trustHost: true });
+        //var sync = ContentSync.sync({ src: null, id: 'myapp', type: 'local', copyRootApp: true });
+        var sync = ContentSync.sync({ src: url, id: 'myapp', type: 'merge', copyCordovaAssets: true });
 
         var setProgress = this.setProgress; 
 
@@ -85,6 +101,8 @@ var app = {
         });
         sync.on('complete', function(data) {
             console.log("Complete", data);
+            //ContentSync.loadUrl("file://"+data.localPath + "/zipTest-master/www/index.html");
+            //document.location = data.localPath + "/zipTest-master/www/index.html";
         });
 
         sync.on('error', function(e) {
@@ -94,9 +112,9 @@ var app = {
     },
     download: function() {
         document.getElementById("downloadExtractBtn").disabled = true;
-        var url = "https://github.com/timkim/zipTest/archive/master.zip"; 
+        var url = "https://github.com/timkim/zipTest/archive/master.zip";
         var extract = this.extract;
-        var setProgress = this.setProgress; 
+        var setProgress = this.setProgress;
         var callback = function(response) {
             console.log(response);
             if(response.progress) {

@@ -532,8 +532,11 @@
 - (void)loadUrl:(CDVInvokedUrlCommand*) command {
     NSString* url = [command argumentAtIndex:0 withDefault:nil];
     if(url != nil) {
+        NSLog(@"Loading URL %@", url);
         NSURLRequest* request = [NSURLRequest requestWithURL:[NSURL URLWithString:url]];
         [self.webViewEngine loadRequest:request];
+    } else {
+        NSLog(@"URL IS NIL");
     }
 }
 #endif
