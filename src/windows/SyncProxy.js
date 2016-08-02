@@ -18,12 +18,20 @@ function cleanPath(pathStr) {
     return pathStr.replace(/\//g, "\\");
 }
 
-function copyRootApp(destPath) {
-
+function copyAndReplaceFileFromPathAsync(path,dest) {
+    return Windows.Storage.StorageFile.getFileFromPathAsync(path)
+    .then(function (file) {
+        return file.copyAsync(dest, file.name, Windows.Storage.NameCollisionOption.replaceExisting);
+    });
 }
 
-function copyCordovaAssets(destPath) {
-
+function copyCordovaAssetsAsync(wwwFolder, destWWWFolder) {
+    return getFolderFromPathAsync(wwwFolder.path + "\\plugins")
+    .then(function (pluginsFolder) {
+        return WinJS.Promise.join([recursiveCopyFolderAsync(pluginsFolder, destWWWFolder, null, false),
+                                   copyAndReplaceFileFromPathAsync(wwwFolder.path + "\\cordova.js", destWWWFolder),
+                                   copyAndReplaceFileFromPathAsync(wwwFolder.path + "\\cordova_plugins.js", destWWWFolder)]);
+    });
 }
 
 // this can throw exceptions, callers responsibility
@@ -111,6 +119,7 @@ var Sync = {
 
         var destFolder = null;
         var destZipFile = null;
+        var destWWWFolder = null;
         var fileName = id;
 
         if (id.indexOf("\\") > -1) {
@@ -145,7 +154,8 @@ var Sync = {
 
         WinJS.Promise.join({
             wwwFolder: getFolderFromPathAsync(AppPath + "\\www"),
-            destFolder: getOrCreateLocalFolder(destFolderPath)
+            destFolder: getOrCreateLocalFolder(destFolderPath),
+            destWWWFolder: getOrCreateLocalFolder(destFolderPath + "\\www")
         }).done(function (res) {
             if (folderExisted && type == 'local') {
                 // get out of the promise chain
@@ -154,6 +164,8 @@ var Sync = {
             else {
                 destFolder = res.destFolder;
                 wwwFolder = res.wwwFolder;
+                destWWWFolder = res.destWWWFolder;
+
                 var job = WinJS.Promise.wrap(null);
                 if (bCopyRootApp) {
                     job = recursiveCopyFolderAsync(wwwFolder, destFolder, "www", true);
@@ -214,16 +226,8 @@ var Sync = {
                     var progPercent = total ? Math.round(bytes / total * 50) : 0;
                     cbSuccess({ 'progress': progPercent, 'status': 1 }, { keepCallback: true });    // 0:stopped, 1:downloading, 2:extracting,  3:complete
                 })
-                .then(function doCopyCordovaAssets(res) {
-                    return true;
-                    //.then(function (wwwFolder) {
-                    //    console.log('wwwFolder = ' + wwwFolder);
-                    //    Windows.Storage.StorageFile.getFileFromPathAsync(path + "\\index.html")
-                    //    .then(function (file) {
-                    //        return file.copyAsync(wwwFolder, file.name, Windows.Storage.NameCollisionOption.replaceExisting);
-
-                    //    });
-                    //});
+                .then(function maybeCopyCordovaAssets(res) {
+                    return bCopyCordovaAssets ? copyCordovaAssetsAsync(wwwFolder, destWWWFolder) : null;
                 },
                 function (err) { 
                     console.log("got err  : " + err);
