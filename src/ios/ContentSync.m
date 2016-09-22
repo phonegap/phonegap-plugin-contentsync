@@ -617,6 +617,10 @@
                              @"no-cache", @"Pragma",
                              [NSString stringWithFormat:@"%d", (int)[data length]], @"Content-Length",
                              nil];
+    NSMutableDictionary *headers = [NSMutableDictionary dictionaryWithDictionary:self.request.allHTTPHeaderFields];
+    headers[@"Cache-Control"] = @"no-cache";
+    headers[@"Cache-Control"] = @"Pragma";
+    headers[@"Content-Length"] = [NSString stringWithFormat:@"%d", (int)[data length]];
 
     // create a response using the request and our new HEADERs
     NSHTTPURLResponse *response = [[NSHTTPURLResponse alloc] initWithURL:self.request.URL
