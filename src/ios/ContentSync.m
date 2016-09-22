@@ -1,4 +1,5 @@
 #import "ContentSync.h"
+#import <MobileCoreServices/MobileCoreServices.h>
 
 @implementation ContentSyncTask
 
@@ -610,17 +611,20 @@
 - (void)startLoading {
     NSData *data = [NSData dataWithContentsOfFile:self.request.URL.path];
 
-    // add the no-cache HEADERs to the request while preserving the existing HEADER values.
-    NSDictionary *headers = [NSDictionary dictionaryWithObjectsAndKeys:
-                             [self.request.allHTTPHeaderFields objectForKey:@"Accept"], @"Accept",
-                             @"no-cache", @"Cache-Control",
-                             @"no-cache", @"Pragma",
-                             [NSString stringWithFormat:@"%d", (int)[data length]], @"Content-Length",
-                             nil];
+    // Whether as a bug or intentionally, it seems that as of iOS 10 the response's MIME Type is
+    // defaulting to 'application/octet-stream' for most files. For now we can set it manually.
+    // MIME lookup taken from:
+    // http://stackoverflow.com/questions/1363813/how-can-you-read-a-files-mime-type-in-objective-c/21858677#21858677
+    NSString *fileExtension = self.request.URL.pathExtension;
+    NSString *UTI = (__bridge_transfer NSString *)UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, (__bridge CFStringRef)fileExtension, NULL);
+    NSString *contentType = (__bridge_transfer NSString *)UTTypeCopyPreferredTagWithClass((__bridge CFStringRef)UTI, kUTTagClassMIMEType);
+
+    // add the no-cache and MIME HEADERs to the request while preserving the existing HEADER values.
     NSMutableDictionary *headers = [NSMutableDictionary dictionaryWithDictionary:self.request.allHTTPHeaderFields];
     headers[@"Cache-Control"] = @"no-cache";
     headers[@"Cache-Control"] = @"Pragma";
     headers[@"Content-Length"] = [NSString stringWithFormat:@"%d", (int)[data length]];
+    headers[@"Content-Type"] = contentType;
 
     // create a response using the request and our new HEADERs
     NSHTTPURLResponse *response = [[NSHTTPURLResponse alloc] initWithURL:self.request.URL
