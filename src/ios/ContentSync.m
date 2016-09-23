@@ -622,7 +622,7 @@
     // add the no-cache and MIME HEADERs to the request while preserving the existing HEADER values.
     NSMutableDictionary *headers = [NSMutableDictionary dictionaryWithDictionary:self.request.allHTTPHeaderFields];
     headers[@"Cache-Control"] = @"no-cache";
-    headers[@"Cache-Control"] = @"Pragma";
+    headers[@"Pragma"] = @"no-cache";
     headers[@"Content-Length"] = [NSString stringWithFormat:@"%d", (int)[data length]];
     headers[@"Content-Type"] = contentType;
 
