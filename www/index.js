@@ -80,6 +80,10 @@ var ContentSync = function(options) {
         options.manifest = "";
     }
 
+    if (typeof options.injectHomeScript === 'undefined') {
+        options.injectHomeScript = false;
+    }
+
     // store the options to this object instance
     this.options = options;
 
@@ -101,7 +105,7 @@ var ContentSync = function(options) {
 
     // wait at least one process tick to allow event subscriptions
     setTimeout(function() {
-        exec(success, fail, 'Sync', 'sync', [options.src, options.id, options.type, options.headers, options.copyCordovaAssets, options.copyRootApp, options.timeout, options.trustHost, options.manifest]);
+        exec(success, fail, 'Sync', 'sync', [options.src, options.id, options.type, options.headers, options.copyCordovaAssets, options.copyRootApp, options.timeout, options.trustHost, options.manifest, options.injectHomeScript]);
     }, 10);
 };
 

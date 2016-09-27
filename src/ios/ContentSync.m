@@ -465,6 +465,14 @@
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
         [pluginResult setKeepCallbackAsBool:NO];
         [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
+
+        BOOL injectHomeScript = [[sTask.command argumentAtIndex:9 withDefault:@(NO)] boolValue];
+        
+        if (injectHomeScript == YES) {
+            [[NSNotificationCenter defaultCenter] removeObserver:self name:CDVPageDidLoadNotification object:nil];
+            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(pageDidLoad:) name:CDVPageDidLoadNotification object:nil];
+        }
+        
         [[self syncTasks] removeObject:sTask];
     }
 }
@@ -558,6 +566,13 @@
         session = [NSURLSession sessionWithConfiguration:configuration delegate:self delegateQueue:nil];
     });
     return session;
+}
+
+- (void) pageDidLoad:(NSNotification *) notification
+{
+    // Michael Brooks' homepage.js (https://github.com/phonegap/connect-phonegap/blob/master/res/middleware/homepage.js)
+    NSString* tapScript = @"javascript: console.log('adding homepage.js'); (function(){var e={},t={touchstart:'touchstart',touchend:'touchend'};if(window.navigator.msPointerEnabled){t={touchstart:'MSPointerDown',touchend:'MSPointerUp'}}document.addEventListener(t.touchstart,function(t){var n=t.touches||[t],r;for(var i=0,s=n.length;i<s;i++){r=n[i];e[r.identifier||r.pointerId]=r}},false);document.addEventListener(t.touchend,function(t){var n=Object.keys(e).length;e={};if(n===3){t.preventDefault();window.history.back(window.history.length)}},false)})(window)";
+    [self.commandDelegate evalJs:tapScript];
 }
 
 @end
