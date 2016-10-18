@@ -289,7 +289,7 @@ and if the file is placed in your apps `www` folder you would invoke it via:
 ```javascript
 var sync = ContentSync.sync({
         src: 'https://myserver/app/1',
-        id: 'app-1'
+        id: 'app-1',
         copyRootApp: true,
         manifest: 'manifest.json'
 });
