@@ -119,7 +119,7 @@
             return;
         }
     }
-    
+
     BOOL copyRootApp = [[command argumentAtIndex:5 withDefault:@(NO)] boolValue];
 
     if(copyRootApp == YES) {
@@ -197,7 +197,7 @@
     NSHTTPURLResponse *response = nil;
     NSError *error = nil;
     [NSURLConnection sendSynchronousRequest:urlRequest returningResponse:&response error:&error];
-    
+
     if(srcURL && srcURL.scheme && srcURL.host && error == nil && response.statusCode < 400) {
 
         BOOL trustHost = [command argumentAtIndex:7 withDefault:@(NO)];
@@ -239,9 +239,6 @@
                 }
             }
 
-            if(!self.syncTasks) {
-                self.syncTasks = [NSMutableArray arrayWithCapacity:1];
-            }
             NSURLSessionDownloadTask *downloadTask = [self.session downloadTaskWithRequest:request];
 
             ContentSyncTask* sData = [[ContentSyncTask alloc] init];
@@ -385,7 +382,8 @@
             sTask.archivePath = [sourceURL path];
             if(sTask.extractArchive == YES && [self isZipArchive:[sourceURL path]]) {
                 // FIXME there is probably a better way to do this
-                NSURL *extractURL = [libraryDirectory URLByAppendingPathComponent:[@"NoCloud" stringByAppendingPathComponent:[sTask appId]]];
+                NSURL *storageDirectory = [ContentSync getStorageDirectory];
+                NSURL *extractURL = [storageDirectory URLByAppendingPathComponent:[sTask appId]];
                 NSString* type = [sTask.command argumentAtIndex:2 withDefault:@"replace"];
 
                 CDVInvokedUrlCommand* command = [CDVInvokedUrlCommand commandFromJson:[NSArray arrayWithObjects:sTask.command.callbackId, @"Zip", @"unzip", [NSMutableArray arrayWithObjects:[sourceURL absoluteString], [extractURL absoluteString], type, nil], nil]];
@@ -534,9 +532,9 @@
     NSLog(@"unzipped path %@", unzippedPath);
     ContentSyncTask* sTask = [self findSyncDataByPath];
     if(sTask) {
-        
+
         BOOL copyCordovaAssets = [[sTask.command argumentAtIndex:4 withDefault:@(NO)] boolValue];
-        
+
         if(copyCordovaAssets == YES) {
             [self copyCordovaAssets:unzippedPath];
         }
@@ -556,7 +554,7 @@
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
         [pluginResult setKeepCallbackAsBool:NO];
         [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
-        [[self syncTasks] removeObject:sTask];
+        [self removeSyncTask:sTask];
     }
 }
 
