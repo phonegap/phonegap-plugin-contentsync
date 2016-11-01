@@ -138,6 +138,17 @@
     NSURL *srcURL = [NSURL URLWithString:src];
     NSMutableURLRequest *urlRequest = [NSMutableURLRequest requestWithURL:srcURL];
     [urlRequest setHTTPMethod:@"HEAD"];
+
+    // Setting headers (do changes also in download url, or better extract setting the following lines to a function)
+    NSDictionary *headers = [command argumentAtIndex:3 withDefault:nil andClass:[NSDictionary class]];
+    if(headers != nil) {
+        for (NSString* header in [headers allKeys]) {
+            NSLog(@"Setting header %@ %@", header, [headers objectForKey:header]);
+            [urlRequest addValue:[headers objectForKey:header] forHTTPHeaderField:header];
+        }
+    }
+
+    // request just to check if url is correct and server is available
     NSHTTPURLResponse *response = nil;
     NSError *error = nil;
     [NSURLConnection sendSynchronousRequest:urlRequest returningResponse:&response error:&error];
@@ -164,7 +175,7 @@
         } else {
             NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:downloadURL];
             request.timeoutInterval = 15.0;
-            // Setting headers
+            // Setting headers (do changes also in check if url is valid, or better extract setting the following lines to a function)
             NSDictionary *headers = [command argumentAtIndex:3 withDefault:nil andClass:[NSDictionary class]];
             if(headers != nil) {
                 for (NSString* header in [headers allKeys]) {
