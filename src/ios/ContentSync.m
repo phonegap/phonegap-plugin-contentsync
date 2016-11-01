@@ -1,5 +1,25 @@
+/*
+ Licensed to the Apache Software Foundation (ASF) under one
+ or more contributor license agreements.  See the NOTICE file
+ distributed with this work for additional information
+ regarding copyright ownership.  The ASF licenses this file
+ to you under the Apache License, Version 2.0 (the
+ "License"); you may not use this file except in compliance
+ with the License.  You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing,
+ software distributed under the License is distributed on an
+ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ KIND, either express or implied.  See the License for the
+ specific language governing permissions and limitations
+ under the License.
+ */
 #import "ContentSync.h"
+#if TARGET_OS_IPHONE
 #import <MobileCoreServices/MobileCoreServices.h>
+#endif
 
 @implementation ContentSyncTask
 
@@ -35,6 +55,44 @@
     return pluginResult;
 }
 
+#if TARGET_OS_IOS
+/**
+ * Returns the _applicationStorageDirectory_ similar to the one of the file plugin
+ */
++ (NSURL*) getStorageDirectory {
+    NSFileManager* fm = [NSFileManager defaultManager];
+    NSArray *URLs = [fm URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask];
+    NSURL *libraryDirectoryUrl = [URLs objectAtIndex:0];
+    return [libraryDirectoryUrl URLByAppendingPathComponent:@"NoCloud"];
+}
+
+#else // TARGET_OS_MAC
+
+/**
+ * Returns the _applicationStorageDirectory_ similar to the one of the file plugin
+ */
++ (NSURL*) getStorageDirectory {
+    NSError* error;
+    NSFileManager* fm = [NSFileManager defaultManager];
+    NSURL* supportDir = [fm URLForDirectory:NSApplicationSupportDirectory inDomain:NSUserDomainMask appropriateForURL:nil create:YES error:&error];
+    if (supportDir == nil) {
+        NSLog(@"unable to get support directory: %@", error);
+        return nil;
+    }
+
+    NSString* bundleID = [[NSBundle mainBundle] bundleIdentifier];
+    NSURL *dirPath = [[supportDir URLByAppendingPathComponent:bundleID] URLByAppendingPathComponent:@"files"];
+
+    if (![fm fileExistsAtPath:dirPath.path]) {
+        if (![fm createDirectoryAtURL:dirPath withIntermediateDirectories:YES attributes:nil error:&error]) {
+            NSLog(@"unable to create support directory: %@", error);
+            return nil;
+        }
+    }
+    return dirPath;
+}
+#endif // TAGET_OS_IOS
+
 - (void)sync:(CDVInvokedUrlCommand*)command {
     NSString* src = [command argumentAtIndex:0 withDefault:nil];
     NSString* type = [command argumentAtIndex:2];
@@ -42,10 +100,8 @@
 
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSString* appId = [command argumentAtIndex:1];
-    NSArray *URLs = [fileManager URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask];
-    NSURL *libraryDirectoryUrl = [URLs objectAtIndex:0];
-
-    NSURL *appPath = [libraryDirectoryUrl URLByAppendingPathComponent:[@"NoCloud" stringByAppendingPathComponent:appId]];
+    NSURL* storageDirectory = [ContentSync getStorageDirectory];
+    NSURL *appPath = [storageDirectory URLByAppendingPathComponent:appId];
     NSLog(@"appPath %@", appPath);
 
     if(local == YES) {
@@ -63,7 +119,7 @@
             return;
         }
     }
-    
+
     BOOL copyRootApp = [[command argumentAtIndex:5 withDefault:@(NO)] boolValue];
 
     if(copyRootApp == YES) {
@@ -152,7 +208,7 @@
     NSHTTPURLResponse *response = nil;
     NSError *error = nil;
     [NSURLConnection sendSynchronousRequest:urlRequest returningResponse:&response error:&error];
-    
+
     if(srcURL && srcURL.scheme && srcURL.host && error == nil && response.statusCode < 400) {
 
         BOOL trustHost = [command argumentAtIndex:7 withDefault:@(NO)];
@@ -169,9 +225,19 @@
         NSLog(@"startDownload from %@", src);
         NSURL *downloadURL = [NSURL URLWithString:src];
 
+        if (appId == nil) {
+            appId = [srcURL lastPathComponent];
+        }
+
         // downloadURL is nil if malformed URL
         if(downloadURL == nil) {
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:INVALID_URL_ERR];
+
+#if !TARGET_OS_IOS // this is currently not added to ios. see issue-96
+        } else if ([self findSyncDataByAppId:appId]) {
+            NSLog(@"Download task already started for %@", appId);
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:IN_PROGRESS_ERR];
+#endif
         } else {
             NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:downloadURL];
             request.timeoutInterval = 15.0;
@@ -184,24 +250,22 @@
                 }
             }
 
-            if(!self.syncTasks) {
-                self.syncTasks = [NSMutableArray arrayWithCapacity:1];
-            }
             NSURLSessionDownloadTask *downloadTask = [self.session downloadTaskWithRequest:request];
 
             ContentSyncTask* sData = [[ContentSyncTask alloc] init];
 
-            sData.appId = appId ? appId : [srcURL lastPathComponent];
+            sData.appId = appId;
             sData.downloadTask = downloadTask;
             sData.command = command;
             sData.progress = 0;
             sData.extractArchive = extractArchive;
 
-            [self.syncTasks addObject:sData];
+            [self addSyncTask:sData];
 
             [downloadTask resume];
 
             pluginResult = [self preparePluginResult:sData.progress status:Downloading];
+            [pluginResult setKeepCallbackAsBool:YES];
         }
 
     } else {
@@ -228,31 +292,52 @@
     }
 }
 
-- (ContentSyncTask *)findSyncDataByDownloadTask:(NSURLSessionDownloadTask*)downloadTask {
-    for(ContentSyncTask* sTask in self.syncTasks) {
-        if(sTask.downloadTask == downloadTask) {
-            return sTask;
+- (void) addSyncTask:(ContentSyncTask*) task {
+    @synchronized (self) {
+        if (!self.syncTasks) {
+            self.syncTasks = [NSMutableArray array];
         }
+        [self.syncTasks addObject:task];
     }
-    return nil;
+};
+
+- (void) removeSyncTask:(ContentSyncTask*) task {
+    @synchronized (self) {
+        [self.syncTasks removeObject:task];
+    }
 }
 
-- (ContentSyncTask *)findSyncDataByPath {
-    for(ContentSyncTask* sTask in self.syncTasks) {
-        if([sTask.archivePath isEqualToString:[self currentPath]]) {
-            return sTask;
+- (ContentSyncTask*) findSyncDataByDownloadTask:(NSURLSessionDownloadTask*) downloadTask {
+    @synchronized (self) {
+        for (ContentSyncTask* sTask in self.syncTasks) {
+            if (sTask.downloadTask == downloadTask) {
+                return sTask;
+            }
         }
+        return nil;
     }
-    return nil;
 }
 
-- (ContentSyncTask *)findSyncDataByAppId:(NSString*)appId {
-    for(ContentSyncTask* sTask in self.syncTasks) {
-        if([sTask.appId isEqualToString:appId]) {
-            return sTask;
+- (ContentSyncTask*) findSyncDataByPath {
+    @synchronized (self) {
+        for (ContentSyncTask* sTask in self.syncTasks) {
+            if ([sTask.archivePath isEqualToString:[self currentPath]]) {
+                return sTask;
+            }
         }
+        return nil;
     }
-    return nil;
+}
+
+- (ContentSyncTask*) findSyncDataByAppId:(NSString*) appId {
+    @synchronized (self) {
+        for (ContentSyncTask* sTask in self.syncTasks) {
+            if ([sTask.appId isEqualToString:appId]) {
+                return sTask;
+            }
+        }
+        return nil;
+    }
 }
 
 - (void)URLSession:(NSURLSession *)session didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition, NSURLCredential *))completionHandler{
@@ -308,7 +393,8 @@
             sTask.archivePath = [sourceURL path];
             if(sTask.extractArchive == YES && [self isZipArchive:[sourceURL path]]) {
                 // FIXME there is probably a better way to do this
-                NSURL *extractURL = [libraryDirectory URLByAppendingPathComponent:[@"NoCloud" stringByAppendingPathComponent:[sTask appId]]];
+                NSURL *storageDirectory = [ContentSync getStorageDirectory];
+                NSURL *extractURL = [storageDirectory URLByAppendingPathComponent:[sTask appId]];
                 NSString* type = [sTask.command argumentAtIndex:2 withDefault:@"replace"];
 
                 CDVInvokedUrlCommand* command = [CDVInvokedUrlCommand commandFromJson:[NSArray arrayWithObjects:sTask.command.callbackId, @"Zip", @"unzip", [NSMutableArray arrayWithObjects:[sourceURL absoluteString], [extractURL absoluteString], type, nil], nil]];
@@ -361,6 +447,7 @@
                     NSLog(@"Deleting archive. It's probably an HTTP Error Page anyways");
                     [fileManager removeItemAtPath:[sTask archivePath] error:NULL];
                 }
+                [self removeSyncTask:sTask];
             } else {
                 double progress = (double)task.countOfBytesReceived / (double)task.countOfBytesExpectedToReceive;
                 NSLog(@"Task: %@ completed successfully", sTask.archivePath);
@@ -374,12 +461,13 @@
                     [message setObject:[NSNumber numberWithInteger:Complete] forKey:@"status"];
                     [message setObject:[sTask archivePath] forKey:@"localPath"];
                     pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
-                    [[self syncTasks] removeObject:sTask];
+                    [self removeSyncTask:sTask];
                 }
             }
         } else {
             NSLog(@"Task: %@ completed with error: %@", task, [error localizedDescription]);
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsInt:CONNECTION_ERR];
+            [self removeSyncTask:sTask];
         }
         if(![[error localizedDescription]  isEqual: @"cancelled"]) {
             [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
@@ -455,9 +543,9 @@
     NSLog(@"unzipped path %@", unzippedPath);
     ContentSyncTask* sTask = [self findSyncDataByPath];
     if(sTask) {
-        
+
         BOOL copyCordovaAssets = [[sTask.command argumentAtIndex:4 withDefault:@(NO)] boolValue];
-        
+
         if(copyCordovaAssets == YES) {
             [self copyCordovaAssets:unzippedPath];
         }
@@ -477,7 +565,7 @@
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
         [pluginResult setKeepCallbackAsBool:NO];
         [self.commandDelegate sendPluginResult:pluginResult callbackId:sTask.command.callbackId];
-        [[self syncTasks] removeObject:sTask];
+        [self removeSyncTask:sTask];
     }
 }
 
@@ -541,6 +629,7 @@
 }
 
 #ifdef __CORDOVA_4_0_0
+#if TARGET_OS_IPHONE
 - (void)loadUrl:(CDVInvokedUrlCommand*) command {
     NSString* url = [command argumentAtIndex:0 withDefault:nil];
     if(url != nil) {
@@ -552,26 +641,41 @@
     }
 }
 #endif
+#endif
 
-- (NSURLSession*) backgroundSession:(NSNumber*)timeout {
+- (NSURLSession*) backgroundSession:(NSNumber*) timeout {
+    NSString *sessionId = [NSString stringWithFormat:@"%@-download-task", [[NSBundle mainBundle] bundleIdentifier]];
+
     static NSURLSession *session = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         NSURLSessionConfiguration *configuration;
+
+#if TARGET_OS_IOS
         if ([[[UIDevice currentDevice] systemVersion] floatValue] >=8.0f)
         {
-            configuration = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:@"com.example.apple-samplecode.SimpleBackgroundTransfer.BackgroundSession"];
+            configuration = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:sessionId];
         }
         else
         {
-            configuration = [NSURLSessionConfiguration backgroundSessionConfiguration:@"com.example.apple-samplecode.SimpleBackgroundTransfer.BackgroundSession"];
+            configuration = [NSURLSessionConfiguration backgroundSessionConfiguration:sessionId];
         }
+#else
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_0
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "UnavailableInDeploymentTarget"
+        configuration = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:sessionId];
+#pragma clang diagnostic pop
+#else
+        configuration = [NSURLSessionConfiguration backgroundSessionConfiguration:sessionId];
+#endif
+#endif
+
         configuration.timeoutIntervalForRequest = [timeout doubleValue];
         session = [NSURLSession sessionWithConfiguration:configuration delegate:self delegateQueue:nil];
     });
     return session;
 }
-
 @end
 
 /**
@@ -592,11 +696,8 @@
  * @param theRequest is the inbound NSURLRequest.
  * @return YES to handle this request with the this NSURLProtocol handler.
  */
-
 + (BOOL)canInitWithRequest:(NSURLRequest*)theRequest {
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    NSArray *URLs = [fileManager URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask];
-    NSURL *libraryDirectoryUrl = [URLs objectAtIndex:0];
+    NSURL* libraryDirectoryUrl = [ContentSync getStorageDirectory];
     return [theRequest.URL.scheme isEqualToString:@"file"] && [theRequest.URL.path hasPrefix:[libraryDirectoryUrl path]];
 }
 
@@ -616,7 +717,7 @@
 /**
  * Start loading the request.
  *
- * When loading a request, the HEADERs are altered to prevent browser caching.
+ * When loading a request, the request headers are altered to prevent browser caching.
  */
 
 - (void)startLoading {
