@@ -20,12 +20,6 @@
 #import <Cordova/CDVPlugin.h>
 #import <Cordova/CDVAvailability.h>
 
-#ifdef USE_COCOAPODS
-#import <SSZipArchive/SSZipArchive.h>
-#else
-#import "SSZipArchive.h"
-#endif
-
 enum ProgressState {
     Stopped = 0,
     Downloading,
@@ -56,7 +50,7 @@ typedef NSUInteger ErrorCodes;
 
 @end
 
-@interface ContentSync : CDVPlugin <NSURLSessionDelegate, NSURLSessionTaskDelegate, NSURLSessionDownloadDelegate, SSZipArchiveDelegate>
+@interface ContentSync : CDVPlugin <NSURLSessionDelegate, NSURLSessionTaskDelegate, NSURLSessionDownloadDelegate>
 
 @property (nonatomic) NSString* currentPath;
 @property (nonatomic) NSMutableArray *syncTasks;
