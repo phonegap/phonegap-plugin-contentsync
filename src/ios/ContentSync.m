@@ -211,7 +211,7 @@
 
     if(srcURL && srcURL.scheme && srcURL.host && error == nil && response.statusCode < 400) {
 
-        BOOL trustHost = [command argumentAtIndex:7 withDefault:@(NO)];
+        BOOL trustHost = (BOOL) [command argumentAtIndex:7 withDefault:@(NO)];
 
         if(!self.trustedHosts) {
             self.trustedHosts = [NSMutableArray arrayWithCapacity:1];
@@ -527,7 +527,7 @@
     self.currentPath = path;
 }
 
-- (void) zipArchiveProgressEvent:(NSInteger)loaded total:(NSInteger)total {
+- (void)zipArchiveProgressEvent:(unsigned long long)loaded total:(unsigned long long)total {
     ContentSyncTask* sTask = [self findSyncDataByPath];
     if(sTask) {
         //NSLog(@"Extracting %ld / %ld", (long)loaded, (long)total);
@@ -658,7 +658,10 @@
         }
         else
         {
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignored "-Wdeprecated-declarations"
             configuration = [NSURLSessionConfiguration backgroundSessionConfiguration:sessionId];
+            #pragma clang diagnostic pop
         }
 #else
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_0
