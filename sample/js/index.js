@@ -121,8 +121,8 @@ var app = {
                 app.setProgress(response);
 
             }
-            if(response.localPath) {
-                var archiveURL = response.localPath;
+            if(response.archiveURL) {
+                var archiveURL = response.archiveURL;
                document.getElementById("downloadExtractBtn").disabled = false;
                document.getElementById("downloadExtractBtn").innerHTML = "Extract";
                document.getElementById("downloadExtractBtn").onclick = function() {
