@@ -641,12 +641,17 @@
 #if TARGET_OS_IPHONE
 - (void)loadUrl:(CDVInvokedUrlCommand*) command {
     NSString* url = [command argumentAtIndex:0 withDefault:nil];
+    CDVPluginResult* pluginResult = nil;
     if(url != nil) {
         NSLog(@"Loading URL %@", url);
         NSURLRequest* request = [NSURLRequest requestWithURL:[NSURL URLWithString:url]];
         [self.webViewEngine loadRequest:request];
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
     } else {
         NSLog(@"URL IS NIL");
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
     }
 }
 #endif
