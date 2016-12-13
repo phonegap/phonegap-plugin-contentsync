@@ -420,6 +420,11 @@
                 if(success) {
                     NSLog(@"Moving %@ to %@", [srcURL path], [dstURL path]);
 
+                    if([fileManager fileExistsAtPath:[dstURL path]]) {
+                        NSLog(@"%@ already exists. Deleting it since type is set to `replace`", [dstURL path]);
+                        [fileManager removeItemAtURL:dstURL error:NULL];
+                    }
+
                     success = [fileManager moveItemAtURL:srcURL toURL:dstURL error:&errorCopy];
                     if(!success) {
                         NSLog(@"Error copying. File might already exist %@", [errorCopy description]);
