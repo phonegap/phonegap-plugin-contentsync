@@ -70,6 +70,7 @@ Parameter | Description
 `options.timeout` | `Double` _(Optional)_ Request timeout. Default is 15 seconds.
 `options.trustHost` | `Boolean` _(Optional)_ Trust SSL host. Host defined in `options.src` will be trusted. Ignored if `options.src` is undefined.
 `options.manifest` | `String` _(Optional)_ If specified the `copyRootApp` functionality will use the list of files contained in the manifest file during it's initial copy. {Android only}
+`options.validateSrc` | `Boolean` _(Optional)_ Whether to validate src url with a HEAD request before download (ios only, default true).
 
 #### Returns
 
