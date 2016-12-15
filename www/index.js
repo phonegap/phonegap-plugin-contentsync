@@ -16,6 +16,7 @@ var exec = cordova.require('cordova/exec');
  *     @param {String} replace completely removes existing content then copies new content.
  *     @param {String} merge   does not modify existing content, but adds new content.
  *   @param {Object} headers are used to set the headers for when we send a request to the src URL
+ *  @param {Boolean} validateSrc whether to validate src url with a HEAD request before download (ios only, default true).
  * @return {ContentSync} instance that can be monitored and cancelled.
  */
 
@@ -80,6 +81,10 @@ var ContentSync = function(options) {
         options.manifest = "";
     }
 
+    if (typeof options.validateSrc === 'undefined') {
+        options.validateSrc = true;
+    }
+
     // store the options to this object instance
     this.options = options;
 
@@ -101,7 +106,7 @@ var ContentSync = function(options) {
 
     // wait at least one process tick to allow event subscriptions
     setTimeout(function() {
-        exec(success, fail, 'Sync', 'sync', [options.src, options.id, options.type, options.headers, options.copyCordovaAssets, options.copyRootApp, options.timeout, options.trustHost, options.manifest]);
+        exec(success, fail, 'Sync', 'sync', [options.src, options.id, options.type, options.headers, options.copyCordovaAssets, options.copyRootApp, options.timeout, options.trustHost, options.manifest, options.validateSrc]);
     }, 10);
 };
 

@@ -199,29 +199,34 @@
     NSString* src = [command argumentAtIndex:0 withDefault:nil];
     NSString* appId = [command argumentAtIndex:1];
     NSNumber* timeout = [command argumentAtIndex:6 withDefault:[NSNumber numberWithDouble:15]];
+    BOOL validateSrc = [[command argumentAtIndex:9 withDefault:@(YES)] boolValue];
 
     self.session = [self backgroundSession:timeout];
-
-    // checking if URL is valid
     NSURL *srcURL = [NSURL URLWithString:src];
-    NSMutableURLRequest *urlRequest = [NSMutableURLRequest requestWithURL:srcURL];
-    [urlRequest setHTTPMethod:@"HEAD"];
-
+    
     // Setting headers (do changes also in download url, or better extract setting the following lines to a function)
     NSDictionary *headers = [command argumentAtIndex:3 withDefault:nil andClass:[NSDictionary class]];
-    if(headers != nil) {
-        for (NSString* header in [headers allKeys]) {
-            NSLog(@"Setting header %@ %@", header, [headers objectForKey:header]);
-            [urlRequest addValue:[headers objectForKey:header] forHTTPHeaderField:header];
+    
+    // checking if URL is valid
+    BOOL srcIsValid = YES;
+    
+    if (validateSrc == YES) {
+        NSMutableURLRequest *urlRequest = [NSMutableURLRequest requestWithURL:srcURL];
+        [urlRequest setHTTPMethod:@"HEAD"];
+        
+        [self setHeaders:urlRequest :headers];
+
+        // request just to check if url is correct and server is available
+        NSHTTPURLResponse *response = nil;
+        NSError *error = nil;
+        [NSURLConnection sendSynchronousRequest:urlRequest returningResponse:&response error:&error];
+        
+        if (error || response.statusCode >= 400) {
+            srcIsValid = false;
         }
     }
 
-    // request just to check if url is correct and server is available
-    NSHTTPURLResponse *response = nil;
-    NSError *error = nil;
-    [NSURLConnection sendSynchronousRequest:urlRequest returningResponse:&response error:&error];
-
-    if(srcURL && srcURL.scheme && srcURL.host && error == nil && response.statusCode < 400) {
+    if(srcURL && srcURL.scheme && srcURL.host && srcIsValid == YES) {
 
         BOOL trustHost = (BOOL) [command argumentAtIndex:7 withDefault:@(NO)];
 
@@ -253,14 +258,8 @@
         } else {
             NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:downloadURL];
             request.timeoutInterval = 15.0;
-            // Setting headers (do changes also in check if url is valid, or better extract setting the following lines to a function)
-            NSDictionary *headers = [command argumentAtIndex:3 withDefault:nil andClass:[NSDictionary class]];
-            if(headers != nil) {
-                for (NSString* header in [headers allKeys]) {
-                    NSLog(@"Setting header %@ %@", header, [headers objectForKey:header]);
-                    [request addValue:[headers objectForKey:header] forHTTPHeaderField:header];
-                }
-            }
+            
+            [self setHeaders:request :headers];
 
             NSURLSessionDownloadTask *downloadTask = [self.session downloadTaskWithRequest:request];
 
@@ -291,6 +290,16 @@
     [pluginResult setKeepCallbackAsBool:YES];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 
+}
+
+- (void)setHeaders:(NSMutableURLRequest*)request :(NSDictionary*)headers {
+    // Setting headers (do changes also in check if url is valid, or better extract setting the following lines to a function)
+    if(headers != nil) {
+        for (NSString* header in [headers allKeys]) {
+            NSLog(@"Setting header %@ %@", header, [headers objectForKey:header]);
+            [request addValue:[headers objectForKey:header] forHTTPHeaderField:header];
+        }
+    }
 }
 
 - (void)cancel:(CDVInvokedUrlCommand *)command {
