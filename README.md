@@ -133,7 +133,8 @@ The event `error` will trigger when an internal error occurs and the cache is ab
 
 Callback Parameter | Description
 ------------------ | -----------
-`e` | `Integer` Enumeration of `ERROR_STATE` to describe the current error
+`e.type` | `Integer` Enumeration of `ERROR_STATE` to describe the current error
+`e.responseCode` | `Integer` HTTP error code if available, `-1` otherwise
 
 #### Example
 

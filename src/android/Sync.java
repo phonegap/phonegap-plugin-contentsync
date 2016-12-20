@@ -295,7 +295,7 @@ public class Sync extends CordovaPlugin {
                 if (connection.getResponseCode() == HttpURLConnection.HTTP_NOT_MODIFIED) {
                     cached = true;
                     connection.disconnect();
-                    sendErrorMessage("Resource not modified: " + source, CONNECTION_ERROR, callbackContext);
+                    sendErrorMessage("Resource not modified: " + source, CONNECTION_ERROR, callbackContext, connection.getResponseCode());
                     return false;
                 } else {
                     if (connection.getContentEncoding() == null || connection.getContentEncoding().equalsIgnoreCase("gzip")) {
@@ -306,7 +306,7 @@ public class Sync extends CordovaPlugin {
                             if (connectionLength > getFreeSpace()) {
                                 cached = true;
                                 connection.disconnect();
-                                sendErrorMessage("Not enough free space to download", CONNECTION_ERROR, callbackContext);
+                                sendErrorMessage("Not enough free space to download", CONNECTION_ERROR, callbackContext, connection.getResponseCode());
                                 return false;
                             } else {
                                 progress.setTotal(connectionLength);
@@ -353,7 +353,10 @@ public class Sync extends CordovaPlugin {
             }
 
         } catch (Throwable e) {
-            sendErrorMessage(e.getLocalizedMessage(), CONNECTION_ERROR, callbackContext);
+            try {
+                sendErrorMessage(e.getLocalizedMessage(), CONNECTION_ERROR, callbackContext, connection.getResponseCode());
+            } catch (IOException ioe) {
+            }
         } finally {
             if (connection != null) {
                 // Revert back to the proper verifier and socket factories
@@ -369,8 +372,18 @@ public class Sync extends CordovaPlugin {
     }
 
     private void sendErrorMessage(String message, int type, CallbackContext callbackContext) {
+        sendErrorMessage(message, type, callbackContext, -1);
+    }
+
+    private void sendErrorMessage(String message, int type, CallbackContext callbackContext, int httpResponseCode) {
         Log.e(LOG_TAG, message);
-        callbackContext.error(type);
+        JSONObject error = new JSONObject();
+        try {
+            error.put("type", type);
+            error.put("responseCode", httpResponseCode);
+        } catch (JSONException e) {
+        }
+        callbackContext.error(error);
     }
 
     private long getFreeSpace() {
