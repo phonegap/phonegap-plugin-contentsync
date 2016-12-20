@@ -517,9 +517,12 @@ public class Sync extends CordovaPlugin {
                     JSONObject result = new JSONObject();
                     result.put(PROP_LOCAL_PATH, outputDirectory);
 
+                    if (dir.list() != null) {
+                        Log.d(LOG_TAG, "size of output dir = " + dir.list().length);
+                    }
                     boolean cached = false;
                     if (type.equals(TYPE_LOCAL) && dir.exists() && dir.isDirectory() && dir.list() != null && dir.list().length > 0) {
-                        Log.d(LOG_TAG, "we have a dir with " + dir.list().length + " files in it.");
+                        Log.d(LOG_TAG, "we have a dir with some files in it.");
                         cached = true;
                     }
 
