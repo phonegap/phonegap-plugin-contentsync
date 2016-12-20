@@ -406,6 +406,16 @@
     if(success) {
         if(sTask) {
             sTask.archivePath = [sourceURL path];
+
+            NSFileManager *fileManager = [NSFileManager defaultManager];
+            NSString* type = [sTask.command argumentAtIndex:2 withDefault:@"replace"];
+            BOOL replace = [type isEqualToString:@"replace"];
+            NSURL *dstURL = [libraryDirectory URLByAppendingPathComponent:[sTask appId]];
+            if([fileManager fileExistsAtPath:[dstURL path]] && replace == YES) {
+                NSLog(@"%@ already exists. Deleting it since type is set to `replace`", [dstURL path]);
+                [fileManager removeItemAtURL:dstURL error:NULL];
+            }
+
             if(sTask.extractArchive == YES && [self isZipArchive:[sourceURL path]]) {
                 // FIXME there is probably a better way to do this
                 NSURL *storageDirectory = [ContentSync getStorageDirectory];
@@ -416,7 +426,6 @@
                 [self unzip:command];
             } else {
                 NSURL *srcURL = [NSURL fileURLWithPath:[sTask archivePath]];
-                NSURL *dstURL = [libraryDirectory URLByAppendingPathComponent:[sTask appId]];
                 NSError* error = nil;
                 NSError *errorCopy;
                 BOOL success;
@@ -518,14 +527,6 @@
 
         NSURL* sourceURL = [NSURL URLWithString:[command argumentAtIndex:0]];
         NSURL* destinationURL = [NSURL URLWithString:[command argumentAtIndex:1]];
-        NSString* type = [command argumentAtIndex:2 withDefault:@"replace"];
-        BOOL replace = [type isEqualToString:@"replace"];
-
-        NSFileManager *fileManager = [NSFileManager defaultManager];
-        if([fileManager fileExistsAtPath:[destinationURL path]] && replace == YES) {
-            NSLog(@"%@ already exists. Deleting it since type is set to `replace`", [destinationURL path]);
-            [fileManager removeItemAtURL:destinationURL error:NULL];
-        }
 
         @try {
             NSError *error;
