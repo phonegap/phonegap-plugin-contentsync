@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
+import java.net.URL;
 import java.net.URLConnection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -222,10 +223,10 @@ public class Sync extends CordovaPlugin {
         }
 
         final CordovaResourceApi resourceApi = webView.getResourceApi();
-        final Uri sourceUri = resourceApi.remapUri(Uri.parse(source));
+        Uri sourceUri = resourceApi.remapUri(Uri.parse(source));
 
         int uriType = CordovaResourceApi.getUriType(sourceUri);
-        final boolean useHttps = uriType == CordovaResourceApi.URI_TYPE_HTTPS;
+        boolean useHttps = uriType == CordovaResourceApi.URI_TYPE_HTTPS;
         final boolean isLocalTransfer = !useHttps && uriType != CordovaResourceApi.URI_TYPE_HTTP;
 
         synchronized (progress) {
@@ -239,6 +240,8 @@ public class Sync extends CordovaPlugin {
         PluginResult result = null;
         TrackingInputStream inputStream = null;
         boolean cached = false;
+        URL resourceUrl, base, next;
+        String location;
 
         OutputStream outputStream = null;
         try {
@@ -261,37 +264,57 @@ public class Sync extends CordovaPlugin {
                 inputStream = new SimpleTrackingInputStream(readResult.inputStream);
             } else {
                 // connect to server
-                // Open a HTTP connection to the URL based on protocol
-                connection = resourceApi.createHttpConnection(sourceUri);
-                if (useHttps && trustEveryone) {
-                    // Setup the HTTPS connection class to trust everyone
-                    HttpsURLConnection https = (HttpsURLConnection)connection;
-                    oldSocketFactory = trustAllHosts(https);
-                    // Save the current hostnameVerifier
-                    oldHostnameVerifier = https.getHostnameVerifier();
-                    // Setup the connection not to verify hostnames
-                    https.setHostnameVerifier(DO_NOT_VERIFY);
+                // Open a HTTP connection to the URL based on protocol following redirections
+
+                while (true) {
+                    connection = resourceApi.createHttpConnection(sourceUri);
+
+                    uriType = CordovaResourceApi.getUriType(sourceUri);
+                    useHttps = uriType == CordovaResourceApi.URI_TYPE_HTTPS;
+
+                    if (useHttps && trustEveryone) {
+                        // Setup the HTTPS connection class to trust everyone
+                        HttpsURLConnection https = (HttpsURLConnection)connection;
+                        oldSocketFactory = trustAllHosts(https);
+                        // Save the current hostnameVerifier
+                        oldHostnameVerifier = https.getHostnameVerifier();
+                        // Setup the connection not to verify hostnames
+                        https.setHostnameVerifier(DO_NOT_VERIFY);
+                    }
+
+                    connection.setRequestMethod("GET");
+
+                    // TODO: Make OkHttp use this CookieManager by default.
+                    String cookie = getCookies(sourceUri.toString());
+
+                    if(cookie != null)
+                    {
+                        connection.setRequestProperty("cookie", cookie);
+                    }
+
+                    // This must be explicitly set for gzip progress tracking to work.
+                    connection.setRequestProperty("Accept-Encoding", "gzip");
+                    connection.setInstanceFollowRedirects(false);   // Make the logic below easier to detect redirections
+
+                    // Handle the other headers
+                    if (headers != null) {
+                        addHeadersToRequest(connection, headers);
+                    }
+
+                    connection.connect();
+
+                    if (connection.getResponseCode() == HttpURLConnection.HTTP_MOVED_PERM ||
+                        connection.getResponseCode() == HttpURLConnection.HTTP_MOVED_TEMP) {
+                        location = connection.getHeaderField("Location");
+                        base     = new URL(sourceUri.toString());
+                        next     = new URL(base, location);  // Deal with relative URLs
+                        sourceUri = Uri.parse(next.toString());
+                        continue;
+                    }
+
+                    break;
                 }
 
-                connection.setRequestMethod("GET");
-
-                // TODO: Make OkHttp use this CookieManager by default.
-                String cookie = getCookies(sourceUri.toString());
-
-                if(cookie != null)
-                {
-                    connection.setRequestProperty("cookie", cookie);
-                }
-
-                // This must be explicitly set for gzip progress tracking to work.
-                connection.setRequestProperty("Accept-Encoding", "gzip");
-
-                // Handle the other headers
-                if (headers != null) {
-                    addHeadersToRequest(connection, headers);
-                }
-
-                connection.connect();
                 if (connection.getResponseCode() == HttpURLConnection.HTTP_NOT_MODIFIED) {
                     cached = true;
                     connection.disconnect();
