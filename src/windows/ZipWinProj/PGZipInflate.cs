@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -44,19 +44,15 @@ namespace ZipWinProj
                 // Read uncompressed contents 
                 using (Stream entryStream = entry.Open())
                 {
-                    byte[] buffer = new byte[entry.Length];
-                    entryStream.Read(buffer, 0, buffer.Length);
-
-                    // Create a file to store the contents 
+                    // Create a file to store the contents
                     StorageFile uncompressedFile = await destFolder.CreateFileAsync(entry.Name, CreationCollisionOption.ReplaceExisting);
 
-                    // Store the contents 
-                    using (IRandomAccessStream uncompressedFileStream = 
+                    using (IRandomAccessStream uncompressedFileStream =
                         await uncompressedFile.OpenAsync(FileAccessMode.ReadWrite))
                     {
                         using (Stream outstream = uncompressedFileStream.AsStreamForWrite())
                         {
-                            outstream.Write(buffer, 0, buffer.Length);
+                            await entryStream.CopyToAsync(outstream);
                             outstream.Flush();
                         }
                     }
