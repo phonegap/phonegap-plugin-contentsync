@@ -102,6 +102,27 @@
 }
 #endif // TAGET_OS_IOS
 
++ (BOOL) hasAppBeenUpdated {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSString* previousVersion = [defaults objectForKey:@"PREVIOUS_VERSION"];
+
+    NSDictionary *infoDictionary = [[NSBundle mainBundle] infoDictionary];
+    NSString* currentVersion = [infoDictionary objectForKey:@"CFBundleShortVersionString"];
+
+    NSLog(@"previous version %@", previousVersion);
+    NSLog(@"current version %@", currentVersion);
+
+    // set previous version to current version
+    [defaults setObject:currentVersion forKey:@"PREVIOUS_VERSION"];
+    [defaults synchronize];
+
+    if ([currentVersion compare:previousVersion options:NSNumericSearch] == NSOrderedDescending) {
+        NSLog(@"current version is newer than previous version");;
+    }
+
+    return ([currentVersion compare:previousVersion options:NSNumericSearch] == NSOrderedDescending);
+}
+
 - (void)sync:(CDVInvokedUrlCommand*)command {
     NSString* src = [command argumentAtIndex:0 withDefault:nil];
     NSString* type = [command argumentAtIndex:2];
@@ -116,16 +137,18 @@
     if(local == YES) {
         NSLog(@"Requesting local copy of %@", appId);
         if([fileManager fileExistsAtPath:[appPath path]]) {
-            NSLog(@"Found local copy %@", [appPath path]);
-            CDVPluginResult *pluginResult = nil;
+            if (![ContentSync hasAppBeenUpdated]) {
+                NSLog(@"Found local copy %@", [appPath path]);
+                CDVPluginResult *pluginResult = nil;
 
-            NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
-            [message setObject:[appPath path] forKey:@"localPath"];
-            [message setObject:@"true" forKey:@"cached"];
-            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+                NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
+                [message setObject:[appPath path] forKey:@"localPath"];
+                [message setObject:@"true" forKey:@"cached"];
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
 
-            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-            return;
+                [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+                return;
+            }
         }
     }
 
@@ -705,10 +728,10 @@
         }
         else
         {
-            #pragma clang diagnostic push
-            #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             configuration = [NSURLSessionConfiguration backgroundSessionConfiguration:sessionId];
-            #pragma clang diagnostic pop
+#pragma clang diagnostic pop
         }
 #else
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_0
