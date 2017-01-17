@@ -244,6 +244,7 @@ public class Sync extends CordovaPlugin {
         PluginResult result = null;
         TrackingInputStream inputStream = null;
         boolean cached = false;
+        boolean retval = true;
 
         OutputStream outputStream = null;
         try {
@@ -256,7 +257,6 @@ public class Sync extends CordovaPlugin {
             Log.d(LOG_TAG, "Download file: " + sourceUri);
             Log.d(LOG_TAG, "Target file: " + file);
             Log.d(LOG_TAG, "size = " + file.length());
-
 
             if (isLocalTransfer) {
                 readResult = resourceApi.openForRead(sourceUri);
@@ -301,7 +301,8 @@ public class Sync extends CordovaPlugin {
                     cached = true;
                     connection.disconnect();
                     sendErrorMessage("Resource not modified: " + source, CONNECTION_ERROR, callbackContext, connection.getResponseCode());
-                    return false;
+                    retval = false
+                    return retval;
                 } else {
                     if (connection.getContentEncoding() == null || connection.getContentEncoding().equalsIgnoreCase("gzip")) {
                         // Only trust content-length header if we understand
@@ -312,7 +313,8 @@ public class Sync extends CordovaPlugin {
                                 cached = true;
                                 connection.disconnect();
                                 sendErrorMessage("Not enough free space to download", CONNECTION_ERROR, callbackContext, connection.getResponseCode());
-                                return false;
+                                retval = false
+                                return retval;
                             } else {
                                 progress.setTotal(connectionLength);
                             }
@@ -326,7 +328,8 @@ public class Sync extends CordovaPlugin {
                 try {
                     synchronized (progress) {
                         if (progress.isAborted()) {
-                            return false;
+                            retval = false
+                            return retval;
                         }
                         //progress.connection = connection;
                     }
@@ -338,7 +341,8 @@ public class Sync extends CordovaPlugin {
                     while ((bytesRead = inputStream.read(buffer)) > 0) {
                         synchronized (progress) {
                             if (progress.isAborted()) {
-                                return false;
+                                retval = false
+                                return retval;
                             }
                         }
                         Log.d(LOG_TAG, "bytes read = " + bytesRead);
@@ -359,6 +363,7 @@ public class Sync extends CordovaPlugin {
 
         } catch (Throwable e) {
             try {
+                retval = false;
                 sendErrorMessage(e.getLocalizedMessage(), CONNECTION_ERROR, callbackContext, connection.getResponseCode());
             } catch (IOException ioe) {
             }
@@ -373,7 +378,7 @@ public class Sync extends CordovaPlugin {
             }
         }
 
-        return true;
+        return retval;
     }
 
     private void sendErrorMessage(String message, int type, CallbackContext callbackContext) {
