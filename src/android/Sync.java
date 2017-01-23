@@ -301,7 +301,7 @@ public class Sync extends CordovaPlugin {
                     cached = true;
                     connection.disconnect();
                     sendErrorMessage("Resource not modified: " + source, CONNECTION_ERROR, callbackContext, connection.getResponseCode());
-                    retval = false
+                    retval = false;
                     return retval;
                 } else {
                     if (connection.getContentEncoding() == null || connection.getContentEncoding().equalsIgnoreCase("gzip")) {
@@ -313,7 +313,7 @@ public class Sync extends CordovaPlugin {
                                 cached = true;
                                 connection.disconnect();
                                 sendErrorMessage("Not enough free space to download", CONNECTION_ERROR, callbackContext, connection.getResponseCode());
-                                retval = false
+                                retval = false;
                                 return retval;
                             } else {
                                 progress.setTotal(connectionLength);
@@ -328,7 +328,7 @@ public class Sync extends CordovaPlugin {
                 try {
                     synchronized (progress) {
                         if (progress.isAborted()) {
-                            retval = false
+                            retval = false;
                             return retval;
                         }
                         //progress.connection = connection;
@@ -341,7 +341,7 @@ public class Sync extends CordovaPlugin {
                     while ((bytesRead = inputStream.read(buffer)) > 0) {
                         synchronized (progress) {
                             if (progress.isAborted()) {
-                                retval = false
+                                retval = false;
                                 return retval;
                             }
                         }
