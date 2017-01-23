@@ -1,5 +1,23 @@
 # Change Log
 
+## [v1.3.3](https://github.com/* remote origin
+  Fetch URL: https://github.com//tree/v1.3.3) (2016-07-09)
+[Full Changelog](https://github.com/* remote origin
+  Fetch URL: https://github.com//compare/v1.3.2...v1.3.3)
+
+- 1.3.3 [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/e13bff12f253bdb6346e422ce6cb44e9a62694a4)
+- :bookmark: Bumping plugin version to 1.3.3 [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/08f3dd84c2b17427fd7f424244b0b90262aef128)
+- Merge pull request #164 from ptit6sky/master [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/3a6cdae00ee1b7a13105a7643b96fb167ef60cfd)
+- Add missing semicolons [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/89ab231ecdc20a6221ba7f39b9828421a55def3c)
+- :bug::penguin: Issue #162: Replace of data after connection aborted (HTTP code 400 or 500) [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/fbd833923963ef443e7564a218d9d0d162e8e851)
+- Updating CHANGELOG [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/692facab73b520edba33ab5db7762d6e44813fef)
+
 ## [v1.3.2](https://github.com/* remote origin
   Fetch URL: https://github.com//tree/v1.3.2) (2016-07-09)
 [Full Changelog](https://github.com/* remote origin
