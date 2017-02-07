@@ -127,6 +127,7 @@
     NSString* src = [command argumentAtIndex:0 withDefault:nil];
     NSString* type = [command argumentAtIndex:2];
     BOOL local = [type isEqualToString:@"local"];
+    BOOL appUpdated = [ContentSync hasAppBeenUpdated];
 
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSString* appId = [command argumentAtIndex:1];
@@ -136,19 +137,17 @@
 
     if(local == YES) {
         NSLog(@"Requesting local copy of %@", appId);
-        if([fileManager fileExistsAtPath:[appPath path]]) {
-            if (![ContentSync hasAppBeenUpdated]) {
-                NSLog(@"Found local copy %@", [appPath path]);
-                CDVPluginResult *pluginResult = nil;
+        if([fileManager fileExistsAtPath:[appPath path]] && !appUpdated) {
+            NSLog(@"Found local copy %@", [appPath path]);
+            CDVPluginResult *pluginResult = nil;
 
-                NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
-                [message setObject:[appPath path] forKey:@"localPath"];
-                [message setObject:@"true" forKey:@"cached"];
-                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+            NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
+            [message setObject:[appPath path] forKey:@"localPath"];
+            [message setObject:@"true" forKey:@"cached"];
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
 
-                [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-                return;
-            }
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+            return;
         }
     }
 
@@ -175,7 +174,7 @@
             [message setObject:[NSNumber numberWithInteger:-1] forKey:@"responseCode"];
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:message];
             NSLog(@"%@", [error localizedDescription]);
-        } else {
+        } else if(appUpdated) {
             [self copyCordovaAssets:[appPath path] copyRootApp:YES];
             if(src == nil) {
                 NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
