@@ -63,6 +63,7 @@ import android.content.res.AssetManager;
 import android.net.Uri;
 import android.os.Environment;
 import android.os.StatFs;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.util.Patterns;
 import android.webkit.CookieManager;
@@ -431,6 +432,7 @@ public class Sync extends CordovaPlugin {
             copyCordovaAssets = args.getBoolean(4);
         }
         final String manifestFile = args.getString(8);
+        final boolean backup = args.getBoolean(10);
         Log.d(LOG_TAG, "sync called with id = " + id + " and src = " + src + "!");
 
         final ProgressEvent progress = createProgressEvent(id);
@@ -453,7 +455,7 @@ public class Sync extends CordovaPlugin {
                     }
                 }
 
-                String outputDirectory = getOutputDirectory(id);
+                String outputDirectory = getOutputDirectory(id, backup);
 
                 // Check to see if we should just return the cached version
                 String type = args.optString(2, TYPE_REPLACE);
@@ -607,9 +609,14 @@ public class Sync extends CordovaPlugin {
         return success;
     }
 
-    private String getOutputDirectory(final String id) {
+    private String getOutputDirectory(final String id, boolean backup) {
         // Production
-        String outputDirectory = cordova.getActivity().getFilesDir().getAbsolutePath();
+        String outputDirectory = null;
+        if (backup) {
+            outputDirectory = cordova.getActivity().getFilesDir().getAbsolutePath();
+        } else {
+            outputDirectory = ContextCompat.getNoBackupFilesDir(cordova.getActivity()).getAbsolutePath();
+        }
         // Testing
         //String outputDirectory = cordova.getActivity().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
         outputDirectory += outputDirectory.endsWith(File.separator) ? "" : File.separator;

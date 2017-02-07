@@ -20,6 +20,7 @@
         <param name="android-package" value="com.adobe.phonegap.contentsync.Sync"/>
       </feature>
     </config-file>
+    <framework src="com.android.support:support-v4:23+"/>
     <source-file src="src/android/Sync.java" target-dir="src/com/adobe/phonegap/contentsync"/>
   </platform>
   <platform name="browser">
