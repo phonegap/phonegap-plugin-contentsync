@@ -78,11 +78,15 @@ var ContentSync = function(options) {
     }
 
     if (typeof options.manifest === 'undefined') {
-        options.manifest = "";
+        options.manifest = '';
     }
 
     if (typeof options.validateSrc === 'undefined') {
         options.validateSrc = true;
+    }
+
+    if (typeof options.backup === 'undefined') {
+        options.backup = false;
     }
 
     // store the options to this object instance
@@ -106,7 +110,7 @@ var ContentSync = function(options) {
 
     // wait at least one process tick to allow event subscriptions
     setTimeout(function() {
-        exec(success, fail, 'Sync', 'sync', [options.src, options.id, options.type, options.headers, options.copyCordovaAssets, options.copyRootApp, options.timeout, options.trustHost, options.manifest, options.validateSrc]);
+        exec(success, fail, 'Sync', 'sync', [options.src, options.id, options.type, options.headers, options.copyCordovaAssets, options.copyRootApp, options.timeout, options.trustHost, options.manifest, options.validateSrc, options.backup]);
     }, 10);
 };
 
@@ -228,11 +232,11 @@ module.exports = {
         var callback = (typeof headers == "function" ? headers : cb);
         exec(callback, callback, 'Sync', 'download', [url, null, headers]);
     },
-    
+
     /**
      * loadUrl
      *
-     * This method allows loading file:// urls when using WKWebViews on iOS. 
+     * This method allows loading file:// urls when using WKWebViews on iOS.
      *
      */
 
