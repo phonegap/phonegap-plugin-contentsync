@@ -127,17 +127,19 @@
     NSString* src = [command argumentAtIndex:0 withDefault:nil];
     NSString* type = [command argumentAtIndex:2];
     BOOL local = [type isEqualToString:@"local"];
-    BOOL appUpdated = [ContentSync hasAppBeenUpdated];
 
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSString* appId = [command argumentAtIndex:1];
     NSURL* storageDirectory = [ContentSync getStorageDirectory];
     NSURL *appPath = [storageDirectory URLByAppendingPathComponent:appId];
     NSLog(@"appPath %@", appPath);
+    
+    BOOL appUpdated = [ContentSync hasAppBeenUpdated];
+    BOOL cacheExists = [fileManager fileExistsAtPath:[appPath path]];
 
     if(local == YES) {
         NSLog(@"Requesting local copy of %@", appId);
-        if([fileManager fileExistsAtPath:[appPath path]] && !appUpdated) {
+        if(cacheExists && !appUpdated) {
             NSLog(@"Found local copy %@", [appPath path]);
             CDVPluginResult *pluginResult = nil;
 
@@ -174,7 +176,7 @@
             [message setObject:[NSNumber numberWithInteger:-1] forKey:@"responseCode"];
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:message];
             NSLog(@"%@", [error localizedDescription]);
-        } else if(appUpdated) {
+        } else if(!cacheExists || appUpdated) {
             [self copyCordovaAssets:[appPath path] copyRootApp:YES];
             if(src == nil) {
                 NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
