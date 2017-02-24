@@ -133,22 +133,23 @@
     NSURL* storageDirectory = [ContentSync getStorageDirectory];
     NSURL *appPath = [storageDirectory URLByAppendingPathComponent:appId];
     NSLog(@"appPath %@", appPath);
+    
+    BOOL appUpdated = [ContentSync hasAppBeenUpdated];
+    BOOL cacheExists = [fileManager fileExistsAtPath:[appPath path]];
 
     if(local == YES) {
         NSLog(@"Requesting local copy of %@", appId);
-        if([fileManager fileExistsAtPath:[appPath path]]) {
-            if (![ContentSync hasAppBeenUpdated]) {
-                NSLog(@"Found local copy %@", [appPath path]);
-                CDVPluginResult *pluginResult = nil;
+        if(cacheExists && !appUpdated) {
+            NSLog(@"Found local copy %@", [appPath path]);
+            CDVPluginResult *pluginResult = nil;
 
-                NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
-                [message setObject:[appPath path] forKey:@"localPath"];
-                [message setObject:@"true" forKey:@"cached"];
-                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+            NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
+            [message setObject:[appPath path] forKey:@"localPath"];
+            [message setObject:@"true" forKey:@"cached"];
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
 
-                [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-                return;
-            }
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+            return;
         }
     }
 
@@ -175,7 +176,7 @@
             [message setObject:[NSNumber numberWithInteger:-1] forKey:@"responseCode"];
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:message];
             NSLog(@"%@", [error localizedDescription]);
-        } else {
+        } else if(!cacheExists || appUpdated) {
             [self copyCordovaAssets:[appPath path] copyRootApp:YES];
             if(src == nil) {
                 NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
@@ -650,26 +651,78 @@
     return success;
 }
 
+- (void)mergeFolders:(NSString *)srcDir intoPath:(NSString *)dstDir error:(NSError**)err {
+
+    NSLog(@"- mergeFolders: %@\n intoPath: %@", srcDir, dstDir);
+
+    NSFileManager *fm = [NSFileManager defaultManager];
+    NSDirectoryEnumerator *srcDirEnum = [fm enumeratorAtPath:srcDir];
+    NSString *subPath;
+    while ((subPath = [srcDirEnum nextObject])) {
+        NSLog(@" subPath: %@", subPath);
+        NSString *srcFullPath =  [srcDir stringByAppendingPathComponent:subPath];
+        NSString *potentialDstPath = [dstDir stringByAppendingPathComponent:subPath];
+
+        // Need to also check if file exists because if it doesn't, value of `isDirectory` is undefined.
+        BOOL isDirectory = ([[NSFileManager defaultManager] fileExistsAtPath:srcFullPath isDirectory:&isDirectory] && isDirectory);
+
+        // Create directory, or delete existing file and move file to destination
+        if (isDirectory) {
+            NSLog(@"   create directory");
+            [fm createDirectoryAtPath:potentialDstPath withIntermediateDirectories:YES attributes:nil error:err];
+            if (err && *err) {
+                NSLog(@"ERROR: %@", *err);
+                return;
+            }
+        }
+        else {
+            if ([fm fileExistsAtPath:potentialDstPath]) {
+                NSLog(@"   removeItemAtPath");
+                [fm removeItemAtPath:potentialDstPath error:err];
+                if (err && *err) {
+                    NSLog(@"ERROR: %@", *err);
+                    return;
+                }
+            }
+
+            NSLog(@"   copyItemAtPath");
+            [fm copyItemAtPath:srcFullPath toPath:potentialDstPath error:err];
+            if (err && *err) {
+                NSLog(@"ERROR: %@", *err);
+                return;
+            }
+        }
+    }
+}
+
 - (BOOL) copyCordovaAssets:(NSString*)unzippedPath {
     return [self copyCordovaAssets:unzippedPath copyRootApp:false];
 }
 
 // TODO GET RID OF THIS
+// THIS F!@#% BS
 - (BOOL) copyCordovaAssets:(NSString*)unzippedPath copyRootApp:(BOOL)copyRootApp {
+    NSLog(@"copyCordovaAssets");
     NSError *errorCopy;
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSURL* destinationURL = [NSURL fileURLWithPath:unzippedPath];
 
     if(copyRootApp == YES) {
         NSLog(@"Copying Root App");
+        NSString* suffix = @"/www";
+        NSString* destDir = unzippedPath;
+
+        if([fileManager fileExistsAtPath:[unzippedPath stringByAppendingString:suffix]]) {
+            destDir = [unzippedPath stringByAppendingString:suffix];
+            NSLog(@"Found %@ folder. Will copy root application to it.", suffix);
+        }
         // we use cordova.js as a way to find the root www/
         NSString* root = [[[self commandDelegate] pathForResource:@"cordova.js"] stringByDeletingLastPathComponent];
 
-        NSURL* sourceURL = [NSURL fileURLWithPath:root];
-        [fileManager removeItemAtURL:destinationURL error:NULL];
-        BOOL success = [fileManager copyItemAtURL:sourceURL toURL:destinationURL error:&errorCopy];
-
-        if(!success) {
+        NSError *mergeError = nil;
+        [self mergeFolders:root intoPath:destDir error:&mergeError];
+        if(mergeError != nil) {
+            NSLog(@"An error occurred: %@", [mergeError localizedDescription]);
             return NO;
         }
 
