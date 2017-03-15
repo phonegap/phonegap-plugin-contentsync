@@ -1,5 +1,25 @@
 # Change Log
 
+## [v1.3.4](https://github.com/* remote origin
+  Fetch URL: https://github.com//tree/v1.3.4) (2016-07-09)
+[Full Changelog](https://github.com/* remote origin
+  Fetch URL: https://github.com//compare/v1.3.3...v1.3.4)
+
+- 1.3.4 [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/72a7c0b9f843fc0eb61717270a54a7ae2f540d19)
+- :bookmark: Bumping plugin version to 1.3.4 [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/19ec8a224eff24efa5ac3e6eb23cf85365d0afa5)
+- Merge pull request #171 from ramboz/issue170 [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/c9c070970f76e998b5fa0178cdb49977650a117c)
+- :bug: Fixing potential NullPointerException while removing folders on Android [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/713690a27ad908db768a4ee58ef7151d3eeac73d)
+- Merge pull request #165 from brevityco/windows-fix [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/d88a36a932977c5503a5e44b6f2cbb235b180ecf)
+- Fix unarchiving memory issues [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/e403fab3c06fb8d9772c61fa63bd0bc7f961ec59)
+- Updating CHANGELOG [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/372ef32fb00a518c6c9f8f32faa52f09c6d33065)
+
 ## [v1.3.3](https://github.com/* remote origin
   Fetch URL: https://github.com//tree/v1.3.3) (2016-07-09)
 [Full Changelog](https://github.com/* remote origin
