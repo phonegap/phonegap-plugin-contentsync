@@ -1,5 +1,21 @@
 # Change Log
 
+## [v1.3.5](https://github.com/* remote origin
+  Fetch URL: https://github.com//tree/v1.3.5) (2016-07-09)
+[Full Changelog](https://github.com/* remote origin
+  Fetch URL: https://github.com//compare/v1.3.4...v1.3.5)
+
+- 1.3.5 [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/e90680484b04b77fba3d97f28dabccc57f7c6931)
+- :bookmark: Bumping plugin version to 1.3.5 [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/1a63fbfdc167033802aca7148c92960e42f9c05b)
+- Merge pull request #172 from phonegap/android-fix [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/752ab470c3c267aa87229671ea67dceb7d9f7d0d)
+- fixing compile error [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/7273dbd91bff6a4060bc17a391a49edc8262dd88)
+- Updating CHANGELOG [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/d388c5af6bc814ae42e1a2bd9ee99acb6a167384)
+
 ## [v1.3.4](https://github.com/* remote origin
   Fetch URL: https://github.com//tree/v1.3.4) (2016-07-09)
 [Full Changelog](https://github.com/* remote origin
