@@ -1120,7 +1120,7 @@ public class Sync extends CordovaPlugin {
 
     private void removeFolder(File directory) {
         if (directory.exists() && directory.isDirectory()) {
-            File files = directory.listFiles();
+            File[] files = directory.listFiles();
             if (files != null) {
                 for (File file : files) {
                     removeFolder(file);
