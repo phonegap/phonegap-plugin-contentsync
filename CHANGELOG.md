@@ -1,5 +1,19 @@
 # Change Log
 
+## [v1.3.6](https://github.com/* remote origin
+  Fetch URL: https://github.com//tree/v1.3.6) (2016-07-09)
+[Full Changelog](https://github.com/* remote origin
+  Fetch URL: https://github.com//compare/v1.3.5...v1.3.6)
+
+- 1.3.6 [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/a1ef7a60ea31976b36686854a045d437eef0fa3f)
+- :bookmark: Bumping plugin version to 1.3.6 [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/b1cc6939d68da56a8d8196097be73826461e2f10)
+- add OutputPath to ZipWinProj.csproj (#173) [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/7912d9d840b54200f6649c7adc32f4129ceaa826)
+- Updating CHANGELOG [view commit](http://github.com/* remote origin
+  Fetch URL: https://github.com//commit/4d5fea0ac8b39f5b0eea049a31cd7f07bcf106bd)
+
 ## [v1.3.5](https://github.com/* remote origin
   Fetch URL: https://github.com//tree/v1.3.5) (2016-07-09)
 [Full Changelog](https://github.com/* remote origin
