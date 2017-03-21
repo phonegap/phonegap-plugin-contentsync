@@ -5,6 +5,7 @@
     <DefaultLanguage>en-US</DefaultLanguage>
     <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <OutputPath>bin\Debug\</OutputPath>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{6865B02D-95D5-4A75-A130-E08BDBF45A12}</ProjectGuid>
     <OutputType>winmdobj</OutputType>
