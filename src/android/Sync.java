@@ -694,6 +694,9 @@ public class Sync extends CordovaPlugin {
             // cordova.js
             this.copyAssetFile(outputDirectory, "www/cordova.js", wwwExists);
 
+            // phonegap.js
+            this.copyAssetFile(outputDirectory, "www/phonegap.js", wwwExists);
+
             // cordova_plugins.js
             this.copyAssetFile(outputDirectory, "www/cordova_plugins.js", wwwExists);
 

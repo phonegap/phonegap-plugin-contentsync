@@ -676,7 +676,7 @@
         return YES;
     }
     NSLog(@"Copying Cordova Assets");
-    NSArray* cordovaAssets = [NSArray arrayWithObjects:@"cordova.js",@"cordova_plugins.js",@"plugins", nil];
+    NSArray* cordovaAssets = [NSArray arrayWithObjects:@"cordova.js",@"phonegap.js",@"cordova_plugins.js",@"plugins", nil];
     NSString* suffix = @"/www";
 
     if([fileManager fileExistsAtPath:[unzippedPath stringByAppendingString:suffix]]) {

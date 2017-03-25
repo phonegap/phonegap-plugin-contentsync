@@ -647,6 +647,7 @@ namespace WPCordovaClassLib.Cordova.Commands
         private void copyCordovaAssets(string destFilePath)
         {
             copyCordovaPlugins("x-wmapp0:www/cordova.js", destFilePath + "/www/cordova.js");
+            copyCordovaPlugins("x-wmapp0:www/phonegap.js", destFilePath + "/www/phonegap.js");
             copyCordovaPlugins("x-wmapp0:www/cordova_plugins.js", destFilePath + "/www/cordova_plugins.js");
 
             Uri uri = new Uri("x-wmapp0:www/cordova_plugins.js", UriKind.RelativeOrAbsolute);
