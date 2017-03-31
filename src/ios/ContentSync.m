@@ -124,14 +124,14 @@
 }
 
 - (void)sync:(CDVInvokedUrlCommand*)command {
-    NSString* src = [command argumentAtIndex:0 withDefault:nil];
-    NSString* type = [command argumentAtIndex:2];
-    BOOL local = [type isEqualToString:@"local"];
+    __block NSString* src = [command argumentAtIndex:0 withDefault:nil];
+    __block NSString* type = [command argumentAtIndex:2];
+    __block BOOL local = [type isEqualToString:@"local"];
 
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    NSString* appId = [command argumentAtIndex:1];
-    NSURL* storageDirectory = [ContentSync getStorageDirectory];
-    NSURL *appPath = [storageDirectory URLByAppendingPathComponent:appId];
+    __block NSFileManager *fileManager = [NSFileManager defaultManager];
+    __block NSString* appId = [command argumentAtIndex:1];
+    __block NSURL* storageDirectory = [ContentSync getStorageDirectory];
+    __block NSURL *appPath = [storageDirectory URLByAppendingPathComponent:appId];
     NSLog(@"appPath %@", appPath);
 
     if(local == YES) {
@@ -155,14 +155,13 @@
     BOOL copyRootApp = [[command argumentAtIndex:5 withDefault:@(NO)] boolValue];
 
     if(copyRootApp == YES) {
-        CDVPluginResult *pluginResult = nil;
-        NSError* error = nil;
+        __block NSError* error = nil;
 
         NSLog(@"Creating app directory %@", [appPath path]);
         [fileManager createDirectoryAtPath:[appPath path] withIntermediateDirectories:YES attributes:nil error:&error];
 
-        NSError* errorSetting = nil;
-        BOOL success = [appPath setResourceValue: [NSNumber numberWithBool: YES]
+        __block NSError* errorSetting = nil;
+        __block BOOL success = [appPath setResourceValue: [NSNumber numberWithBool: YES]
                                           forKey: NSURLIsExcludedFromBackupKey error: &errorSetting];
 
         if(success == NO) {
@@ -170,30 +169,35 @@
         }
 
         if(error != nil) {
+            CDVPluginResult *pluginResult = nil;
             NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
             [message setObject:[NSNumber numberWithInteger:LOCAL_ERR] forKey:@"type"];
             [message setObject:[NSNumber numberWithInteger:-1] forKey:@"responseCode"];
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:message];
             NSLog(@"%@", [error localizedDescription]);
         } else {
-            [self copyCordovaAssets:[appPath path] copyRootApp:YES];
-            if(src == nil) {
-                NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
-                [message setObject:[appPath path] forKey:@"localPath"];
-                [message setObject:@"true" forKey:@"cached"];
-                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
-                [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-                return;
-            }
+            [self.commandDelegate runInBackground:^{
+                CDVPluginResult *pluginResult = nil;
+                [self copyCordovaAssets:[appPath path] copyRootApp:YES];
+                if(src == nil) {
+                    NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
+                    [message setObject:[appPath path] forKey:@"localPath"];
+                    [message setObject:@"true" forKey:@"cached"];
+                    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+                    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+                    return;
+                }
+            }];
         }
     }
 
 
     __weak ContentSync* weakSelf = self;
-
-    [self.commandDelegate runInBackground:^{
-        [weakSelf startDownload:command extractArchive:YES];
-    }];
+    if (local != YES && src != nil) {
+        [self.commandDelegate runInBackground:^{
+            [weakSelf startDownload:command extractArchive:YES];
+        }];
+    }
 }
 
 - (void) download:(CDVInvokedUrlCommand*)command {
@@ -226,24 +230,24 @@
 
     self.session = [self backgroundSession:timeout];
     NSURL *srcURL = [NSURL URLWithString:src];
-    
+
     // Setting headers (do changes also in download url, or better extract setting the following lines to a function)
     NSDictionary *headers = [command argumentAtIndex:3 withDefault:nil andClass:[NSDictionary class]];
-    
+
     // checking if URL is valid
     BOOL srcIsValid = YES;
-    
+
     if (validateSrc == YES) {
         NSMutableURLRequest *urlRequest = [NSMutableURLRequest requestWithURL:srcURL];
         [urlRequest setHTTPMethod:@"HEAD"];
-        
+
         [self setHeaders:urlRequest :headers];
 
         // request just to check if url is correct and server is available
         NSHTTPURLResponse *response = nil;
         NSError *error = nil;
         [NSURLConnection sendSynchronousRequest:urlRequest returningResponse:&response error:&error];
-        
+
         if (error || response.statusCode >= 400) {
             srcIsValid = false;
         }
@@ -281,7 +285,7 @@
         } else {
             NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:downloadURL];
             request.timeoutInterval = 15.0;
-            
+
             [self setHeaders:request :headers];
 
             NSURLSessionDownloadTask *downloadTask = [self.session downloadTaskWithRequest:request];
