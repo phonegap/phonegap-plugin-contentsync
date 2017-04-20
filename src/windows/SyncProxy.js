@@ -30,6 +30,7 @@ function copyCordovaAssetsAsync(wwwFolder, destWWWFolder) {
     .then(function (pluginsFolder) {
         return WinJS.Promise.join([recursiveCopyFolderAsync(pluginsFolder, destWWWFolder, null, false),
                                    copyAndReplaceFileFromPathAsync(wwwFolder.path + "\\cordova.js", destWWWFolder),
+                                   copyAndReplaceFileFromPathAsync(wwwFolder.path + "\\phonegap.js", destWWWFolder),
                                    copyAndReplaceFileFromPathAsync(wwwFolder.path + "\\cordova_plugins.js", destWWWFolder)]);
     });
 }
