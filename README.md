@@ -68,7 +68,7 @@ Parameter | Description
 `options.copyCordovaAssets` | `Boolean` _(Optional)_ Copies `cordova.js`, `cordova_plugins.js` and `plugins/` to sync'd folder. This operation happens after the source content has been cached, so it will override any existing Cordova assets. Default is `false`.
 `options.copyRootApp` | `Boolean` _(Optional)_ Copies the `www` folder to sync'd folder. This operation happens before the source content has been cached, then the source content is cached and finally it copies `cordova.js`, `cordova_plugins.js` and `plugins/` to sync'd folder to remain consistent with the installed plugins. Default is `false`.
 `options.timeout` | `Double` _(Optional)_ Request timeout. Default is 15 seconds.
-`options.trustHost` | `Boolean` _(Optional)_ Trust SSL host. Host defined in `options.src` will be trusted. Ignored if `options.src` is undefined.
+`options.trustHost` | `Boolean` _(Optional)_ Trust SSL host. Host defined in `options.src` will be trusted. Ignored if `options.src` is undefined. Not supported on Android.
 `options.manifest` | `String` _(Optional)_ If specified the `copyRootApp` functionality will use the list of files contained in the manifest file during it's initial copy. {Android only}
 `options.validateSrc` | `Boolean` _(Optional)_ Whether to validate src url with a HEAD request before download (ios only, default true).
 

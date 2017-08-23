@@ -35,17 +35,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
-
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaResourceApi;
@@ -57,9 +46,7 @@ import org.json.JSONObject;
 
 import android.app.Activity;
 import android.content.SharedPreferences;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.content.res.AssetManager;
 import android.net.Uri;
 import android.os.Environment;
 import android.os.StatFs;
@@ -112,7 +99,7 @@ public class Sync extends CordovaPlugin {
             final CallbackContext finalContext = callbackContext;
             cordova.getThreadPool().execute(new Runnable() {
                 public void run() {
-                    if (download(source, target, headers, createProgressEvent("download"), finalContext, false)) {
+                    if (download(source, target, headers, createProgressEvent("download"), finalContext)) {
                         JSONObject retval = new JSONObject();
                         try {
                             retval.put("archiveURL", target.getAbsolutePath());
@@ -218,7 +205,7 @@ public class Sync extends CordovaPlugin {
         }
     }
 
-    private boolean download(final String source, final File file, final JSONObject headers, final ProgressEvent progress, final CallbackContext callbackContext, final boolean trustEveryone) {
+    private boolean download(final String source, final File file, final JSONObject headers, final ProgressEvent progress, final CallbackContext callbackContext) {
         Log.d(LOG_TAG, "download " + source);
 
         if (!Patterns.WEB_URL.matcher(source).matches()) {
@@ -239,8 +226,6 @@ public class Sync extends CordovaPlugin {
             }
         }
         HttpURLConnection connection = null;
-        HostnameVerifier oldHostnameVerifier = null;
-        SSLSocketFactory oldSocketFactory = null;
         PluginResult result = null;
         TrackingInputStream inputStream = null;
         boolean cached = false;
@@ -268,16 +253,6 @@ public class Sync extends CordovaPlugin {
                 // connect to server
                 // Open a HTTP connection to the URL based on protocol
                 connection = resourceApi.createHttpConnection(sourceUri);
-                if (useHttps && trustEveryone) {
-                    // Setup the HTTPS connection class to trust everyone
-                    HttpsURLConnection https = (HttpsURLConnection)connection;
-                    oldSocketFactory = trustAllHosts(https);
-                    // Save the current hostnameVerifier
-                    oldHostnameVerifier = https.getHostnameVerifier();
-                    // Setup the connection not to verify hostnames
-                    https.setHostnameVerifier(DO_NOT_VERIFY);
-                }
-
                 connection.setRequestMethod("GET");
 
                 // TODO: Make OkHttp use this CookieManager by default.
@@ -367,15 +342,6 @@ public class Sync extends CordovaPlugin {
                 sendErrorMessage(e.getLocalizedMessage(), CONNECTION_ERROR, callbackContext, connection.getResponseCode());
             } catch (IOException ioe) {
             }
-        } finally {
-            if (connection != null) {
-                // Revert back to the proper verifier and socket factories
-                if (trustEveryone && useHttps) {
-                    HttpsURLConnection https = (HttpsURLConnection) connection;
-                    https.setHostnameVerifier(oldHostnameVerifier);
-                    https.setSSLSocketFactory(oldSocketFactory);
-                }
-            }
         }
 
         return retval;
@@ -424,7 +390,6 @@ public class Sync extends CordovaPlugin {
         }
         final boolean copyCordovaAssets;
         final boolean copyRootApp = args.getBoolean(5);
-        final boolean trustEveryone = args.getBoolean(7);
         if (copyRootApp) {
             copyCordovaAssets = true;
         } else {
@@ -485,7 +450,7 @@ public class Sync extends CordovaPlugin {
 
                 if (!type.equals(TYPE_LOCAL)) {
                     // download file
-                    if (download(src, createDownloadFileLocation(id), headers, progress, callbackContext, trustEveryone)) {
+                    if (download(src, createDownloadFileLocation(id), headers, progress, callbackContext)) {
                         // update progress with zip file
                         File targetFile = progress.getTargetFile();
                         Log.d(LOG_TAG, "downloaded = " + targetFile.getAbsolutePath());
@@ -790,52 +755,6 @@ public class Sync extends CordovaPlugin {
             // No headers to be manipulated!
         }
     }
-
-    /**
-     * This function will install a trust manager that will blindly trust all SSL
-     * certificates.  The reason this code is being added is to enable developers
-     * to do development using self signed SSL certificates on their web server.
-     *
-     * The standard HttpsURLConnection class will throw an exception on self
-     * signed certificates if this code is not run.
-     */
-    private static SSLSocketFactory trustAllHosts(HttpsURLConnection connection) {
-        // Install the all-trusting trust manager
-        SSLSocketFactory oldFactory = connection.getSSLSocketFactory();
-        try {
-            // Install our all trusting manager
-            SSLContext sc = SSLContext.getInstance("TLS");
-            sc.init(null, trustAllCerts, new java.security.SecureRandom());
-            SSLSocketFactory newFactory = sc.getSocketFactory();
-            connection.setSSLSocketFactory(newFactory);
-        } catch (Exception e) {
-            Log.e(LOG_TAG, e.getMessage(), e);
-        }
-        return oldFactory;
-    }
-
-    // Create a trust manager that does not validate certificate chains
-    private static final TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
-        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-            return new java.security.cert.X509Certificate[] {};
-        }
-
-        public void checkClientTrusted(X509Certificate[] chain,
-                                       String authType) throws CertificateException {
-        }
-
-        public void checkServerTrusted(X509Certificate[] chain,
-                                       String authType) throws CertificateException {
-        }
-    } };
-
-
-    // always verify the host - don't check for certificate
-    private static final HostnameVerifier DO_NOT_VERIFY = new HostnameVerifier() {
-        public boolean verify(String hostname, SSLSession session) {
-            return true;
-        }
-    };
 
     /* Unzip code */
 
