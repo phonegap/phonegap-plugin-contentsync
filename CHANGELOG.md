@@ -1,5 +1,21 @@
 # Change Log
 
+## [v1.4.0](https://github.com/git@github.com:phonegap/phonegap-plugin-contentsync/tree/v1.4.0) (2016-07-09)
+[Full Changelog](https://github.com/git@github.com:phonegap/phonegap-plugin-contentsync/compare/v1.3.6...v1.4.0)
+
+- 1.4.0 [view commit](http://github.com/git@github.com:phonegap/phonegap-plugin-contentsync/commit/b991d1de4a5e0eb5fc18a72125b07b93aec1b142)
+- :bookmark: Bumping plugin version to 1.4.0 [view commit](http://github.com/git@github.com:phonegap/phonegap-plugin-contentsync/commit/21ee2f5018c9e226bd69e92a9ae5445f9fad0e1c)
+- :wrench: Add package-lock.json [view commit](http://github.com/git@github.com:phonegap/phonegap-plugin-contentsync/commit/a52a0c28a5897ba4f7535c680c9abed24467d8f3)
+- :penguin: Issue #185: Google Play Blocker: Unsafe implementation of TrustManager [view commit](http://github.com/git@github.com:phonegap/phonegap-plugin-contentsync/commit/dbafa4c63a83a7c0e6d25e97d552fc4bb3570ba7)
+- :wrench: Add github template files [view commit](http://github.com/git@github.com:phonegap/phonegap-plugin-contentsync/commit/867685a40db875216e758233cd9ff8a114351344)
+- Fix headline (#178) [view commit](http://github.com/git@github.com:phonegap/phonegap-plugin-contentsync/commit/be31081490c0536514be889724fd0a2bd710bbb5)
+- Merge branch 'Cognifide-master' [view commit](http://github.com/git@github.com:phonegap/phonegap-plugin-contentsync/commit/61dcc78d454408471fea04e29e806def5dedfa3e)
+- Merge branch 'master' of https://github.com/Cognifide/phonegap-plugin-contentsync into Cognifide-master [view commit](http://github.com/git@github.com:phonegap/phonegap-plugin-contentsync/commit/6ad41d32a89b07e33dd508896e6385b7bce3cd2c)
+- Issue #166 new copyRootApp behavior: merge [view commit](http://github.com/git@github.com:phonegap/phonegap-plugin-contentsync/commit/7c8e95b23d3e7d0f2ad17db2831e1a9d3e298bdf)
+- Merge pull request #1 from Cognifide/initial-copy-and-download-in-background [view commit](http://github.com/git@github.com:phonegap/phonegap-plugin-contentsync/commit/1049407c91d1d937aca72b82b88df3c3e531a39d)
+- Starting download only when src is not nil. Initial copy run in background. [view commit](http://github.com/git@github.com:phonegap/phonegap-plugin-contentsync/commit/323aba5233a85d984afb4375bcf5cd6f709ac2f4)
+- Updating CHANGELOG [view commit](http://github.com/git@github.com:phonegap/phonegap-plugin-contentsync/commit/5f68b365194f0350ff7367c5d2e5531f69d1cfa9)
+
 ## [v1.3.6](https://github.com/* remote origin
   Fetch URL: https://github.com//tree/v1.3.6) (2016-07-09)
 [Full Changelog](https://github.com/* remote origin
