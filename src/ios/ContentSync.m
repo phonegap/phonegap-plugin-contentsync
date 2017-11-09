@@ -115,12 +115,19 @@
     // set previous version to current version
     [defaults setObject:currentVersion forKey:@"PREVIOUS_VERSION"];
     [defaults synchronize];
+    
+    BOOL appHasBeenUpdated = ([currentVersion compare:previousVersion options:NSNumericSearch] == NSOrderedDescending);
 
-    if ([currentVersion compare:previousVersion options:NSNumericSearch] == NSOrderedDescending) {
-        NSLog(@"current version is newer than previous version");;
+    // This condition seems to occur on the 2nd run of the app, when the PREVIOUS_VERSION entry has not yet been set.
+    // In this case, appHasBeenUpdated will incorrectly be set to YES, even though the app has not actually been updated.
+    if (previousVersion == nil && currentVersion != nil) {
+        NSLog(@"previous version has not yet been set. skipping comparison");
+        appHasBeenUpdated = false;
+    } else if (appHasBeenUpdated == true) {
+        NSLog(@"current version is newer than previous version");
     }
 
-    return ([currentVersion compare:previousVersion options:NSNumericSearch] == NSOrderedDescending);
+    return appHasBeenUpdated;
 }
 
 - (void)sync:(CDVInvokedUrlCommand*)command {
