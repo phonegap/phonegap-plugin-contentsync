@@ -43,10 +43,11 @@
   "license": "APL",
   "scripts": {
     "test": "jasmine-node --color spec",
-    "paramedic": "./tests/scripts/start-server.sh && cordova-paramedic --platform ios && ./tests/scripts/stop-server.sh"
+    "paramedic":
+      "./tests/scripts/start-server.sh && cordova-paramedic --platform ios && ./tests/scripts/stop-server.sh"
   },
   "devDependencies": {
     "jasmine-node": "1.14.5",
-    "pluginpub": "0.0.6"
+    "pluginpub": "^0.0.9"
   }
 }
