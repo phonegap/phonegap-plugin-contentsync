@@ -40,7 +40,7 @@
     }
   ],
   "author": "Adobe PhoneGap Team",
-  "license": "APL",
+  "license": "Apache-2.0",
   "scripts": {
     "test": "jasmine-node --color spec",
     "paramedic":
