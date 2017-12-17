@@ -320,14 +320,26 @@ npm test
 ## Emulator Testing
 
 The emulator tests use cordova-paramedic and the cordova-plugin-test-framework.
-To run them you will need cordova-paramedic installed.
+To run them you will need cordova-paramedic installed:
 
     npm install -g cordova-paramedic
-    // Then from the root of this repo
+
+Some of the tests require a simple HTTP server to host .zip payloads:
+
+    ./tests/scripts/start-server.sh
+
+Run the tests:
+
+    // From the root of this repo
     // test ios :
     cordova-paramedic --platform ios --plugin .
+
     // test android :
     cordova-paramedic --platform android --plugin .
+
+Once complete, the simple HTTP server can be stopped:
+
+    ./tests/scripts/stop-server.sh
 
 ## Contributing
 
