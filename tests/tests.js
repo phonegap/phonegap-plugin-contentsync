@@ -77,6 +77,24 @@ jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
             });
         }, 60000); // wait a full 60 secs for slow Android emulator
 
+        it('tests copyCordovaAssets works without copyRootApp', function(done) {
+            var appId = 'copyCordovaAssets' + (new Date().getTime());
+            var sync = ContentSync.sync({
+                id: appId,
+                copyCordovaAssets: true,
+                type: 'local'
+            });
+
+            sync.on('complete', function(data) {
+                // cordova.js should be available in the synced directory
+                testFileExists(appId + '/cordova.js', function success() {
+                    done();
+                }, function fail() {
+                    fail('cordova.js should exist in the synced directory.');
+                });
+            });
+        });
+
         /**
          * Helper function that tests if the file at the given path exists
          */
