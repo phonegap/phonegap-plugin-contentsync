@@ -160,8 +160,9 @@
     }
 
     BOOL copyRootApp = [[command argumentAtIndex:5 withDefault:@(NO)] boolValue];
+    BOOL copyCordovaAssetsValue = [[command argumentAtIndex:4 withDefault:@(NO)] boolValue];
 
-    if(copyRootApp == YES) {
+    if(copyRootApp == YES || copyCordovaAssetsValue == YES) {
         __block NSError* error = nil;
 
         NSLog(@"Creating app directory %@", [appPath path]);
@@ -185,7 +186,7 @@
         } else {
             [self.commandDelegate runInBackground:^{
                 CDVPluginResult *pluginResult = nil;
-                [self copyCordovaAssets:[appPath path] copyRootApp:YES];
+                [self copyCordovaAssets:[appPath path] copyRootApp:copyRootApp];
                 if(src == nil) {
                     NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
                     [message setObject:[appPath path] forKey:@"localPath"];
@@ -709,8 +710,6 @@
     return [self copyCordovaAssets:unzippedPath copyRootApp:false];
 }
 
-// TODO GET RID OF THIS
-// THIS F!@#% BS
 - (BOOL) copyCordovaAssets:(NSString*)unzippedPath copyRootApp:(BOOL)copyRootApp {
     NSLog(@"copyCordovaAssets");
     NSError *errorCopy;

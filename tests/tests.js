@@ -14,7 +14,6 @@ jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
         function syncArchive(url, done) {
             
             var progressEvent = null;
-            //var url = "https://github.com/timkim/zipTest/archive/master.zip";
             var sync = ContentSync.sync({ src: url, id: 'myapps/myapp', type: 'replace', copyCordovaAssets: false, headers: false });
 
 
@@ -43,7 +42,7 @@ jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
 
             sync.on('error', function (e) {
                 expect(progressEvent).toBeDefined("Progress should have been received");
-                expect(e).toBe(null, "Error callback was called :: " + e);
+                expect(e).toBe(null, "Error callback was called :: " + JSON.stringify(e));
                 //console.log("got error back :: " + e);
                 done();
             });
@@ -77,6 +76,24 @@ jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
                 done();
             });
         }, 60000); // wait a full 60 secs for slow Android emulator
+
+        it('tests copyCordovaAssets works without copyRootApp', function(done) {
+            var appId = 'copyCordovaAssets' + (new Date().getTime());
+            var sync = ContentSync.sync({
+                id: appId,
+                copyCordovaAssets: true,
+                type: 'local'
+            });
+
+            sync.on('complete', function(data) {
+                // cordova.js should be available in the synced directory
+                testFileExists(appId + '/cordova.js', function success() {
+                    done();
+                }, function fail() {
+                    fail('cordova.js should exist in the synced directory.');
+                });
+            });
+        });
 
         /**
          * Helper function that tests if the file at the given path exists
