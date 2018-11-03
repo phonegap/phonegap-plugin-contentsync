@@ -1,4 +1,4 @@
-# phonegap-plugin-contentsync [![Build Status](https://travis-ci.org/phonegap/phonegap-plugin-contentsync.svg?branch=master)](https://travis-ci.org/phonegap/phonegap-plugin-contentsync) [![bitHound Score][bithound-img]][bithound-url]
+# phonegap-plugin-contentsync [![Build Status](https://travis-ci.org/phonegap/phonegap-plugin-contentsync.svg?branch=master)](https://travis-ci.org/phonegap/phonegap-plugin-contentsync)
 
 > Download and cache remotely hosted zipped content bundles, unzipping automatically.
 
@@ -20,7 +20,9 @@ phonegap plugin add https://github.com/phonegap/phonegap-plugin-contentsync
 
 - Android
 - iOS
-- WP8
+- Windows UWP**
+
+> **While windows supports the full api defined here, the ability to navigate your app to the newly downloaded content is not supported because of security restrictions in windows, and the way that cordova-window is architected.
 
 
 ## Quick Example
@@ -265,7 +267,7 @@ sync.on('complete', function(data) {
 });
 ```
 
-As of version 1.2.0 of the plugin the location in which the plugin stores the synched content is equivaltent to the `cordova.file.dataDirectory` path from the `cordova-plugin-file` package. This is a change from previous versions so please be aware you may need to do a full sync after upgrading to version 1.2.0.
+As of version 1.2.0 of the plugin the location in which the plugin stores the synced content is equivaltent to the `cordova.file.dataDirectory` path from the `cordova-plugin-file` package. This is a change from previous versions so please be aware you may need to do a full sync after upgrading to version 1.2.0.
 
 Platform | Path
 ------------------ | -----------
@@ -301,7 +303,7 @@ This results in the `copyRootApp` taking about a third of the time as when a man
 
 ## Persistence of Synced Content
 
-Content downloaded via this plugin persists between runs of the application or reboots of the phone. The content will only be removed if the application is uninstalled or you use the File API to remove the location of the synched content.
+Content downloaded via this plugin persists between runs of the application or reboots of the phone. The content will only be removed if the application is uninstalled or you use the File API to remove the location of the synced content.
 
 ## Native Requirements
 
@@ -372,5 +374,4 @@ or on-edit linting.
 
 [travis-ci-img]: https://travis-ci.org/phonegap/phonegap-plugin-contentsync.svg?branch=master
 [travis-ci-url]: http://travis-ci.org/phonegap/phonegap-plugin-contentsync
-[bithound-img]: https://www.bithound.io/github/phonegap/phonegap-plugin-contentsync/badges/score.svg
-[bithound-url]: https://www.bithound.io/github/phonegap/phonegap-plugin-contentsync
+
