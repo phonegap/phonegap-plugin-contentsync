@@ -15,9 +15,7 @@
     "platforms": [
       "ios",
       "android",
-      "windows8",
       "windows",
-      "wp8",
       "browser",
       "osx"
     ]
@@ -27,9 +25,7 @@
     "ecosystem:phonegap",
     "cordova-ios",
     "cordova-android",
-    "cordova-windows8",
     "cordova-windows",
-    "cordova-wp8",
     "cordova-browser",
     "cordova-osx"
   ],
@@ -42,11 +38,13 @@
   "author": "Adobe PhoneGap Team",
   "license": "Apache-2.0",
   "scripts": {
-    "test": "jasmine-node --color spec",
+    "test": "jasmine JASMINE_CONFIG_PATH=spec/jasmine.json",
     "paramedic": "./tests/scripts/start-server.sh && cordova-paramedic --platform ios && ./tests/scripts/stop-server.sh"
   },
   "devDependencies": {
-    "jasmine-node": "1.14.5",
     "pluginpub": "^0.0.9"
+  },
+  "dependencies": {
+    "jasmine": "^3.3.0"
   }
 }

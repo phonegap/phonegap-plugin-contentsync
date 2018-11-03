@@ -16,7 +16,7 @@ describe('phonegap-plugin-contentsync', function() {
     beforeEach(function() {
         options = { src: 'http://path/to/src.zip', id: 'app-1' };
         execWin = jasmine.createSpy();
-        execSpy = spyOn(cordova.required, 'cordova/exec').andCallFake(execWin);
+        execSpy = spyOn(cordova.required, 'cordova/exec').and.callFake(execWin);
     });
 
     describe('.sync', function() {
@@ -86,7 +86,7 @@ describe('phonegap-plugin-contentsync', function() {
 
             describe('options.src', function() {
                 it('should be passed to exec', function(done) {
-                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                    execSpy.and.callFake(function(win, fail, service, id, args) {
                         expect(args[0]).toEqual(options.src);
                         done();
                     });
@@ -97,7 +97,7 @@ describe('phonegap-plugin-contentsync', function() {
             describe('options.id', function() {
                 it('should be passed to exec', function(done) {
                     options.id = '1234567890';
-                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                    execSpy.and.callFake(function(win, fail, service, id, args) {
                         expect(args[1]).toEqual(options.id);
                         done();
                     });
@@ -107,7 +107,7 @@ describe('phonegap-plugin-contentsync', function() {
 
             describe('options.type', function() {
                 it('should default to "replace"', function(done) {
-                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                    execSpy.and.callFake(function(win, fail, service, id, args) {
                         expect(args[2]).toEqual('replace');
                         done();
                     });
@@ -116,7 +116,7 @@ describe('phonegap-plugin-contentsync', function() {
 
                 it('should be passed as whatever we specify', function(done) {
                     options.type = 'superduper';
-                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                    execSpy.and.callFake(function(win, fail, service, id, args) {
                         expect(args[2]).toEqual(options.type);
                         done();
                     });
@@ -126,7 +126,7 @@ describe('phonegap-plugin-contentsync', function() {
 
             describe('options.headers', function() {
                 it('should default to null', function(done) {
-                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                    execSpy.and.callFake(function(win, fail, service, id, args) {
                         expect(args[3]).toEqual(null);
                         done();
                     });
@@ -135,7 +135,7 @@ describe('phonegap-plugin-contentsync', function() {
 
                 it('should be passed as whatever we specify', function(done) {
                     options.headers = { 'Authorization': 'SECRET_PASSWORD' };
-                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                    execSpy.and.callFake(function(win, fail, service, id, args) {
                         expect(args[3]).toEqual(options.headers);
                         done();
                     });
@@ -145,7 +145,7 @@ describe('phonegap-plugin-contentsync', function() {
 
             describe('options.copyCordovaAssets', function() {
                 it('should default to false', function(done) {
-                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                    execSpy.and.callFake(function(win, fail, service, id, args) {
                         expect(args[4]).toEqual(false);
                         done();
                     });
@@ -153,7 +153,7 @@ describe('phonegap-plugin-contentsync', function() {
                 });
                 it('should be passed as whatever we specify', function(done) {
                     options.copyCordovaAssets = true;
-                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                    execSpy.and.callFake(function(win, fail, service, id, args) {
                         expect(args[4]).toEqual(options.copyCordovaAssets);
                         done();
                     });
@@ -163,7 +163,7 @@ describe('phonegap-plugin-contentsync', function() {
 
             describe('options.copyRootApp', function() {
                 it('should default to false', function(done) {
-                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                    execSpy.and.callFake(function(win, fail, service, id, args) {
                         expect(args[5]).toEqual(false);
                         done();
                     });
@@ -171,7 +171,7 @@ describe('phonegap-plugin-contentsync', function() {
                 });
                 it('should be passed as whatever we specify', function(done) {
                     options.copyRootApp = true;
-                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                    execSpy.and.callFake(function(win, fail, service, id, args) {
                         expect(args[5]).toEqual(options.copyRootApp);
                         done();
                     });
@@ -180,7 +180,7 @@ describe('phonegap-plugin-contentsync', function() {
             });
             describe('options.timeout', function() {
                 it('should default to 15.0', function(done) {
-                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                    execSpy.and.callFake(function(win, fail, service, id, args) {
                         expect(args[6]).toEqual(15.0);
                         done();
                     });
@@ -188,7 +188,7 @@ describe('phonegap-plugin-contentsync', function() {
                 });
                 it('should be passed as whatever we specify', function(done) {
                     options.timeout = 30.0;
-                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                    execSpy.and.callFake(function(win, fail, service, id, args) {
                         expect(args[6]).toEqual(options.timeout);
                         done();
                     });
@@ -197,7 +197,7 @@ describe('phonegap-plugin-contentsync', function() {
             });
             describe('options.trustHost', function() {
                 it('should default to false', function(done) {
-                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                    execSpy.and.callFake(function(win, fail, service, id, args) {
                         expect(args[7]).toEqual(false);
                         done();
                     });
@@ -205,7 +205,7 @@ describe('phonegap-plugin-contentsync', function() {
                 });
                 it('should be passed as whatever we specify', function(done) {
                     options.trustHost = true;
-                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                    execSpy.and.callFake(function(win, fail, service, id, args) {
                         expect(args[7]).toEqual(options.trustHost);
                         done();
                     });
@@ -214,7 +214,7 @@ describe('phonegap-plugin-contentsync', function() {
             });
             describe('options.manifest', function() {
                 it('should default to the empty string', function(done) {
-                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                    execSpy.and.callFake(function(win, fail, service, id, args) {
                         expect(args[8]).toEqual("");
                         done();
                     });
@@ -222,7 +222,7 @@ describe('phonegap-plugin-contentsync', function() {
                 });
                 it('should be passed as whatever we specify', function(done) {
                     options.manifest = "manifest.json";
-                    execSpy.andCallFake(function(win, fail, service, id, args) {
+                    execSpy.and.callFake(function(win, fail, service, id, args) {
                         expect(args[8]).toEqual(options.manifest);
                         done();
                     });
@@ -233,7 +233,7 @@ describe('phonegap-plugin-contentsync', function() {
 
         describe('on "progress" event', function() {
             it('should be emitted with an argument', function(done) {
-                execSpy.andCallFake(function(win, fail, service, id, args) {
+                execSpy.and.callFake(function(win, fail, service, id, args) {
                     win({ 'progress': 1 });
                 });
                 var sync = contentSync.sync(options);
@@ -246,7 +246,7 @@ describe('phonegap-plugin-contentsync', function() {
 
         describe('on "complete" event', function() {
             beforeEach(function() {
-                execSpy.andCallFake(function(win, fail, service, id, args) {
+                execSpy.and.callFake(function(win, fail, service, id, args) {
                     win({
                         localPath: 'file:///path/to/content'
                     });
@@ -271,7 +271,7 @@ describe('phonegap-plugin-contentsync', function() {
 
         describe('on "error" event', function() {
             it('should be emitted with an Error', function(done) {
-                execSpy.andCallFake(function(win, fail, service, id, args) {
+                execSpy.and.callFake(function(win, fail, service, id, args) {
                     fail('something went wrong');
                 });
                 var sync = contentSync.sync(options);
@@ -289,8 +289,8 @@ describe('phonegap-plugin-contentsync', function() {
                 sync.cancel();
                 setTimeout(function() {
                     expect(execSpy).toHaveBeenCalled();
-                    expect(execSpy.callCount).toEqual(2); // 1) sync, 2) cancel
-                    expect(execSpy.mostRecentCall.args).toEqual([
+                    expect(execSpy.calls.count()).toBe(2); // 1) sync, 2) cancel
+                    expect(execSpy.calls.mostRecent().args).toEqual([
                         jasmine.any(Function),
                         jasmine.any(Function),
                         'Sync',
@@ -302,7 +302,7 @@ describe('phonegap-plugin-contentsync', function() {
             });
 
             it('should emit the "cancel" event', function(done) {
-                execSpy.andCallFake(function(win, fail, service, id, args) {
+                execSpy.and.callFake(function(win, fail, service, id, args) {
                     win();
                 });
                 var sync = contentSync.sync(options);
